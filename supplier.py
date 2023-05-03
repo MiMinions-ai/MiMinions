@@ -2,12 +2,7 @@ import openai
 import json
 import os
 
-
-# with open("openai_api_key.json", "r") as f:
-#     openai_api_key = json.load(f)["key"]
-
 openai.api_key = os.environ.get("OPENAI_API_KEY")
-
 
 sys_msg = [{
     "role": "system",
