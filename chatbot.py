@@ -26,10 +26,11 @@ with gr.Blocks() as settings:
             submit.click(update_sys,background_edit,background,queue=False)
             
 with gr.Blocks() as chat_window:
-    with gr.Column():
+    with gr.Row():
         chatbot = gr.Chatbot(initial_msg)
-        msg = gr.Textbox()
-        clear = gr.Button("Clear")
+        with gr.Column():
+            msg = gr.Textbox()
+            clear = gr.Button("Clear")
 
     msg.submit(send_chat,[msg,chatbot],[msg,chatbot])
     clear.click(lambda:None,None,chatbot,queue=False)
