@@ -35,4 +35,4 @@ with gr.Blocks() as chatbot_iface:
     clear.click(lambda:None,None,chatbot,queue=False)
 
 if __name__ == "__main__":
-    chatbot_iface.launch()
+    chatbot_iface.launch(server_name="0.0.0.0")
