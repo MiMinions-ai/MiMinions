@@ -34,7 +34,7 @@ with gr.Blocks() as chat_window:
     msg.submit(send_chat,[msg,chatbot],[msg,chatbot])
     clear.click(lambda:None,None,chatbot,queue=False)
 
-iface = gr.TabbedInterface([chat_window,settings],[["Chatbot","Settings"]],"bottom",title="Chatbot",description="A chatbot with GPT-3.5 Turbo")
+iface = gr.TabbedInterface([chat_window,settings],["Chatbot","Settings"],"bottom",title="Chatbot",description="A chatbot with GPT-3.5 Turbo")
 
 if __name__ == "__main__":
     iface.launch(server_name="0.0.0.0")
