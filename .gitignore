@@ -1,4 +1,6 @@
 venv
 __pycache__
 
+# files local to the server os
 server.py
+*.pem
