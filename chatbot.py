@@ -48,4 +48,4 @@ with gr.Blocks() as chat_window:
 iface = gr.TabbedInterface([chat_window,settings],["Chat","Settings"],title="ChatGPT 3.5")
 
 if __name__ == "__main__":
-    iface.launch(server_name="0.0.0.0",ssl_certfile="cert.pem", ssl_keyfile="key.pem")
+    iface.launch(server_name="0.0.0.0",ssl_certfile="./cert.pem", ssl_keyfile="./key.pem")
