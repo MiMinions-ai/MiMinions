@@ -27,15 +27,25 @@ with gr.Blocks() as settings:
             
 with gr.Blocks() as chat_window:
     with gr.Row():
-        chatbot = gr.Chatbot(initial_msg)
+        with gr.Column():
+            chatbot = gr.Chatbot(initial_msg)
+            clear = gr.Button("Clear")
+        
         with gr.Column():
             msg = gr.Textbox()
-            clear = gr.Button("Clear")
+            submit = gr.Button("Submit")
+            gr.Examples(["Hello","How are you?"],msg,label="Examples")
+                
+            audio = gr.Audio(source="microphone",type="filepath")
+            # gr.Interface(translate,inputs=gr.Audio(source="microphone",type="filepath"),outputs = "text")
 
+    audio.change(translate,audio,msg,queue=False)
     msg.submit(send_chat,[msg,chatbot],[msg,chatbot])
+    submit.click(send_chat,[msg,chatbot],[msg,chatbot],queue=False)
+
     clear.click(lambda:None,None,chatbot,queue=False)
 
-iface = gr.TabbedInterface([chat_window,settings],["Chatbot","Settings"],title="ChatGPT 3.5")
+iface = gr.TabbedInterface([chat_window,settings],["Chat","Settings"],title="ChatGPT 3.5")
 
 if __name__ == "__main__":
     iface.launch(server_name="0.0.0.0")

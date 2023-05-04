@@ -1,5 +1,4 @@
 import openai
-import json
 import os
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -51,3 +50,11 @@ def send_chat(text,messages=initial_msg):
     messages.append((text,assistant_text))
 
     return "",messages
+
+def translate(file_path):
+    if file_path:
+        f = open(file_path,"rb")
+        res = openai.Audio.translate("whisper-1",f)
+        return res["text"]
+    else:
+        return ""
