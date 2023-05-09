@@ -56,4 +56,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         ssl_verify=False,
         ssl_certfile="./cert.pem",
-        ssl_keyfile="./key.pem")
+        ssl_keyfile="./key.pem",
+        server_port=80)
