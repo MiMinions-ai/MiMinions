@@ -1,3 +1,5 @@
+# directories that are local to the server os
+.archive
 venv
 __pycache__
 
