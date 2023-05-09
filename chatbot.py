@@ -54,5 +54,6 @@ iface = gr.TabbedInterface(
 if __name__ == "__main__":
     iface.launch(
         server_name="0.0.0.0",
-        ssl_verify=False)
-        # ssl_certfile="./cert.pem", ssl_keyfile="./key.pem")
+        ssl_verify=False,
+        ssl_certfile="./cert.pem",
+        ssl_keyfile="./key.pem")
