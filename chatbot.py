@@ -45,7 +45,14 @@ with gr.Blocks() as chat_window:
 
     clear.click(lambda:None,None,chatbot,queue=False)
 
-iface = gr.TabbedInterface([chat_window,settings],["Chat","Settings"],title="ChatGPT 3.5")
+iface = gr.TabbedInterface(
+    [chat_window,settings],
+    ["Chat","Settings"],
+    title="ChatGPT 3.5",
+    css="footer {visibility: hidden}")
 
 if __name__ == "__main__":
-    iface.launch(server_name="0.0.0.0",ssl_certfile="./cert.pem", ssl_keyfile="./key.pem")
+    iface.launch(
+        server_name="0.0.0.0",
+        ssl_verify=False)
+        # ssl_certfile="./cert.pem", ssl_keyfile="./key.pem")
