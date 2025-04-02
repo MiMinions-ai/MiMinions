@@ -1,4 +1,1 @@
-openai
-gradio
-# langchain
-# autoGPT
+phidata
