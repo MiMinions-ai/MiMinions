@@ -1,4 +1,4 @@
-openai
-gradio
+# openai
+agno
 # langchain
 # autoGPT
