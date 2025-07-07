@@ -1,4 +1,8 @@
+# Core framework dependencies (optional)
+langchain-core>=0.3.0
+autogen-agentchat>=0.6.0
+agno>=1.7.0
+
+# Optional dependencies that were commented out
 # openai
-agno
-# langchain
 # autoGPT
