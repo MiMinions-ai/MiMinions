@@ -56,6 +56,19 @@ class TestBaseAgent:
         with pytest.raises(ValueError, match="Database tools not initialized"):
             agent.concept_query("{ test }")
         
+        # Test new remember/recall methods also raise errors
+        with pytest.raises(ValueError, match="Database tools not initialized"):
+            agent.remember("test content")
+        
+        with pytest.raises(ValueError, match="Database tools not initialized"):
+            agent.recall()
+        
+        with pytest.raises(ValueError, match="Database tools not initialized"):
+            agent.remember_search([1, 2, 3])
+        
+        with pytest.raises(ValueError, match="Database tools not initialized"):
+            agent.recall_context([1, 2, 3])
+        
         agent.close()
     
     def test_agent_without_search_tools(self):
@@ -83,6 +96,30 @@ class TestBaseAgent:
         repr_str = repr(agent)
         assert "BaseAgent" in repr_str
         assert "test_agent" in repr_str
+        assert "session" in repr_str
+        agent.close()
+    
+    def test_session_management(self):
+        """Test session ID management"""
+        agent = BaseAgent(name="test_agent")
+        
+        # Test default session ID is set
+        initial_session = agent.get_session()
+        assert initial_session is not None
+        assert len(initial_session) > 0
+        
+        # Test setting new session ID
+        new_session = "test_session_123"
+        agent.set_session(new_session)
+        assert agent.get_session() == new_session
+        
+        agent.close()
+    
+    def test_agent_init_with_session(self):
+        """Test BaseAgent initialization with session ID"""
+        session_id = "test_session_456"
+        agent = BaseAgent(name="test_agent", session_id=session_id)
+        assert agent.get_session() == session_id
         agent.close()
 
 

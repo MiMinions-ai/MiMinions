@@ -4,6 +4,8 @@
 
 The base agent module provides a comprehensive foundation for creating AI agents with integrated capabilities for:
 
+- **Knowledge Management**: Remember and recall functionality with vector-based storage
+- **Session Tracking**: Conversation memory and context management
 - **Knowledge Retrieval**: Vector-based search using pgvector
 - **Concept Relations**: Graph-based queries using pg_graphql  
 - **Web Search**: Exploratory search via Google and DuckDuckGo
@@ -14,7 +16,8 @@ The base agent module provides a comprehensive foundation for creating AI agents
 ### Core Components
 
 1. **BaseAgent** (`src/miminions/agents/base_agent.py`)
-   - Main agent class with tool management
+   - Main agent class with tool management and session tracking
+   - Remember/recall functionality for knowledge management
    - Synchronous and asynchronous operation support
    - Resource management and cleanup
    - Error handling and validation
@@ -22,6 +25,7 @@ The base agent module provides a comprehensive foundation for creating AI agents
 2. **DatabaseTools** (`src/miminions/agents/tools/database.py`)
    - PostgreSQL connection management
    - Vector similarity search (pgvector)
+   - Session-based conversation storage and retrieval
    - GraphQL query execution (pg_graphql)
    - Connection pooling and async support
 
@@ -32,6 +36,12 @@ The base agent module provides a comprehensive foundation for creating AI agents
    - Automatic engine selection
 
 ### Key Features
+
+#### Knowledge Management System
+- **Remember**: Store information with vector embeddings
+- **Recall**: Retrieve conversation history and context
+- **Session Tracking**: Maintain conversation state across interactions
+- **Context Search**: Vector-based relevance matching within sessions
 
 #### Graceful Dependency Handling
 - Optional dependencies don't break basic functionality
@@ -80,15 +90,54 @@ result = await agent.execute_tool_async("calc", "add", 5, 3)
 ```
 
 ### Knowledge Operations
+
+#### Remember and Recall (New Memory System)
 ```python
-# Vector search
+# Create agent with session tracking
+agent = BaseAgent(
+    name="MemoryAgent",
+    connection_string="postgresql://user:pass@host/db",
+    session_id="conversation_123"
+)
+
+# Remember information
+memory_id = agent.remember(
+    content="User prefers Python for data science",
+    embedding=[0.1, 0.2, 0.3],  # Optional vector embedding
+    role="system",
+    metadata={"topic": "preferences"}
+)
+
+# Search remembered knowledge
+knowledge = agent.remember_search(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=10
+)
+
+# Recall conversation history
+history = agent.recall(limit=20)
+
+# Recall relevant context using similarity
+context = agent.recall_context(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=5
+)
+
+# Session management
+agent.set_session("new_conversation")
+other_history = agent.recall(session_id="previous_conversation")
+```
+
+#### Legacy Vector Search (Deprecated)
+```python
+# Vector search (deprecated - use remember_search instead)
 results = agent.vector_search(
     query_vector=[0.1, 0.2, 0.3],
     table="knowledge_base",
     limit=10
 )
 
-# GraphQL queries
+# GraphQL queries for concept relations
 data = agent.concept_query("""
     { concepts { id name relations { type target } } }
 """)
@@ -131,10 +180,11 @@ pytest tests/test_base_agent.py -v
 ```
 
 Tests cover:
-- Basic agent initialization
+- Basic agent initialization and session management
 - Tool management operations
-- Error handling scenarios
-- Resource cleanup
+- Remember and recall functionality
+- Error handling scenarios for missing database/search tools
+- Resource cleanup and context management
 - Dependency validation
 
 ## Future Enhancements
@@ -142,10 +192,11 @@ Tests cover:
 Potential areas for expansion:
 
 1. **Multi-Agent Coordination**: Agent-to-agent communication
-2. **Persistent State**: Agent state serialization/deserialization
+2. **Persistent State**: Agent state serialization/deserialization  
 3. **Plugin System**: Dynamic tool loading
 4. **Performance Monitoring**: Built-in metrics and logging
-5. **Advanced Search**: Semantic search and result ranking
+5. **Advanced Memory**: Semantic clustering and memory consolidation
+6. **Cross-Session Analytics**: Pattern recognition across conversations
 
 ## Dependencies
 

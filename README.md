@@ -4,11 +4,13 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 
 ## Features
 
-- **BaseAgent**: Core agent class with tool management
-- **Vector Search**: Knowledge retrieval using pgvector for similarity search
+- **BaseAgent**: Core agent class with tool management and session tracking
+- **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
+- **Vector Search**: Knowledge retrieval using pgvector for similarity search  
 - **GraphQL Queries**: Concept relation queries using pg_graphql
 - **Web Search**: Exploratory search using Google and DuckDuckGo
 - **Custom Tools**: Easy integration of custom tools and functions
+- **Session Management**: Conversation tracking and context management
 - **Async Support**: Full asynchronous operation support
 - **Graceful Dependencies**: Optional dependencies with graceful fallback
 
@@ -78,7 +80,29 @@ agent = BaseAgent(
     connection_string="postgresql://user:password@localhost/database"
 )
 
-# Vector search for knowledge retrieval
+# Remember information (stores with vector embedding)
+memory_id = agent.remember(
+    content="Python is a programming language",
+    embedding=[0.1, 0.2, 0.3],  # Optional: your embedding
+    role="system"
+)
+
+# Search remembered knowledge
+results = agent.remember_search(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=5
+)
+
+# Recall conversation history
+history = agent.recall(limit=10)
+
+# Recall relevant context using vector similarity
+context = agent.recall_context(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=5
+)
+
+# Legacy vector search (deprecated - use remember_search instead)
 results = agent.vector_search(
     query_vector=[0.1, 0.2, 0.3],
     table="knowledge_base",
@@ -98,6 +122,36 @@ concept_data = agent.concept_query("""
         }
     }
 """)
+
+agent.close()
+```
+
+### Session Management
+
+```python
+from miminions.agents import BaseAgent
+
+# Create agent with specific session
+agent = BaseAgent(
+    name="SessionAgent",
+    connection_string="postgresql://user:password@localhost/database",
+    session_id="conversation_123"
+)
+
+# Remember user input
+agent.remember("Hello, how are you?", role="user")
+
+# Remember assistant response  
+agent.remember("I'm doing well, thank you!", role="assistant")
+
+# Recall entire conversation
+conversation = agent.recall()
+
+# Switch to different session
+agent.set_session("conversation_456")
+
+# Recall from specific session
+history = agent.recall(session_id="conversation_123")
 
 agent.close()
 ```

@@ -6,6 +6,7 @@ and capabilities for knowledge retrieval, concept relations, and web search.
 """
 
 import asyncio
+import uuid
 from typing import Any, Callable, Dict, List, Optional, Union
 from concurrent.futures import ThreadPoolExecutor
 
@@ -21,7 +22,8 @@ class BaseAgent:
     def __init__(self, 
                  connection_string: Optional[str] = None,
                  max_workers: int = 4,
-                 name: str = "BaseAgent"):
+                 name: str = "BaseAgent",
+                 session_id: Optional[str] = None):
         """
         Initialize the base agent
         
@@ -29,9 +31,11 @@ class BaseAgent:
             connection_string: PostgreSQL connection string for database tools
             max_workers: Maximum number of concurrent operations
             name: Agent name for identification
+            session_id: Optional session ID for conversation tracking
         """
         self.name = name
         self.max_workers = max_workers
+        self.session_id = session_id or str(uuid.uuid4())
         self._custom_tools: Dict[str, Callable] = {}
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         
@@ -121,12 +125,168 @@ class BaseAgent:
         """
         return name in self._custom_tools
     
-    # Synchronous methods for database operations
+    # Knowledge management methods - Remember and Recall
+    def remember(self, content: str, embedding: Optional[List[float]] = None,
+                role: str = "system", metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Remember information by storing it with vector embedding
+        
+        Args:
+            content: Content to remember
+            embedding: Optional vector embedding of the content
+            role: Role of the content (system, user, assistant)
+            metadata: Optional additional metadata
+            
+        Returns:
+            Memory ID for the stored content
+        """
+        self._validate_database_tools()
+        return self.database_tools.store_session_message(
+            self.session_id, role, content, embedding, metadata
+        )
+    
+    async def remember_async(self, content: str, embedding: Optional[List[float]] = None,
+                           role: str = "system", metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Remember information by storing it with vector embedding asynchronously
+        
+        Args:
+            content: Content to remember
+            embedding: Optional vector embedding of the content
+            role: Role of the content (system, user, assistant)
+            metadata: Optional additional metadata
+            
+        Returns:
+            Memory ID for the stored content
+        """
+        self._validate_database_tools()
+        return await self.database_tools.store_session_message_async(
+            self.session_id, role, content, embedding, metadata
+        )
+    
+    def remember_search(self, query_vector: List[float], table: str = "knowledge_base",
+                       vector_column: str = "embedding", limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search remembered knowledge using vector similarity
+        
+        Args:
+            query_vector: Query vector as list of floats
+            table: Table name to search in (defaults to knowledge_base)
+            vector_column: Column name containing vectors
+            limit: Maximum number of results
+            
+        Returns:
+            List of matching records with distance scores
+        """
+        self._validate_database_tools()
+        return self.database_tools.vector_search(query_vector, table, vector_column, limit)
+    
+    async def remember_search_async(self, query_vector: List[float], table: str = "knowledge_base",
+                                   vector_column: str = "embedding", limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search remembered knowledge using vector similarity asynchronously
+        
+        Args:
+            query_vector: Query vector as list of floats
+            table: Table name to search in (defaults to knowledge_base)
+            vector_column: Column name containing vectors
+            limit: Maximum number of results
+            
+        Returns:
+            List of matching records with distance scores
+        """
+        self._validate_database_tools()
+        return await self.database_tools.vector_search_async(query_vector, table, vector_column, limit)
+    
+    def recall(self, limit: int = 50, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Recall conversation history from memory
+        
+        Args:
+            limit: Maximum number of messages to recall
+            session_id: Optional specific session ID (defaults to current session)
+            
+        Returns:
+            List of messages in chronological order
+        """
+        self._validate_database_tools()
+        target_session = session_id or self.session_id
+        return self.database_tools.get_session_history(target_session, limit)
+    
+    async def recall_async(self, limit: int = 50, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Recall conversation history from memory asynchronously
+        
+        Args:
+            limit: Maximum number of messages to recall
+            session_id: Optional specific session ID (defaults to current session)
+            
+        Returns:
+            List of messages in chronological order
+        """
+        self._validate_database_tools()
+        target_session = session_id or self.session_id
+        return await self.database_tools.get_session_history_async(target_session, limit)
+    
+    def recall_context(self, query_vector: List[float], limit: int = 10,
+                      session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Recall relevant context from conversation memory using vector similarity
+        
+        Args:
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            session_id: Optional specific session ID (defaults to current session)
+            
+        Returns:
+            List of relevant messages with similarity scores
+        """
+        self._validate_database_tools()
+        target_session = session_id or self.session_id
+        return self.database_tools.search_session_context(target_session, query_vector, limit)
+    
+    async def recall_context_async(self, query_vector: List[float], limit: int = 10,
+                                  session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Recall relevant context from conversation memory using vector similarity asynchronously
+        
+        Args:
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            session_id: Optional specific session ID (defaults to current session)
+            
+        Returns:
+            List of relevant messages with similarity scores
+        """
+        self._validate_database_tools()
+        target_session = session_id or self.session_id
+        return await self.database_tools.search_session_context_async(target_session, query_vector, limit)
+    
+    def set_session(self, session_id: str) -> None:
+        """
+        Set the current session ID for conversation tracking
+        
+        Args:
+            session_id: New session ID
+        """
+        self.session_id = session_id
+    
+    def get_session(self) -> str:
+        """
+        Get the current session ID
+        
+        Returns:
+            Current session ID
+        """
+        return self.session_id
+    # Legacy synchronous methods for database operations (deprecated)
     def vector_search(self, query_vector: List[float], table: str,
                      vector_column: str = "embedding",
                      limit: int = 10) -> List[Dict[str, Any]]:
         """
         Perform vector similarity search for knowledge retrieval
+        
+        DEPRECATED: Use remember_search() instead
         
         Args:
             query_vector: Query vector as list of floats
@@ -184,12 +344,14 @@ class BaseAgent:
         """
         return self._execute_custom_tool(tool_name, *args, **kwargs)
     
-    # Asynchronous methods for database operations
+    # Legacy asynchronous methods for database operations (deprecated)
     async def vector_search_async(self, query_vector: List[float], table: str,
                                  vector_column: str = "embedding",
                                  limit: int = 10) -> List[Dict[str, Any]]:
         """
         Perform vector similarity search for knowledge retrieval asynchronously
+        
+        DEPRECATED: Use remember_search_async() instead
         
         Args:
             query_vector: Query vector as list of floats
@@ -384,4 +546,4 @@ class BaseAgent:
         await self.close_async()
     
     def __repr__(self):
-        return f"BaseAgent(name='{self.name}', tools={len(self._custom_tools)})"
+        return f"BaseAgent(name='{self.name}', session='{self.session_id}', tools={len(self._custom_tools)})"

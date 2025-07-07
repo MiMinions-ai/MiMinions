@@ -7,6 +7,8 @@ with pgvector and pg_graphql support.
 
 import asyncio
 import json
+import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from concurrent.futures import ThreadPoolExecutor
 
@@ -180,6 +182,260 @@ class DatabaseTools:
             Query result as dictionary
         """
         return await self._execute_graphql_query_async(query, variables)
+    
+    # Session-based methods for conversation management
+    def store_session_message(self, session_id: str, role: str, content: str, 
+                             embedding: Optional[List[float]] = None,
+                             metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Store a message in a conversation session
+        
+        Args:
+            session_id: Unique session identifier
+            role: Message role (user, assistant, system)
+            content: Message content
+            embedding: Optional content embedding for semantic search
+            metadata: Optional additional metadata
+            
+        Returns:
+            Message ID
+        """
+        return self._store_session_message(session_id, role, content, embedding, metadata)
+    
+    async def store_session_message_async(self, session_id: str, role: str, content: str,
+                                        embedding: Optional[List[float]] = None,
+                                        metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Store a message in a conversation session asynchronously
+        
+        Args:
+            session_id: Unique session identifier
+            role: Message role (user, assistant, system)
+            content: Message content
+            embedding: Optional content embedding for semantic search
+            metadata: Optional additional metadata
+            
+        Returns:
+            Message ID
+        """
+        return await self._store_session_message_async(session_id, role, content, embedding, metadata)
+    
+    def get_session_history(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Retrieve conversation history for a session
+        
+        Args:
+            session_id: Session identifier
+            limit: Maximum number of messages to retrieve
+            
+        Returns:
+            List of messages in chronological order
+        """
+        return self._get_session_history(session_id, limit)
+    
+    async def get_session_history_async(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Retrieve conversation history for a session asynchronously
+        
+        Args:
+            session_id: Session identifier
+            limit: Maximum number of messages to retrieve
+            
+        Returns:
+            List of messages in chronological order
+        """
+        return await self._get_session_history_async(session_id, limit)
+    
+    def search_session_context(self, session_id: str, query_vector: List[float],
+                              limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search for relevant context within a session using vector similarity
+        
+        Args:
+            session_id: Session identifier
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            
+        Returns:
+            List of relevant messages with similarity scores
+        """
+        return self._search_session_context(session_id, query_vector, limit)
+    
+    async def search_session_context_async(self, session_id: str, query_vector: List[float],
+                                         limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search for relevant context within a session using vector similarity asynchronously
+        
+        Args:
+            session_id: Session identifier
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            
+        Returns:
+            List of relevant messages with similarity scores
+        """
+        return await self._search_session_context_async(session_id, query_vector, limit)
+    
+    # Internal methods for session operations
+    def _store_session_message(self, session_id: str, role: str, content: str,
+                              embedding: Optional[List[float]] = None,
+                              metadata: Optional[Dict[str, Any]] = None) -> str:
+        """Internal method to store session message"""
+        conn = self._get_connection()
+        with conn.cursor() as cur:
+            message_id = str(uuid.uuid4())
+            timestamp = datetime.utcnow()
+            
+            # Convert embedding to numpy array if provided
+            embedding_array = np.array(embedding) if embedding and np is not None else None
+            metadata_json = json.dumps(metadata) if metadata else None
+            
+            # Create sessions table if not exists
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_sessions (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    embedding vector,
+                    metadata JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create indexes if not exist
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS session_idx ON conversation_sessions (session_id)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS created_idx ON conversation_sessions (created_at)
+            """)
+            
+            # Insert message
+            cur.execute("""
+                INSERT INTO conversation_sessions 
+                (id, session_id, role, content, embedding, metadata, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (message_id, session_id, role, content, embedding_array, metadata_json, timestamp))
+            
+            conn.commit()
+            return message_id
+    
+    async def _store_session_message_async(self, session_id: str, role: str, content: str,
+                                         embedding: Optional[List[float]] = None,
+                                         metadata: Optional[Dict[str, Any]] = None) -> str:
+        """Internal async method to store session message"""
+        conn = await self._get_async_connection()
+        async with conn.cursor() as cur:
+            message_id = str(uuid.uuid4())
+            timestamp = datetime.utcnow()
+            
+            # Convert embedding to numpy array if provided
+            embedding_array = np.array(embedding) if embedding and np is not None else None
+            metadata_json = json.dumps(metadata) if metadata else None
+            
+            # Create sessions table if not exists
+            await cur.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_sessions (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    embedding vector,
+                    metadata JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create indexes if not exist
+            await cur.execute("""
+                CREATE INDEX IF NOT EXISTS session_idx ON conversation_sessions (session_id)
+            """)
+            await cur.execute("""
+                CREATE INDEX IF NOT EXISTS created_idx ON conversation_sessions (created_at)
+            """)
+            
+            # Insert message
+            await cur.execute("""
+                INSERT INTO conversation_sessions 
+                (id, session_id, role, content, embedding, metadata, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (message_id, session_id, role, content, embedding_array, metadata_json, timestamp))
+            
+            await conn.commit()
+            return message_id
+    
+    def _get_session_history(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Internal method to get session history"""
+        conn = self._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, session_id, role, content, metadata, created_at
+                FROM conversation_sessions
+                WHERE session_id = %s
+                ORDER BY created_at ASC
+                LIMIT %s
+            """, (session_id, limit))
+            
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in cur.fetchall()]
+    
+    async def _get_session_history_async(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Internal async method to get session history"""
+        conn = await self._get_async_connection()
+        async with conn.cursor() as cur:
+            await cur.execute("""
+                SELECT id, session_id, role, content, metadata, created_at
+                FROM conversation_sessions
+                WHERE session_id = %s
+                ORDER BY created_at ASC
+                LIMIT %s
+            """, (session_id, limit))
+            
+            columns = [desc[0] for desc in cur.description]
+            rows = await cur.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
+    
+    def _search_session_context(self, session_id: str, query_vector: List[float],
+                               limit: int = 10) -> List[Dict[str, Any]]:
+        """Internal method to search session context"""
+        conn = self._get_connection()
+        with conn.cursor() as cur:
+            # Convert list to numpy array for pgvector
+            vector_array = np.array(query_vector)
+            
+            cur.execute("""
+                SELECT id, session_id, role, content, metadata, created_at,
+                       embedding <-> %s as distance
+                FROM conversation_sessions
+                WHERE session_id = %s AND embedding IS NOT NULL
+                ORDER BY distance
+                LIMIT %s
+            """, (vector_array, session_id, limit))
+            
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in cur.fetchall()]
+    
+    async def _search_session_context_async(self, session_id: str, query_vector: List[float],
+                                          limit: int = 10) -> List[Dict[str, Any]]:
+        """Internal async method to search session context"""
+        conn = await self._get_async_connection()
+        async with conn.cursor() as cur:
+            # Convert list to numpy array for pgvector
+            vector_array = np.array(query_vector)
+            
+            await cur.execute("""
+                SELECT id, session_id, role, content, metadata, created_at,
+                       embedding <-> %s as distance
+                FROM conversation_sessions
+                WHERE session_id = %s AND embedding IS NOT NULL
+                ORDER BY distance
+                LIMIT %s
+            """, (vector_array, session_id, limit))
+            
+            columns = [desc[0] for desc in cur.description]
+            rows = await cur.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
     
     def close(self):
         """Close database connections"""

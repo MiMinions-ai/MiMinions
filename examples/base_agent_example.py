@@ -45,14 +45,27 @@ def example_database_agent():
     
     agent = BaseAgent(
         name="DatabaseAgent",
-        connection_string=connection_string
+        connection_string=connection_string,
+        session_id="demo_session_123"
     )
     
     # These would work with actual database tools
     try:
-        # agent.vector_search([1, 2, 3], "embeddings_table")
-        # agent.concept_query("{ users { name email } }")
-        print("Database tools would be available with proper connection")
+        # Remember and recall examples (would work with real database)
+        print("With a real database connection, you could:")
+        print("- agent.remember('Python is great!', embedding=[0.1, 0.2, 0.3])")
+        print("- agent.remember_search([0.1, 0.2, 0.3])")
+        print("- agent.recall(limit=10)")
+        print("- agent.recall_context([0.1, 0.2, 0.3])")
+        print("")
+        print("- agent.vector_search([1, 2, 3], 'embeddings_table')  # deprecated")
+        print("- agent.concept_query('{ users { name email } }')")
+        print(f"Current session: {agent.get_session()}")
+        
+        # Demonstrate session management
+        agent.set_session("new_session_456")
+        print(f"New session: {agent.get_session()}")
+        
     except Exception as e:
         print(f"Database tools not available: {e}")
     
@@ -94,11 +107,49 @@ async def example_async_agent():
     
     await agent.close_async()
 
+# Example 5: Memory and session management (demonstrating new remember/recall features)
+def example_memory_management():
+    """Demonstrate remember and recall functionality"""
+    print("\n=== Memory Management Example ===")
+    
+    # Create agent with session tracking
+    agent = BaseAgent(
+        name="MemoryAgent", 
+        session_id="conversation_demo"
+    )
+    
+    print(f"Agent session: {agent.get_session()}")
+    print("Agent representation:", repr(agent))
+    
+    # Demonstrate session switching
+    agent.set_session("new_conversation")
+    print(f"Switched to session: {agent.get_session()}")
+    
+    # Show what would work with database connection
+    print("\nWith database connection, you could:")
+    print("1. Remember information:")
+    print("   agent.remember('User likes Python', role='system')")
+    print("   agent.remember('How do I install packages?', role='user')")
+    print("   agent.remember('Use pip install <package>', role='assistant')")
+    print("")
+    print("2. Search remembered knowledge:")
+    print("   agent.remember_search([0.1, 0.2, 0.3])  # vector similarity")
+    print("")
+    print("3. Recall conversation:")
+    print("   agent.recall()  # get conversation history")
+    print("   agent.recall_context([0.1, 0.2, 0.3])  # get relevant context")
+    print("")
+    print("4. Cross-session operations:")
+    print("   agent.recall(session_id='other_conversation')")
+    
+    agent.close()
+
 if __name__ == "__main__":
     # Run the examples
     example_basic_agent()
     example_database_agent()
     example_search_agent()
+    example_memory_management()
     
     # Run async example
     import asyncio
