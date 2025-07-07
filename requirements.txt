@@ -1,0 +1,18 @@
+# system
+python-dotenv
+
+# agentic
+agno
+openai
+
+# database
+pgvector
+psycopg
+sqlalchemy
+pypdf
+
+# tools
+duckduckgo-search
+exa_py
+slack-sdk
+yfinance

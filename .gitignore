@@ -129,3 +129,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# github content removal
+.gitignore
+
+# working content removal
+*.ipynb
+.outputs/
