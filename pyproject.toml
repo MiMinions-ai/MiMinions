@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miminions"
-version = "0.1.0"
+version = "0.0.1"
 description = "MiMinions - A Python package for managing and interacting with AI assistants"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
 keywords = ["ai", "assistant", "automation", "productivity"]
 authors = [
-    {name = "MiMinions.ai", email = "support@miminions.ai"}
+    {name = "MiMinions.ai", email = "shengxio@miminions.ai"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
