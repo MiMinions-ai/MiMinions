@@ -22,12 +22,35 @@ Before using most CLI commands, you need to sign in:
 # Sign in
 miminions auth signin --username your_username --password your_password
 
+# Sign in with custom timeout (useful for slow networks)
+miminions auth signin --username your_username --password your_password --timeout 60
+
 # Check authentication status
 miminions auth status
 
 # Sign out
 miminions auth signout
 ```
+
+#### Public Access Mode
+
+MiMinions supports a public access mode that allows you to use basic CLI functionality without authentication:
+
+```bash
+# Enable public access mode
+miminions auth config --public-access true
+
+# Disable public access mode
+miminions auth config --public-access false
+
+# Configure authentication timeout (minimum 5 seconds)
+miminions auth config --auth-timeout 60
+
+# View current configuration
+miminions auth config
+```
+
+When public access is enabled, CLI commands will show a warning but allow basic functionality without requiring authentication. This is useful for testing or when authentication servers are unavailable.
 
 ### Agent Management
 

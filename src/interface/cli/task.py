@@ -6,7 +6,7 @@ import click
 import json
 import uuid
 from pathlib import Path
-from .auth import get_config_dir, is_authenticated
+from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 
 
 def get_tasks_file():
@@ -32,12 +32,17 @@ def save_tasks(tasks):
 
 
 def require_auth():
-    """Decorator to require authentication."""
+    """Decorator to require authentication or allow public access."""
     def decorator(f):
         def wrapper(*args, **kwargs):
             if not is_authenticated():
-                click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                return
+                if is_public_access_enabled():
+                    # Show warning but allow access
+                    click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
+                else:
+                    # Require authentication
+                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
+                    return
             return f(*args, **kwargs)
         return wrapper
     return decorator
