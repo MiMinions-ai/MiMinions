@@ -1,6 +1,19 @@
 # MiMinions
 
-A Python package for MiMinions - An agentic framework for multi-agent use with a powerful CLI interface.
+A Python package for MiMinions - an agentic framework for multi-agent systems with knowledge retrieval, concept relations, and web search capabilities.
+
+## Features
+
+- **BaseAgent**: Core agent class with tool management and session tracking
+- **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
+- **Vector Search**: Knowledge retrieval using pgvector for similarity search  
+- **GraphQL Queries**: Concept relation queries using pg_graphql
+- **Web Search**: Exploratory search using Google and DuckDuckGo
+- **Custom Tools**: Easy integration of custom tools and functions
+- **Session Management**: Conversation tracking and context management
+- **Async Support**: Full asynchronous operation support
+- **Graceful Dependencies**: Optional dependencies with graceful fallback
+
 
 ## Installation
 
@@ -10,173 +23,224 @@ You can install MiMinions using pip:
 pip install miminions
 ```
 
-## CLI Usage
-
-MiMinions provides a comprehensive command-line interface for managing AI agents, tasks, workflows, and knowledge.
-
-### Authentication
-
-Before using most CLI commands, you need to sign in:
+For full functionality, install optional dependencies:
 
 ```bash
-# Sign in
-miminions auth signin --username your_username --password your_password
-
-# Sign in with custom timeout (useful for slow networks)
-miminions auth signin --username your_username --password your_password --timeout 60
-
-# Check authentication status
-miminions auth status
-
-# Sign out
-miminions auth signout
+pip install miminions[full]
 ```
 
-#### Public Access Mode
-
-MiMinions supports a public access mode that allows you to use basic CLI functionality without authentication:
+Or install individual components:
 
 ```bash
-# Enable public access mode
-miminions auth config --public-access true
+# For database operations (pgvector, pg_graphql)
+pip install psycopg[binary] pgvector
 
-# Disable public access mode
-miminions auth config --public-access false
+# For web search
+pip install googlesearch-python duckduckgo-search
 
-# Configure authentication timeout (minimum 5 seconds)
-miminions auth config --auth-timeout 60
-
-# View current configuration
-miminions auth config
+# For async support
+pip install aiohttp
 ```
 
-When public access is enabled, CLI commands will show a warning but allow basic functionality without requiring authentication. This is useful for testing or when authentication servers are unavailable.
+## Quick Start
 
-### Agent Management
+### Basic Agent with Custom Tools
 
-Manage AI agents with the following commands:
+```python
+from miminions.agents import BaseAgent
 
-```bash
-# List all agents
-miminions agent list
+# Create an agent
+agent = BaseAgent(name="MyAgent")
 
-# Add a new agent
-miminions agent add --name "My Agent" --description "Agent description" --type "general"
+# Add a custom tool
+def calculator(operation, a, b):
+    if operation == "add":
+        return a + b
+    elif operation == "multiply":
+        return a * b
+    else:
+        return "Unknown operation"
 
-# Update an agent
-miminions agent update agent_id --name "New Name" --description "New description"
+agent.add_tool("calculator", calculator)
 
-# Set a goal for an agent
-miminions agent set-goal agent_id --goal "Complete the task"
+# Use the tool
+result = agent.execute_tool("calculator", "add", 5, 3)
+print(f"Result: {result}")  # Result: 8
 
-# Run an agent
-miminions agent run agent_id
-
-# Run an agent asynchronously
-miminions agent run agent_id --async
-
-# Remove an agent
-miminions agent remove agent_id
+agent.close()
 ```
 
-### Task Management
+### Agent with Database Operations
 
-Manage tasks with priorities and assignments:
+```python
+from miminions.agents import BaseAgent
 
-```bash
-# List all tasks
-miminions task list
+# Create agent with database connection
+agent = BaseAgent(
+    name="DatabaseAgent",
+    connection_string="postgresql://user:password@localhost/database"
+)
 
-# Add a new task
-miminions task add --title "My Task" --description "Task description" --priority "high" --agent "agent_id"
+# Remember information (stores with vector embedding)
+memory_id = agent.remember(
+    content="Python is a programming language",
+    embedding=[0.1, 0.2, 0.3],  # Optional: your embedding
+    role="system"
+)
 
-# Update a task
-miminions task update task_id --title "Updated Title" --status "in_progress"
+# Search remembered knowledge
+results = agent.remember_search(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=5
+)
 
-# Show task details
-miminions task show task_id
+# Recall conversation history
+history = agent.recall(limit=10)
 
-# Duplicate a task
-miminions task duplicate task_id --title "Duplicated Task"
+# Recall relevant context using vector similarity
+context = agent.recall_context(
+    query_vector=[0.1, 0.2, 0.3],
+    limit=5
+)
 
-# Remove a task
-miminions task remove task_id
+# Legacy vector search (deprecated - use remember_search instead)
+results = agent.vector_search(
+    query_vector=[0.1, 0.2, 0.3],
+    table="knowledge_base",
+    limit=5
+)
+
+# GraphQL query for concept relations
+concept_data = agent.concept_query("""
+    {
+        concepts {
+            id
+            name
+            relations {
+                target
+                type
+            }
+        }
+    }
+""")
+
+agent.close()
+
 ```
 
-### Workflow Management
+### Session Management
 
-Manage workflows with multiple agents:
+```python
+from miminions.agents import BaseAgent
 
-```bash
-# List all workflows
-miminions workflow list
+# Create agent with specific session
+agent = BaseAgent(
+    name="SessionAgent",
+    connection_string="postgresql://user:password@localhost/database",
+    session_id="conversation_123"
+)
 
-# Add a new workflow
-miminions workflow add --name "My Workflow" --description "Workflow description" --agents "agent1,agent2"
+# Remember user input
+agent.remember("Hello, how are you?", role="user")
 
-# Update a workflow
-miminions workflow update workflow_id --name "Updated Workflow"
+# Remember assistant response  
+agent.remember("I'm doing well, thank you!", role="assistant")
 
-# Show workflow details
-miminions workflow show workflow_id
+# Recall entire conversation
+conversation = agent.recall()
 
-# Start a workflow
-miminions workflow start workflow_id
+# Switch to different session
+agent.set_session("conversation_456")
 
-# Pause a workflow
-miminions workflow pause workflow_id
+# Recall from specific session
+history = agent.recall(session_id="conversation_123")
 
-# Stop a workflow
-miminions workflow stop workflow_id
-
-# Remove a workflow
-miminions workflow remove workflow_id
+agent.close()
 ```
 
-### Knowledge Management
+### Web Search Operations
 
-Manage knowledge with versioning and customization:
+```python
+from miminions.agents import BaseAgent
 
-```bash
-# List all knowledge entries
-miminions knowledge list
+agent = BaseAgent(name="SearchAgent")
 
-# Add a new knowledge entry
-miminions knowledge add --title "My Knowledge" --content "Knowledge content" --category "general" --tags "tag1,tag2"
+# Web search
+results = agent.web_search("Python machine learning tutorial", num_results=5)
 
-# Update a knowledge entry (creates new version)
-miminions knowledge update entry_id --title "Updated Title" --content "Updated content"
+# Parallel search across multiple engines
+parallel_results = await agent.parallel_search("AI research papers")
 
-# Show knowledge details
-miminions knowledge show entry_id
-
-# Show version history
-miminions knowledge version entry_id
-
-# Revert to a previous version
-miminions knowledge revert entry_id --version "1.0"
-
-# Customize knowledge format
-miminions knowledge customize entry_id --format "markdown"
-
-# Remove a knowledge entry
-miminions knowledge remove entry_id
+agent.close()
 ```
 
-### Getting Help
+### Asynchronous Operations
 
-Get help for any command:
+```python
+import asyncio
+from miminions.agents import BaseAgent
 
-```bash
-# General help
-miminions --help
+async def main():
+    agent = BaseAgent(name="AsyncAgent")
+    
+    # Add async tool
+    async def async_processor(data):
+        await asyncio.sleep(0.1)  # Simulate async work
+        return f"Processed: {data}"
+    
+    agent.add_tool("processor", async_processor)
+    
+    # Use async tool
+    result = await agent.execute_tool_async("processor", "test data")
+    print(result)
+    
+    # Async knowledge search
+    knowledge_results = await agent.knowledge_search_async(
+        query="artificial intelligence",
+        query_vector=[0.1, 0.2, 0.3],
+        include_web_search=True
+    )
+    
+    await agent.close_async()
 
-# Help for a specific command group
-miminions agent --help
-
-# Help for a specific command
-miminions agent add --help
+asyncio.run(main())
 ```
+
+## API Reference
+
+### BaseAgent Class
+
+#### Constructor
+```python
+BaseAgent(connection_string=None, max_workers=4, name="BaseAgent")
+```
+
+#### Tool Management
+- `add_tool(name, tool_func)`: Add custom tool
+- `remove_tool(name)`: Remove tool
+- `list_tools()`: List available tools
+- `has_tool(name)`: Check if tool exists
+- `execute_tool(name, *args, **kwargs)`: Execute tool (sync)
+- `execute_tool_async(name, *args, **kwargs)`: Execute tool (async)
+
+#### Database Operations
+- `vector_search(query_vector, table, ...)`: Vector similarity search
+- `concept_query(query, variables=None)`: GraphQL query
+- `vector_search_async(...)`: Async vector search
+- `concept_query_async(...)`: Async GraphQL query
+
+#### Web Search
+- `web_search(query, num_results=10, prefer_engine=None)`: Web search
+- `web_search_async(...)`: Async web search
+- `parallel_search(query, num_results=10)`: Parallel multi-engine search
+
+#### Knowledge Search
+- `knowledge_search(query, ...)`: Combined knowledge and web search
+- `knowledge_search_async(...)`: Async combined search
+
+## Examples
+
+See the `examples/` directory for more detailed usage examples.
 
 ## Development
 
@@ -186,6 +250,10 @@ To set up the development environment:
 2. Install development dependencies:
    ```bash
    pip install -e ".[dev]"
+   ```
+3. Run tests:
+   ```bash
+   pytest tests/
    ```
 
 ### Running Tests
