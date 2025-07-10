@@ -4,6 +4,10 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 
 ## Features
 
+- **Generic Tool System**: Create tools once, use with multiple AI frameworks
+- **Framework Adapters**: Support for LangChain, AutoGen, and AGNO
+- **Agent Support**: Simple agent class for managing tools
+- **Type Safety**: Full type annotation support
 - **BaseAgent**: Core agent class with tool management and session tracking
 - **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
 - **Vector Search**: Knowledge retrieval using pgvector for similarity search  
@@ -13,7 +17,6 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 - **Session Management**: Conversation tracking and context management
 - **Async Support**: Full asynchronous operation support
 - **Graceful Dependencies**: Optional dependencies with graceful fallback
-
 
 ## Installation
 
@@ -237,6 +240,48 @@ BaseAgent(connection_string=None, max_workers=4, name="BaseAgent")
 #### Knowledge Search
 - `knowledge_search(query, ...)`: Combined knowledge and web search
 - `knowledge_search_async(...)`: Async combined search
+
+#### Agentic Tooling System
+
+```python
+from miminions.tools import tool
+from miminions.agent import Agent
+
+# Create a tool
+@tool(name="calculator", description="Simple calculator")
+def calculate(operation: str, a: int, b: int) -> int:
+    if operation == "add":
+        return a + b
+    elif operation == "subtract":
+        return a - b
+    else:
+        return 0
+
+# Create an agent and add the tool
+agent = Agent("my_agent", "A helpful agent")
+agent.add_tool(calculate)
+
+# Use the tool
+result = agent.execute_tool("calculator", operation="add", a=5, b=3)
+print(result)  # 8
+
+# Convert to different frameworks
+langchain_tools = agent.to_langchain_tools()
+autogen_tools = agent.to_autogen_tools()
+agno_tools = agent.to_agno_tools()
+```
+
+## Framework Compatibility
+
+The generic tool system is inter-transferable with:
+
+- **LangChain**: Convert to/from LangChain BaseTool
+- **AutoGen**: Convert to/from AutoGen FunctionTool
+- **AGNO**: Convert to/from AGNO Function
+
+## Documentation
+
+See `TOOLS_README.md` for detailed documentation of the tool system.
 
 ## Examples
 
