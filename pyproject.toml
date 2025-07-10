@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "MiMinions - A Python package for managing and interacting with AI assistants"
 readme = "README.md"
 requires-python = ">=3.8"
+dependencies = [
+    "click>=8.0.0",
+]
 license = {file = "LICENSE"}
 keywords = ["ai", "assistant", "automation", "productivity"]
 authors = [
@@ -27,3 +30,6 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/miminions/miminions"
 Repository = "https://github.com/miminions/miminions.git"
+
+[project.scripts]
+miminions = "interface.cli:cli"

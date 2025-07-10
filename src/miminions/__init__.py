@@ -10,3 +10,16 @@ from .agent import Agent
 
 __version__ = "0.1.0"
 __all__ = ["GenericTool", "tool", "create_tool", "Agent"]
+
+try:
+    from .agents import BaseAgent
+    from .tools import GenericTool, tool, create_tool
+    from .agent import Agent
+
+    __version__ = "0.1.0"
+    __all__ = ["GenericTool", "tool", "create_tool", "Agent"]
+except ImportError:
+    # In case optional dependencies are not installed
+    __all__ = []
+
+__version__ = "0.1.0"
