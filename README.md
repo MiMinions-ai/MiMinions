@@ -14,6 +14,7 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 - **Async Support**: Full asynchronous operation support
 - **Graceful Dependencies**: Optional dependencies with graceful fallback
 
+
 ## Installation
 
 You can install MiMinions using pip:
@@ -124,6 +125,7 @@ concept_data = agent.concept_query("""
 """)
 
 agent.close()
+
 ```
 
 ### Session Management
@@ -253,6 +255,33 @@ To set up the development environment:
    ```bash
    pytest tests/
    ```
+
+### Running Tests
+
+The package includes comprehensive tests for the CLI:
+
+```bash
+# Run basic tests
+python src/tests/cli/test_runner.py
+
+# Run specific test files (if pytest is available)
+pytest src/tests/cli/test_auth.py
+pytest src/tests/cli/test_agent.py
+pytest src/tests/cli/test_e2e.py
+```
+
+### CLI Architecture
+
+The CLI is organized into modules:
+
+- `src/interface/cli/main.py` - Main CLI entry point
+- `src/interface/cli/auth.py` - Authentication commands
+- `src/interface/cli/agent.py` - Agent management commands
+- `src/interface/cli/task.py` - Task management commands
+- `src/interface/cli/workflow.py` - Workflow management commands
+- `src/interface/cli/knowledge.py` - Knowledge management commands
+
+Data is stored locally in JSON files in the `~/.miminions/` directory.
 
 ## License
 
