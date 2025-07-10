@@ -271,6 +271,51 @@ autogen_tools = agent.to_autogen_tools()
 agno_tools = agent.to_agno_tools()
 ```
 
+### Workspace Management
+
+Manage workspaces with nodes, rules, and state-based logic:
+
+```bash
+# List all workspaces
+miminions workspace list
+
+# Add a new workspace
+miminions workspace add --name "My Workspace" --description "Workspace description"
+
+# Add a sample workspace with example nodes and rules
+miminions workspace add --name "Demo Workspace" --description "Demo workspace" --sample
+
+# Show workspace details
+miminions workspace show workspace_id
+
+# Update a workspace
+miminions workspace update workspace_id --name "New Name" --description "New description"
+
+# Remove a workspace
+miminions workspace remove workspace_id
+
+# Add a node to a workspace
+miminions workspace add-node workspace_id --name "Node Name" --type agent --properties '{"key": "value"}'
+
+# Connect two nodes in a workspace
+miminions workspace connect-nodes workspace_id node1_id node2_id
+
+# Set workspace state
+miminions workspace set-state workspace_id --key "priority" --value "high"
+
+# Evaluate workspace logic and see applicable actions
+miminions workspace evaluate workspace_id
+```
+
+#### Workspace Features
+
+- **Network of Nodes**: Create and connect nodes of different types (agent, task, workflow, knowledge, custom)
+- **Rule System**: Define rules with conditions and actions that trigger based on workspace state
+- **Rule Inheritance**: Inherit rules from parent workspaces to create hierarchical rule sets
+- **State-based Logic**: Rules evaluate against current workspace state to determine applicable actions
+- **Node Types**: Support for agent, task, workflow, knowledge, and custom node types
+- **Connections**: Bidirectional connections between nodes to represent relationships
+
 ## Framework Compatibility
 
 The generic tool system is inter-transferable with:
@@ -325,6 +370,7 @@ The CLI is organized into modules:
 - `src/interface/cli/task.py` - Task management commands
 - `src/interface/cli/workflow.py` - Workflow management commands
 - `src/interface/cli/knowledge.py` - Knowledge management commands
+- `src/interface/cli/workspace.py` - Workspace management commands
 
 Data is stored locally in JSON files in the `~/.miminions/` directory.
 
