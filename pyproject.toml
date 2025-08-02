@@ -33,3 +33,6 @@ Repository = "https://github.com/miminions/miminions.git"
 
 [project.scripts]
 miminions = "interface.cli:cli"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

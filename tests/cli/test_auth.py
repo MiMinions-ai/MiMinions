@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 
-from interface.cli.auth import auth_cli, get_config_dir, get_auth_file, is_authenticated, save_auth_data, load_auth_data, clear_auth_data
+from miminions.interface.cli.auth import auth_cli, get_config_dir, get_auth_file, is_authenticated, save_auth_data, load_auth_data, clear_auth_data
 
 
 class TestAuthFunctions:
@@ -27,14 +27,14 @@ class TestAuthFunctions:
 
     def test_get_auth_file(self):
         """Test that get_auth_file returns correct path."""
-        with patch('interface.cli.auth.get_config_dir') as mock_get_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_get_config_dir:
             mock_get_config_dir.return_value = Path('/tmp/test_config')
             auth_file = get_auth_file()
             assert auth_file == Path('/tmp/test_config/auth.json')
 
     def test_is_authenticated_no_file(self):
         """Test is_authenticated returns False when no auth file exists."""
-        with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+        with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
             mock_auth_file = MagicMock()
             mock_auth_file.exists.return_value = False
             mock_get_auth_file.return_value = mock_auth_file
@@ -43,7 +43,7 @@ class TestAuthFunctions:
 
     def test_is_authenticated_empty_file(self):
         """Test is_authenticated returns False for empty auth file."""
-        with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+        with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
             mock_auth_file = MagicMock()
             mock_auth_file.exists.return_value = True
             mock_stat = MagicMock()
@@ -55,7 +55,7 @@ class TestAuthFunctions:
 
     def test_is_authenticated_valid_file(self):
         """Test is_authenticated returns True for valid auth file."""
-        with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+        with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
             mock_auth_file = MagicMock()
             mock_auth_file.exists.return_value = True
             mock_stat = MagicMock()
@@ -71,7 +71,7 @@ class TestAuthFunctions:
             tmp_path = tmp_file.name
         
         try:
-            with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+            with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
                 mock_get_auth_file.return_value = Path(tmp_path)
                 
                 test_data = {"username": "testuser", "authenticated": True}
@@ -86,7 +86,7 @@ class TestAuthFunctions:
 
     def test_load_auth_data_no_file(self):
         """Test load_auth_data returns None when no file exists."""
-        with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+        with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
             mock_auth_file = MagicMock()
             mock_auth_file.exists.return_value = False
             mock_get_auth_file.return_value = mock_auth_file
@@ -102,7 +102,7 @@ class TestAuthFunctions:
             tmp_path = tmp_file.name
         
         try:
-            with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+            with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
                 mock_get_auth_file.return_value = Path(tmp_path)
                 
                 loaded_data = load_auth_data()
@@ -116,7 +116,7 @@ class TestAuthFunctions:
             tmp_path = tmp_file.name
         
         try:
-            with patch('interface.cli.auth.get_auth_file') as mock_get_auth_file:
+            with patch('miminions.interface.cli.auth.get_auth_file') as mock_get_auth_file:
                 mock_get_auth_file.return_value = Path(tmp_path)
                 
                 # Verify file exists
@@ -140,7 +140,7 @@ class TestAuthCLI:
 
     def test_signin_success(self):
         """Test successful signin."""
-        with patch('interface.cli.auth.save_auth_data') as mock_save:
+        with patch('miminions.interface.cli.auth.save_auth_data') as mock_save:
             result = self.runner.invoke(auth_cli, ['signin', '--username', 'testuser', '--password', 'testpass'])
             
             assert result.exit_code == 0
@@ -161,9 +161,9 @@ class TestAuthCLI:
 
     def test_signout_authenticated(self):
         """Test signout when authenticated."""
-        with patch('interface.cli.auth.is_authenticated') as mock_is_auth:
-            with patch('interface.cli.auth.load_auth_data') as mock_load:
-                with patch('interface.cli.auth.clear_auth_data') as mock_clear:
+        with patch('miminions.interface.cli.auth.is_authenticated') as mock_is_auth:
+            with patch('miminions.interface.cli.auth.load_auth_data') as mock_load:
+                with patch('miminions.interface.cli.auth.clear_auth_data') as mock_clear:
                     mock_is_auth.return_value = True
                     mock_load.return_value = {"username": "testuser"}
                     
@@ -175,7 +175,7 @@ class TestAuthCLI:
 
     def test_signout_not_authenticated(self):
         """Test signout when not authenticated."""
-        with patch('interface.cli.auth.is_authenticated') as mock_is_auth:
+        with patch('miminions.interface.cli.auth.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             
             result = self.runner.invoke(auth_cli, ['signout'])
@@ -185,8 +185,8 @@ class TestAuthCLI:
 
     def test_status_authenticated(self):
         """Test status when authenticated."""
-        with patch('interface.cli.auth.is_authenticated') as mock_is_auth:
-            with patch('interface.cli.auth.load_auth_data') as mock_load:
+        with patch('miminions.interface.cli.auth.is_authenticated') as mock_is_auth:
+            with patch('miminions.interface.cli.auth.load_auth_data') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = {"username": "testuser"}
                 
@@ -197,7 +197,7 @@ class TestAuthCLI:
 
     def test_status_not_authenticated(self):
         """Test status when not authenticated."""
-        with patch('interface.cli.auth.is_authenticated') as mock_is_auth:
+        with patch('miminions.interface.cli.auth.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             
             result = self.runner.invoke(auth_cli, ['status'])
