@@ -8,12 +8,12 @@ setup(
     install_requires=[
         # Add your package dependencies here
     ],
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Sheng Xiong Ding",
+    author_email="shengxio@miminions.ai",
     description="A Python package for MiMinions",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/miminions",
+    url="https://github.com/miminions-ai/miminions",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
