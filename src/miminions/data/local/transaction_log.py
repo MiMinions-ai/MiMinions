@@ -307,7 +307,7 @@ class TransactionLog:
                                 break
                                 
                         except (json.JSONDecodeError, ValueError, TypeError) as e:
-                            print(f"Warning: Could not parse log line {line_num} in {log_file}: {e}")
+                            logger.warning(f"Could not parse log line {line_num} in {log_file}: {e}")
                             continue
                     
                     # Check limit
