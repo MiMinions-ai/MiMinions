@@ -298,7 +298,21 @@ class CSVFileHandler(FileHandler):
                                 first_row = rows[0]
                                 second_row = rows[1]
                                 
-                                # Heuristic: if first row is all strings and second row has numbers/dates
+                                # Heuristic: Determine if the first row of the CSV file is a header.
+                                # Logic:
+                                # - Assume the first row is a header if it contains strings, and the second row
+                                #   contains numbers or date-like values.
+                                # - This is based on the common structure of CSV files where headers are textual
+                                #   and data rows are numeric or date-based.
+                                # Assumptions:
+                                # - The first row contains only strings (e.g., column names).
+                                # - The second row contains values that can be parsed as numbers or dates.
+                                # Limitations:
+                                # - This heuristic may fail for CSV files with unconventional structures, such as:
+                                #   - Mixed data types in the first or second row.
+                                #   - Non-standard headers (e.g., numeric headers).
+                                # - It does not handle cases where the second row contains non-numeric, non-date
+                                #   values that are still valid data.
                                 has_header = True
                                 try:
                                     for i, (first, second) in enumerate(zip(first_row, second_row)):
