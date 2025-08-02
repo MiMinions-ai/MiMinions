@@ -12,9 +12,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .tools.database import DatabaseTools
 from .tools.search import SearchTools
+from ..core.common import ToolManager
 
 
-class BaseAgent:
+class BaseAgent(ToolManager):
     """
     Base agent with integrated tools for knowledge retrieval and exploration
     """
@@ -33,10 +34,10 @@ class BaseAgent:
             name: Agent name for identification
             session_id: Optional session ID for conversation tracking
         """
+        super().__init__()
         self.name = name
         self.max_workers = max_workers
         self.session_id = session_id or str(uuid.uuid4())
-        self._custom_tools: Dict[str, Callable] = {}
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         
         # Initialize database tools if connection string provided
@@ -63,18 +64,13 @@ class BaseAgent:
     
     def _execute_custom_tool(self, tool_name: str, *args, **kwargs) -> Any:
         """Internal method to execute custom tools"""
-        if tool_name not in self._custom_tools:
-            raise ValueError(f"Tool '{tool_name}' not found. Available tools: {list(self._custom_tools.keys())}")
-        
-        tool_func = self._custom_tools[tool_name]
-        return tool_func(*args, **kwargs)
+        return self.execute_tool(tool_name, *args, **kwargs)
     
     async def _execute_custom_tool_async(self, tool_name: str, *args, **kwargs) -> Any:
         """Internal async method to execute custom tools"""
-        if tool_name not in self._custom_tools:
-            raise ValueError(f"Tool '{tool_name}' not found. Available tools: {list(self._custom_tools.keys())}")
-        
-        tool_func = self._custom_tools[tool_name]
+        tool_func = self.get_tool(tool_name)
+        if tool_func is None:
+            raise ValueError(f"Tool '{tool_name}' not found. Available tools: {self.list_tools()}")
         
         # If tool is a coroutine, await it; otherwise run in executor
         if asyncio.iscoroutinefunction(tool_func):
@@ -82,48 +78,6 @@ class BaseAgent:
         else:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(self._executor, tool_func, *args, **kwargs)
-    
-    # Tool management methods
-    def add_tool(self, name: str, tool_func: Callable) -> None:
-        """
-        Add a custom tool to the agent
-        
-        Args:
-            name: Tool name
-            tool_func: Tool function (can be sync or async)
-        """
-        self._custom_tools[name] = tool_func
-    
-    def remove_tool(self, name: str) -> None:
-        """
-        Remove a custom tool from the agent
-        
-        Args:
-            name: Tool name to remove
-        """
-        if name in self._custom_tools:
-            del self._custom_tools[name]
-    
-    def list_tools(self) -> List[str]:
-        """
-        List all available custom tools
-        
-        Returns:
-            List of tool names
-        """
-        return list(self._custom_tools.keys())
-    
-    def has_tool(self, name: str) -> bool:
-        """
-        Check if a tool is available
-        
-        Args:
-            name: Tool name
-            
-        Returns:
-            True if tool exists
-        """
-        return name in self._custom_tools
     
     # Knowledge management methods - Remember and Recall
     def remember(self, content: str, embedding: Optional[List[float]] = None,
@@ -330,19 +284,7 @@ class BaseAgent:
         self._validate_search_tools()
         return self.search_tools.search(query, num_results, prefer_engine)
     
-    def execute_tool(self, tool_name: str, *args, **kwargs) -> Any:
-        """
-        Execute a custom tool
-        
-        Args:
-            tool_name: Name of the tool to execute
-            *args: Positional arguments for the tool
-            **kwargs: Keyword arguments for the tool
-            
-        Returns:
-            Tool execution result
-        """
-        return self._execute_custom_tool(tool_name, *args, **kwargs)
+
     
     # Legacy asynchronous methods for database operations (deprecated)
     async def vector_search_async(self, query_vector: List[float], table: str,

@@ -6,37 +6,39 @@ Provides a simple agent that can work with generic tools and different framework
 
 from typing import List, Dict, Any, Optional, Union
 from .tools import GenericTool
-from .tools.langchain_adapter import to_langchain_tool
-from .tools.autogen_adapter import to_autogen_tool
-from .tools.agno_adapter import to_agno_tool
+from .tools.adapter_factory import AdapterFactory
+from .core.common import ToolManager
 
 
-class Agent:
+class Agent(ToolManager):
     """Simple agent that can work with generic tools"""
     
     def __init__(self, name: str, description: str = ""):
+        super().__init__()
         self.name = name
         self.description = description
-        self.tools: List[GenericTool] = []
+        self.generic_tools: List[GenericTool] = []
     
     def add_tool(self, tool: GenericTool) -> None:
         """Add a generic tool to the agent"""
-        self.tools.append(tool)
+        self.generic_tools.append(tool)
+        # Also add to the base tool manager for execution
+        super().add_tool(tool.name, tool.run)
     
     def get_tool(self, name: str) -> Optional[GenericTool]:
         """Get a tool by name"""
-        for tool in self.tools:
+        for tool in self.generic_tools:
             if tool.name == name:
                 return tool
         return None
     
     def list_tools(self) -> List[str]:
         """List all available tool names"""
-        return [tool.name for tool in self.tools]
+        return [tool.name for tool in self.generic_tools]
     
     def get_tools_schema(self) -> List[Dict[str, Any]]:
         """Get schema for all tools"""
-        return [tool.to_dict() for tool in self.tools]
+        return [tool.to_dict() for tool in self.generic_tools]
     
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
         """Execute a tool by name"""
@@ -47,18 +49,18 @@ class Agent:
     
     def to_langchain_tools(self) -> List[Any]:
         """Convert all tools to LangChain format"""
-        return [to_langchain_tool(tool) for tool in self.tools]
+        return AdapterFactory.convert_all(self.generic_tools, "langchain")
     
     def to_autogen_tools(self) -> List[Any]:
         """Convert all tools to AutoGen format"""
-        return [to_autogen_tool(tool) for tool in self.tools]
+        return AdapterFactory.convert_all(self.generic_tools, "autogen")
     
     def to_agno_tools(self) -> List[Any]:
         """Convert all tools to AGNO format"""
-        return [to_agno_tool(tool) for tool in self.tools]
+        return AdapterFactory.convert_all(self.generic_tools, "agno")
     
     def __str__(self) -> str:
-        return f"Agent({self.name}, tools={len(self.tools)})"
+        return f"Agent({self.name}, tools={len(self.generic_tools)})"
     
     def __repr__(self) -> str:
         return self.__str__()

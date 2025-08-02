@@ -3,48 +3,7 @@ Agent management commands for MiMinions CLI.
 """
 
 import click
-import json
-from pathlib import Path
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
-
-
-def get_agents_file():
-    """Get the agents configuration file path."""
-    return get_config_dir() / "agents.json"
-
-
-def load_agents():
-    """Load agents from configuration."""
-    agents_file = get_agents_file()
-    if not agents_file.exists():
-        return {}
-    
-    with open(agents_file, "r") as f:
-        return json.load(f)
-
-
-def save_agents(agents):
-    """Save agents to configuration."""
-    agents_file = get_agents_file()
-    with open(agents_file, "w") as f:
-        json.dump(agents, f, indent=2)
-
-
-def require_auth():
-    """Decorator to require authentication or allow public access."""
-    def decorator(f):
-        def wrapper(*args, **kwargs):
-            if not is_authenticated():
-                if is_public_access_enabled():
-                    # Show warning but allow access
-                    click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-                else:
-                    # Require authentication
-                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                    return
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
+from .common import cli_config, cli_utils, require_auth
 
 
 @click.group()
@@ -57,7 +16,7 @@ def agent_cli():
 @require_auth()
 def list_agents():
     """List all agents."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     if not agents:
         click.echo("No agents configured.")
@@ -78,10 +37,10 @@ def list_agents():
 @require_auth()
 def add_agent(name, description, type):
     """Add a new agent."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     # Generate a simple ID based on name
-    agent_id = name.lower().replace(" ", "_")
+    agent_id = cli_utils.generate_id(name)
     
     if agent_id in agents:
         click.echo(f"Agent '{agent_id}' already exists.", err=True)
@@ -93,10 +52,10 @@ def add_agent(name, description, type):
         "type": type,
         "status": "inactive",
         "goal": None,
-        "created_at": click.get_current_context().meta.get("timestamp", "")
+        "created_at": cli_utils.format_timestamp()
     }
     
-    save_agents(agents)
+    cli_config.save_agents(agents)
     click.echo(f"Agent '{name}' added successfully with ID: {agent_id}")
 
 
@@ -108,7 +67,7 @@ def add_agent(name, description, type):
 @require_auth()
 def update_agent(agent_id, name, description, type):
     """Update an existing agent."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
@@ -123,7 +82,7 @@ def update_agent(agent_id, name, description, type):
     if type:
         agent["type"] = type
     
-    save_agents(agents)
+    cli_config.save_agents(agents)
     click.echo(f"Agent '{agent_id}' updated successfully")
 
 
@@ -133,14 +92,14 @@ def update_agent(agent_id, name, description, type):
 @require_auth()
 def remove_agent(agent_id):
     """Remove an agent."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
     
     del agents[agent_id]
-    save_agents(agents)
+    cli_config.save_agents(agents)
     click.echo(f"Agent '{agent_id}' removed successfully")
 
 
@@ -150,14 +109,14 @@ def remove_agent(agent_id):
 @require_auth()
 def set_goal(agent_id, goal):
     """Set a goal for an agent."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
     
     agents[agent_id]["goal"] = goal
-    save_agents(agents)
+    cli_config.save_agents(agents)
     click.echo(f"Goal set for agent '{agent_id}': {goal}")
 
 
@@ -167,7 +126,7 @@ def set_goal(agent_id, goal):
 @require_auth()
 def run_agent(agent_id, async_run):
     """Run an agent."""
-    agents = load_agents()
+    agents = cli_config.load_agents()
     
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
@@ -181,7 +140,7 @@ def run_agent(agent_id, async_run):
     
     # Update status
     agents[agent_id]["status"] = "running"
-    save_agents(agents)
+    cli_config.save_agents(agents)
     
     if async_run:
         click.echo(f"Agent '{agent_id}' started asynchronously")

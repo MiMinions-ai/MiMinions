@@ -9,54 +9,49 @@ import signal
 import time
 from pathlib import Path
 
+# Import common utilities
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from miminions.core.common import config_manager, auth_decorator
+
 
 def get_config_dir():
     """Get the configuration directory for MiMinions."""
-    config_dir = Path.home() / ".miminions"
-    config_dir.mkdir(exist_ok=True)
-    return config_dir
+    return config_manager.config_dir
 
 
 def get_config_file():
     """Get the configuration file path."""
-    return get_config_dir() / "config.json"
+    return config_manager.get_config_file("config.json")
 
 
 def get_config():
     """Get the configuration settings."""
-    config_file = get_config_file()
-    if not config_file.exists():
-        return {
-            "public_access": False,
-            "auth_timeout": 30
-        }
-    
-    with open(config_file, "r") as f:
-        return json.load(f)
+    return config_manager.load_json("config.json", {
+        "public_access": False,
+        "auth_timeout": 30
+    })
 
 
 def save_config(config):
     """Save configuration settings."""
-    config_file = get_config_file()
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=2)
+    config_manager.save_json("config.json", config)
 
 
 def get_auth_file():
     """Get the authentication file path."""
-    return get_config_dir() / "auth.json"
+    return config_manager.get_config_file("auth.json")
 
 
 def is_authenticated():
     """Check if user is authenticated."""
-    auth_file = get_auth_file()
-    return auth_file.exists() and auth_file.stat().st_size > 0
+    return auth_decorator._is_authenticated()
 
 
 def is_public_access_enabled():
     """Check if public access mode is enabled."""
-    config = get_config()
-    return config.get("public_access", False)
+    return auth_decorator._is_public_access_enabled()
 
 
 def get_auth_timeout():

@@ -14,21 +14,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule, NodeType, RulePriority
 
 
-def require_auth():
-    """Decorator to require authentication or allow public access."""
-    def decorator(f):
-        def wrapper(*args, **kwargs):
-            if not is_authenticated():
-                if is_public_access_enabled():
-                    # Show warning but allow access
-                    click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-                else:
-                    # Require authentication
-                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                    return
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
+# Import common utilities
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from miminions.core.common import auth_decorator
+
+require_auth = auth_decorator.require_auth
 
 
 def get_workspace_manager():
