@@ -32,7 +32,7 @@ Homepage = "https://github.com/miminions/miminions"
 Repository = "https://github.com/miminions/miminions.git"
 
 [project.scripts]
-miminions = "interface.cli:cli"
+miminions = "miminions.interface.cli:cli"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
