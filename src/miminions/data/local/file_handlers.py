@@ -237,6 +237,55 @@ class CSVFileHandler(FileHandler):
     def get_file_type(self) -> str:
         return "csv"
     
+    def _detect_csv_header(self, first_row: List[str], second_row: List[str]) -> bool:
+        """
+        Determine if the first row of a CSV file is a header using heuristic analysis.
+        
+        This method analyzes the first and second rows of a CSV file to determine
+        if the first row contains column headers. The heuristic is based on the
+        common structure of CSV files where headers are textual and data rows
+        contain numeric or date-like values.
+        
+        Logic:
+            - Assume the first row is a header if it contains strings, and the second row
+              contains numbers or date-like values.
+            - This is based on the common structure of CSV files where headers are textual
+              and data rows are numeric or date-based.
+        
+        Assumptions:
+            - The first row contains only strings (e.g., column names).
+            - The second row contains values that can be parsed as numbers or dates.
+        
+        Limitations:
+            - This heuristic may fail for CSV files with unconventional structures, such as:
+              - Mixed data types in the first or second row.
+              - Non-standard headers (e.g., numeric headers).
+            - It does not handle cases where the second row contains non-numeric, non-date
+              values that are still valid data.
+        
+        Args:
+            first_row: The first row of the CSV file
+            second_row: The second row of the CSV file
+            
+        Returns:
+            True if the first row appears to be a header, False otherwise
+        """
+        has_header = True
+        try:
+            for i, (first, second) in enumerate(zip(first_row, second_row)):
+                # Try to parse second row values as numbers
+                try:
+                    float(second)
+                except ValueError:
+                    # Not a number, check if it's a date-like string
+                    if not any(char.isdigit() for char in second):
+                        has_header = False
+                        break
+        except:
+            has_header = False
+        
+        return has_header
+    
     def can_handle(self, file_path: Union[str, Path], mime_type: Optional[str] = None) -> bool:
         file_path = Path(file_path)
         
@@ -251,6 +300,34 @@ class CSVFileHandler(FileHandler):
         return False
     
     def extract_metadata(self, file_path: Union[str, Path]) -> Dict[str, Any]:
+        """
+        Extract comprehensive metadata from a CSV file.
+        
+        This method analyzes the CSV file to determine its structure and properties
+        including encoding, delimiter, header presence, column information, and
+        row/column counts. It uses multiple detection strategies to handle various
+        CSV formats and encodings.
+        
+        The method attempts to:
+            - Detect the file encoding by trying multiple common encodings
+            - Identify the delimiter using CSV sniffer or common delimiters
+            - Determine if the first row contains headers using heuristic analysis
+            - Count rows and columns for data structure information
+            - Extract column names or generate default column names
+        
+        Args:
+            file_path: Path to the CSV file to analyze
+            
+        Returns:
+            Dictionary containing:
+                - encoding: Detected file encoding
+                - delimiter: Detected field delimiter
+                - has_header: Whether the file has a header row
+                - columns: List of column names or generated names
+                - row_count: Total number of data rows
+                - column_count: Number of columns
+                - error: Error message if analysis fails
+        """
         file_path = Path(file_path)
         
         metadata = {
@@ -298,34 +375,7 @@ class CSVFileHandler(FileHandler):
                                 first_row = rows[0]
                                 second_row = rows[1]
                                 
-                                # Heuristic: Determine if the first row of the CSV file is a header.
-                                # Logic:
-                                # - Assume the first row is a header if it contains strings, and the second row
-                                #   contains numbers or date-like values.
-                                # - This is based on the common structure of CSV files where headers are textual
-                                #   and data rows are numeric or date-based.
-                                # Assumptions:
-                                # - The first row contains only strings (e.g., column names).
-                                # - The second row contains values that can be parsed as numbers or dates.
-                                # Limitations:
-                                # - This heuristic may fail for CSV files with unconventional structures, such as:
-                                #   - Mixed data types in the first or second row.
-                                #   - Non-standard headers (e.g., numeric headers).
-                                # - It does not handle cases where the second row contains non-numeric, non-date
-                                #   values that are still valid data.
-                                has_header = True
-                                try:
-                                    for i, (first, second) in enumerate(zip(first_row, second_row)):
-                                        # Try to parse second row values as numbers
-                                        try:
-                                            float(second)
-                                        except ValueError:
-                                            # Not a number, check if it's a date-like string
-                                            if not any(char.isdigit() for char in second):
-                                                has_header = False
-                                                break
-                                except:
-                                    has_header = False
+                                has_header = self._detect_csv_header(first_row, second_row)
                                 
                                 metadata['has_header'] = has_header
                                 
@@ -426,11 +476,23 @@ class FileHandlerRegistry:
         return None
     
     def get_supported_extensions(self) -> List[str]:
-        """Get list of all supported file extensions."""
+        """
+        Get list of all supported file extensions.
+        
+        This method determines supported file extensions by testing each handler
+        with sample files. It creates temporary test files with known extensions
+        and checks if the corresponding handler can process them.
+        
+        Note: This is a simplified implementation. In a production environment,
+        handlers should expose their supported extensions directly for better
+        performance and accuracy.
+        
+        Returns:
+            List of supported file extensions (e.g., ['.txt', '.md', '.csv'])
+        """
         extensions = set()
         
-        # This is a simple implementation - in practice you'd want handlers
-        # to expose their supported extensions
+        # Test each handler with sample files to determine supported extensions
         test_files = {
             '.txt': TextFileHandler(),
             '.md': MarkdownFileHandler(),

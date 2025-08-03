@@ -100,7 +100,13 @@ class TransactionLog:
             counter += 1
     
     def _rotate_log_if_needed(self) -> None:
-        """Rotate log file if it exceeds size limit."""
+        """
+        Rotate log file if it exceeds size limit.
+        
+        This method checks if the current log file has exceeded the maximum size limit.
+        If so, it moves the current log to a historical location with an incremented
+        filename and creates a new log file. The rotation event is also logged.
+        """
         if not self.current_log_file.exists():
             return
         
@@ -121,7 +127,16 @@ class TransactionLog:
             ))
     
     def _write_transaction_record(self, record: TransactionRecord) -> None:
-        """Write a transaction record to the current log file."""
+        """
+        Write a transaction record to the current log file.
+        
+        This method ensures the log file is rotated if needed, then appends
+        the transaction record as a JSON line to the current log file.
+        The file is flushed immediately to ensure data persistence.
+        
+        Args:
+            record: The transaction record to write to the log
+        """
         self._rotate_log_if_needed()
         
         with open(self.current_log_file, 'a', encoding='utf-8') as f:
@@ -247,7 +262,11 @@ class TransactionLog:
                         end_time: Optional[str] = None,
                         limit: Optional[int] = None) -> List[TransactionRecord]:
         """
-        Query transaction records.
+        Query transaction records with optional filtering.
+        
+        This method reads from all available log files (current and historical)
+        and applies the specified filters to return matching transaction records.
+        The results are sorted by timestamp with newest records first.
         
         Args:
             file_id: Filter by file ID
@@ -258,7 +277,7 @@ class TransactionLog:
             limit: Maximum number of records to return
             
         Returns:
-            List of matching transaction records
+            List of matching transaction records sorted by timestamp (newest first)
         """
         records = []
         
@@ -356,10 +375,20 @@ class TransactionLog:
     
     def get_log_stats(self) -> Dict[str, Any]:
         """
-        Get transaction log statistics.
+        Get comprehensive transaction log statistics.
+        
+        This method analyzes all log files (current and historical) to provide
+        detailed statistics including file counts, sizes, record counts, and
+        transaction type distributions.
         
         Returns:
-            Dictionary with log statistics
+            Dictionary containing:
+                - total_log_files: Number of log files
+                - total_size_bytes: Total size in bytes
+                - total_size_mb: Total size in megabytes
+                - total_records: Total number of transaction records
+                - transaction_counts: Dictionary of transaction type counts
+                - current_log_file: Path to current log file
         """
         # Get all log files
         log_files = [self.current_log_file]
