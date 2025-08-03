@@ -9,7 +9,7 @@ import os
 # Add src to path for importing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
 
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 
 class TestBaseAgent:

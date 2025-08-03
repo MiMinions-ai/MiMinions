@@ -4,7 +4,7 @@ Example usage of MiMinions BaseAgent
 This example demonstrates how to use the BaseAgent class with various tools.
 """
 
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 # Example 1: Basic agent with custom tools
 def example_basic_agent():

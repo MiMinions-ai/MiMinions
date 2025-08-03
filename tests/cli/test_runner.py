@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 def run_basic_test():
     """Run a basic test to verify the CLI works."""
     try:
-        from interface.cli.main import cli
+        from miminions.interface.cli.main import cli
         from click.testing import CliRunner
         from unittest.mock import patch
         import tempfile
@@ -30,7 +30,7 @@ def run_basic_test():
         assert 'MiMinions CLI' in result.output
         
         # Test auth status when not signed in (with isolated config)
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = config_dir
             result = runner.invoke(cli, ['auth', 'status'])
             assert result.exit_code == 0
@@ -48,14 +48,14 @@ def run_basic_test():
 def run_auth_test():
     """Run authentication tests."""
     try:
-        from interface.cli.auth import auth_cli
+        from miminions.interface.cli.auth import auth_cli
         from click.testing import CliRunner
         from unittest.mock import patch
         
         runner = CliRunner()
         
         # Test signin
-        with patch('interface.cli.auth.save_auth_data') as mock_save:
+        with patch('miminions.interface.cli.auth.save_auth_data') as mock_save:
             result = runner.invoke(auth_cli, ['signin', '--username', 'testuser', '--password', 'testpass'])
             assert result.exit_code == 0
             assert 'Successfully signed in as testuser' in result.output
@@ -71,22 +71,22 @@ def run_auth_test():
 def run_agent_test():
     """Run agent management tests."""
     try:
-        from interface.cli.agent import agent_cli
+        from miminions.interface.cli.agent import agent_cli
         from click.testing import CliRunner
         from unittest.mock import patch
         
         runner = CliRunner()
         
         # Test list agents when not authenticated
-        with patch('interface.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.interface.cli.agent.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             result = runner.invoke(agent_cli, ['list'])
             assert result.exit_code == 0
             assert 'Please sign in first' in result.output
         
         # Test list agents when authenticated but no agents
-        with patch('interface.cli.agent.is_authenticated') as mock_is_auth:
-            with patch('interface.cli.agent.load_agents') as mock_load:
+        with patch('miminions.interface.cli.agent.is_authenticated') as mock_is_auth:
+            with patch('miminions.interface.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = {}
                 result = runner.invoke(agent_cli, ['list'])

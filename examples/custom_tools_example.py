@@ -5,7 +5,7 @@ This example demonstrates how to create and manage custom tools
 with the BaseAgent for extending functionality.
 """
 
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 import asyncio
 import json
 import math
