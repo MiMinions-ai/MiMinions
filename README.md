@@ -50,7 +50,7 @@ pip install aiohttp
 ### Basic Agent with Custom Tools
 
 ```python
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 # Create an agent
 agent = BaseAgent(name="MyAgent")
@@ -76,7 +76,7 @@ agent.close()
 ### Agent with Database Operations
 
 ```python
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 # Create agent with database connection
 agent = BaseAgent(
@@ -134,7 +134,7 @@ agent.close()
 ### Session Management
 
 ```python
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 # Create agent with specific session
 agent = BaseAgent(
@@ -164,7 +164,7 @@ agent.close()
 ### Web Search Operations
 
 ```python
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 agent = BaseAgent(name="SearchAgent")
 
@@ -181,7 +181,7 @@ agent.close()
 
 ```python
 import asyncio
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 async def main():
     agent = BaseAgent(name="AsyncAgent")
