@@ -5,11 +5,14 @@ Records all read, write, and removal operations for audit trail and consistency.
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TextIO
 from dataclasses import dataclass, asdict
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionType(Enum):
