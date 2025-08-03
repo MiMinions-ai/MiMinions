@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 from click.testing import CliRunner
 
-from interface.cli.main import cli
+from miminions.interface.cli.main import cli
 
 
 class TestCLIEndToEnd:
@@ -31,7 +31,7 @@ class TestCLIEndToEnd:
 
     def test_complete_workflow(self):
         """Test a complete workflow from authentication to agent execution."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Step 1: Check initial status (should be not authenticated)
@@ -153,7 +153,7 @@ class TestCLIEndToEnd:
 
     def test_authentication_required_workflow(self):
         """Test that commands requiring authentication are properly blocked."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Try to list agents without authentication
@@ -182,7 +182,7 @@ class TestCLIEndToEnd:
 
     def test_data_persistence_workflow(self):
         """Test that data persists across CLI invocations."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Sign in and add an agent
@@ -217,7 +217,7 @@ class TestCLIEndToEnd:
 
     def test_error_handling_workflow(self):
         """Test proper error handling in various scenarios."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Sign in first
@@ -263,7 +263,7 @@ class TestCLIEndToEnd:
 
     def test_task_management_workflow(self):
         """Test complete task management workflow."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Sign in
@@ -317,7 +317,7 @@ class TestCLIEndToEnd:
 
     def test_knowledge_versioning_workflow(self):
         """Test knowledge versioning workflow."""
-        with patch('interface.cli.auth.get_config_dir') as mock_config_dir:
+        with patch('miminions.interface.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = self.config_dir
             
             # Sign in

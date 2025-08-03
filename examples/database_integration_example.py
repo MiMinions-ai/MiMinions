@@ -7,7 +7,7 @@ vector search, GraphQL queries, and knowledge management.
 Note: This example requires actual PostgreSQL with pgvector and pg_graphql extensions.
 """
 
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 import asyncio
 
 
@@ -238,7 +238,7 @@ def complete_database_example():
     
     example_code = '''
 import asyncio
-from miminions.agents import BaseAgent
+from miminions.agent import BaseAgent
 
 async def main():
     # Initialize agent with database
