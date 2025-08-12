@@ -1,0 +1,83 @@
+name: Question or Discussion
+description: Ask a question or start a discussion about MiMinions
+title: "[Question]: "
+labels: ["question"]
+projects: ["MiMinions-ai/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in MiMinions! Please ask your question or start a discussion.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: dropdown
+    id: question-type
+    attributes:
+      label: Question Type
+      description: What type of question is this?
+      options:
+        - Usage Question
+        - Installation Help
+        - Configuration Help
+        - Best Practices
+        - Architecture Discussion
+        - Integration Question
+        - Performance Question
+        - General Discussion
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: Please describe your question in detail
+      placeholder: What would you like to know?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context about your use case or setup
+      placeholder: What are you trying to accomplish?
+    validations:
+      required: false
+  - type: textarea
+    id: attempted-solutions
+    attributes:
+      label: What have you tried?
+      description: Have you tried any solutions or searched for answers?
+      placeholder: Describe what you've already attempted
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: MiMinions Version
+      description: What version of MiMinions are you using (if applicable)?
+      placeholder: ex. 1.0.0
+    validations:
+      required: false
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any other relevant information
+      placeholder: Anything else that might be helpful
+    validations:
+      required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://example.com)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
