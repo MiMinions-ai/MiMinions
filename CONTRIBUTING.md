@@ -21,307 +21,115 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ## Getting Started
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/your-username/MiMinions.git
-   cd MiMinions
-   ```
-3. **Set up the development environment** (see below)
-4. **Create a branch** for your changes:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+Fork the repository on GitHub and clone your fork locally. Set up the development environment using the instructions below. Create a branch for your changes using `git checkout -b feature/your-feature-name`. Make sure to follow our coding standards and testing guidelines.
 
 ## Development Environment
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package installer)
-- Git
+You need Python 3.8 or higher, pip, and Git installed on your system.
 
 ### Setup
 
-1. **Install development dependencies**:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-2. **Install optional dependencies** for full functionality:
-   ```bash
-   pip install -e ".[full]"
-   ```
-
-3. **Verify the installation**:
-   ```bash
-   python -c "import miminions; print('MiMinions installed successfully')"
-   ```
-
-### Database Setup (Optional)
-
-For testing database features:
-
-1. **Install PostgreSQL** with pgvector extension
-2. **Set up a test database**:
-   ```bash
-   createdb miminions_test
-   ```
-3. **Set environment variables**:
-   ```bash
-   export MIMINIONS_TEST_DB="postgresql://user:password@localhost/miminions_test"
-   ```
+Install development dependencies with `pip install -e ".[dev]"` and optional dependencies with `pip install -e ".[full]"`. Verify the installation by running `python -c "import miminions; print('MiMinions installed successfully')"`. For database testing, install PostgreSQL with pgvector extension and set up a test database with the appropriate environment variables.
 
 ## How to Contribute
 
 ### Types of Contributions
 
-We welcome various types of contributions:
-
-- **Bug fixes**: Fix issues and improve stability
-- **New features**: Add new functionality to the framework
-- **Documentation**: Improve or add documentation
-- **Tests**: Add or improve test coverage
-- **Performance**: Optimize code performance
-- **Examples**: Add usage examples and tutorials
+We welcome bug fixes, new features, documentation improvements, tests, performance optimizations, and usage examples. Check existing issues first to see if your idea is already being worked on. For large features, open an issue to discuss your proposed changes before starting work.
 
 ### Contribution Process
 
-1. **Check existing issues** to see if your idea is already being worked on
-2. **Open an issue** to discuss your proposed changes (for large features)
-3. **Fork and create a branch** for your work
-4. **Make your changes** following our guidelines
-5. **Test your changes** thoroughly
-6. **Submit a pull request** with a clear description
+Fork the repository and create a branch for your work. Make your changes following our guidelines and test them thoroughly. Submit a pull request with a clear description of your changes. Ensure your code follows our coding standards and includes appropriate tests.
 
 ## Submitting Issues
 
-Before submitting an issue:
-
-1. **Search existing issues** to avoid duplicates
-2. **Use our issue templates** for bug reports, feature requests, or questions
-3. **Provide detailed information** including:
-   - Python version
-   - Operating system
-   - MiMinions version
-   - Steps to reproduce (for bugs)
-   - Clear description of expected vs actual behavior
+Before submitting an issue, search existing issues to avoid duplicates. Use our issue templates for bug reports, feature requests, or questions. Provide detailed information including Python version, operating system, MiMinions version, and steps to reproduce for bugs. Include clear descriptions of expected vs actual behavior.
 
 ### Bug Reports
 
-Use the bug report template and include:
-
-- Clear, descriptive title
-- Steps to reproduce the issue
-- Expected behavior
-- Actual behavior
-- Error messages or stack traces
-- System information
+Use the bug report template with a clear, descriptive title. Include steps to reproduce the issue, expected behavior, actual behavior, error messages or stack traces, and system information.
 
 ### Feature Requests
 
-Use the feature request template and include:
-
-- Clear description of the feature
-- Use case and motivation
-- Proposed implementation (if you have ideas)
-- Alternative solutions considered
+Use the feature request template with a clear description of the feature, use case and motivation, proposed implementation if you have ideas, and alternative solutions considered.
 
 ## Submitting Pull Requests
 
 ### Before You Submit
 
-1. **Ensure your code follows our coding standards**
-2. **Run the test suite** and ensure all tests pass
-3. **Add tests** for new functionality
-4. **Update documentation** as needed
-5. **Check that your changes don't break existing functionality**
+Ensure your code follows our coding standards and run the test suite to make sure all tests pass. Add tests for new functionality and update documentation as needed. Check that your changes don't break existing functionality.
 
 ### Pull Request Guidelines
 
-1. **Use our PR template** and fill out all relevant sections
-2. **Keep changes focused** - one feature or fix per PR
-3. **Write clear commit messages** following conventional commit format
-4. **Include tests** for new functionality
-5. **Update documentation** for user-facing changes
-6. **Link related issues** in the PR description
+Use our PR template and fill out all relevant sections. Keep changes focused with one feature or fix per PR. Write clear commit messages following conventional commit format and include tests for new functionality. Update documentation for user-facing changes and link related issues in the PR description.
 
 ### Commit Message Format
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
-
-Examples:
-```
-feat(agents): add support for custom tool validation
-fix(database): resolve connection timeout issue
-docs(readme): update installation instructions
-```
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. Use types like `feat` for new features, `fix` for bug fixes, `docs` for documentation changes, `style` for code style changes, `refactor` for code refactoring, `test` for adding or updating tests, and `chore` for maintenance tasks.
 
 ## Coding Standards
 
 ### Python Style
 
-We follow [PEP 8](https://pep8.org/) with some modifications:
-
-- **Line length**: 88 characters (Black formatter default)
-- **Import organization**: Use `isort` for consistent import ordering
-- **Type hints**: Use type hints for public APIs
-- **Docstrings**: Use Google-style docstrings
+We follow [PEP 8](https://pep8.org/) with a line length of 88 characters (Black formatter default). Use `isort` for consistent import ordering and type hints for public APIs. Use Google-style docstrings for documentation.
 
 ### Code Quality Tools
 
-We use several tools to maintain code quality:
-
-- **Black**: Code formatting
-- **isort**: Import sorting
-- **flake8**: Linting
-- **mypy**: Type checking
-- **pytest**: Testing
-
-Run these tools before submitting:
-
-```bash
-# Format code
-black src/ tests/
-
-# Sort imports
-isort src/ tests/
-
-# Lint code
-flake8 src/ tests/
-
-# Type check
-mypy src/
-
-# Run tests
-pytest tests/
-```
+We use Black for code formatting, isort for import sorting, flake8 for linting, mypy for type checking, and pytest for testing. Run these tools before submitting: `black src/ tests/`, `isort src/ tests/`, `flake8 src/ tests/`, `mypy src/`, and `pytest tests/`.
 
 ### Best Practices
 
-- **Write clear, readable code** with meaningful variable names
-- **Add docstrings** to all public functions and classes
-- **Use type hints** for function parameters and return values
-- **Handle exceptions** appropriately
-- **Write defensive code** with proper validation
-- **Follow the existing code patterns** in the project
+Write clear, readable code with meaningful variable names and add docstrings to all public functions and classes. Use type hints for function parameters and return values. Handle exceptions appropriately and write defensive code with proper validation. Follow the existing code patterns in the project.
 
 ## Testing Guidelines
 
 ### Test Structure
 
-- Tests are located in the `tests/` directory
-- Mirror the source structure in test organization
-- Use descriptive test names that explain what is being tested
+Tests are located in the `tests/` directory and should mirror the source structure in organization. Use descriptive test names that explain what is being tested.
 
 ### Writing Tests
 
-1. **Unit tests**: Test individual functions and classes
-2. **Integration tests**: Test component interactions
-3. **End-to-end tests**: Test complete workflows
-
-### Test Requirements
-
-- **All new features** must include tests
-- **Bug fixes** should include regression tests
-- **Tests should be isolated** and not depend on external services
-- **Use mocking** for external dependencies
-- **Aim for high test coverage** (target: 80%+)
+Write unit tests for individual functions and classes, integration tests for component interactions, and end-to-end tests for complete workflows. All new features must include tests, and bug fixes should include regression tests. Tests should be isolated and not depend on external services, using mocking for external dependencies. Aim for high test coverage (target: 80%+).
 
 ### Running Tests
 
-```bash
-# Run all tests
-pytest tests/
-
-# Run specific test file
-pytest tests/test_agents.py
-
-# Run with coverage
-pytest --cov=miminions tests/
-
-# Run tests in parallel
-pytest -n auto tests/
-```
+Run all tests with `pytest tests/`, specific test files with `pytest tests/test_agents.py`, tests with coverage using `pytest --cov=miminions tests/`, and tests in parallel with `pytest -n auto tests/`.
 
 ## Documentation
 
 ### Types of Documentation
 
-1. **Code documentation**: Docstrings and inline comments
-2. **API documentation**: Generated from docstrings
-3. **User guides**: README and tutorials
-4. **Examples**: Working code examples
+Include code documentation with docstrings and inline comments, API documentation generated from docstrings, user guides in README and tutorials, and working code examples.
 
 ### Documentation Standards
 
-- **Use clear, concise language**
-- **Include code examples** where helpful
-- **Keep documentation up-to-date** with code changes
-- **Use proper Markdown formatting**
+Use clear, concise language and include code examples where helpful. Keep documentation up-to-date with code changes and use proper Markdown formatting.
 
 ### Building Documentation
 
-```bash
-# Generate API documentation (if applicable)
-sphinx-build -b html docs/ docs/_build/html/
-```
+Generate API documentation if applicable using `sphinx-build -b html docs/ docs/_build/html/`.
 
 ## Community and Support
 
 ### Getting Help
 
-- **GitHub Discussions**: For questions and community discussion
-- **Issues**: For bug reports and feature requests
-- **Documentation**: Check README and docstrings first
-
-### Communication Guidelines
-
-- **Be respectful** and inclusive
-- **Be patient** with responses
-- **Provide context** when asking questions
-- **Help others** when you can
+Use GitHub Discussions for questions and community discussion, Issues for bug reports and feature requests, and check documentation first. Be respectful and inclusive in communications, patient with responses, and provide context when asking questions.
 
 ### Recognition
 
-We recognize contributors in several ways:
-
-- **Contributors list** in README
-- **Release notes** mentioning significant contributions
-- **GitHub contributor graph**
+We recognize contributors through the contributors list in README, release notes mentioning significant contributions, and the GitHub contributor graph.
 
 ## Release Process
 
 ### Versioning
 
-We follow [Semantic Versioning](https://semver.org/):
-
-- **Major** (X.0.0): Breaking changes
-- **Minor** (x.Y.0): New features, backwards compatible
-- **Patch** (x.y.Z): Bug fixes, backwards compatible
+We follow [Semantic Versioning](https://semver.org/) with major releases for breaking changes, minor releases for new features that are backwards compatible, and patch releases for bug fixes that are backwards compatible.
 
 ### Release Cycle
 
-- **Patch releases**: As needed for critical bugs
-- **Minor releases**: Monthly or bi-monthly
-- **Major releases**: When breaking changes are needed
+Patch releases are made as needed for critical bugs, minor releases monthly or bi-monthly, and major releases when breaking changes are needed.
 
 ## License
 
@@ -329,11 +137,6 @@ By contributing to MiMinions, you agree that your contributions will be licensed
 
 ## Questions?
 
-If you have questions about contributing, please:
-
-1. Check this document and the README
-2. Search existing issues and discussions
-3. Open a new discussion or issue
-4. Reach out to the maintainers
+If you have questions about contributing, check this document and the README first, search existing issues and discussions, open a new discussion or issue, or reach out to the maintainers.
 
 Thank you for contributing to MiMinions! 🎉
