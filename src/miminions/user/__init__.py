@@ -1,24 +1,18 @@
 """
 User module for MiMinions
 
-This module provides user management capabilities including authentication,
-validation, personalization, and data handling for the MiMinions system.
+This module provides simple user management capabilities including basic CRUD operations
+and API key management for the MiMinions system.
 """
 
 try:
-    from .model import User, UserProfile, UserPreferences
+    from .model import User
     from .controller import UserController
-    from .auth import UserAuthenticator
-    from .validator import UserValidator
 
     __version__ = "0.1.0"
     __all__ = [
-        "User", 
-        "UserProfile", 
-        "UserPreferences", 
-        "UserController", 
-        "UserAuthenticator", 
-        "UserValidator"
+        "User",
+        "UserController"
     ]
 
 except ImportError:
