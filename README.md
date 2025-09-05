@@ -5,13 +5,8 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 ## Features
 
 - **Generic Tool System**: Create tools once, use with multiple AI frameworks
-- **Framework Adapters**: Support for LangChain, AutoGen, and AGNO
 - **Agent Support**: Simple agent class for managing tools
-- **Type Safety**: Full type annotation support
-- **BaseAgent**: Core agent class with tool management and session tracking
 - **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
-- **Vector Search**: Knowledge retrieval using pgvector for similarity search  
-- **GraphQL Queries**: Concept relation queries using pg_graphql
 - **Web Search**: Exploratory search using Google and DuckDuckGo
 - **Custom Tools**: Easy integration of custom tools and functions
 - **Session Management**: Conversation tracking and context management
