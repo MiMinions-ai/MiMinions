@@ -6,6 +6,7 @@ Thank you for your interest in contributing to MiMinions! We welcome contributio
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
+- [Branching Strategy](#branching-strategy)
 - [Development Environment](#development-environment)
 - [How to Contribute](#how-to-contribute)
 - [Submitting Issues](#submitting-issues)
@@ -32,6 +33,43 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
    ```bash
    git checkout -b feature/your-feature-name
    ```
+
+## 🌿 Branch Strategy
+
+### Branch Naming Convention
+
+We follow a structured branch naming convention:
+
+```bash
+<type>/<ticket-number>-<description>
+```
+
+#### Branch Types
+
+|Branch|Name|Notes|
+|---|---|---|
+|Stable|master|Accepts merges from Release and Hotfix branches only.|
+|Development|develop|Accepts merges from Feature/Bugfix, Release and Hotfix|
+|Features/Bugfix|feat-* / bug-*|Always branch off HEAD of develop|
+|Hotfix|hotfix-*|Always branch off master. Merges back into master and develop.|
+|Release|release-*|Always branches off develop. Last minute changes for release.|
+
+#### Examples
+
+```bash
+feature/PYM-001-stripe-payment-integration
+bugfix/PYM-015-webhook-signature-validation
+hotfix/PYM-020-payment-failure-handling
+```
+
+### Branch Rules
+
+1. **Always create from main/master/develop**: `git checkout main && git pull origin main`
+2. **Use descriptive names**: Include ticket number and brief description
+3. **Keep branches focused**: One feature/fix per branch
+4. **Keep branches short-lived**: Merge within 1-2 weeks
+
+
 
 ## Development Environment
 
