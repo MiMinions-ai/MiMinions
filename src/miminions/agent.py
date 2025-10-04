@@ -1,11 +1,11 @@
 """
-Simple Agent Module
+Agent Module
 
 Provides a simple agent that can work with generic tools and different frameworks.
 """
 
 from typing import List, Dict, Any, Optional, Union
-from ..tools import GenericTool
+from .tools import GenericTool
 
 class Agent:
     """Simple agent that can work with generic tools"""
@@ -45,4 +45,4 @@ class Agent:
         return f"Agent({self.name}, tools={len(self.tools)})"
     
     def __repr__(self) -> str:
-        return self.__str__() 
+        return self.__str__()
