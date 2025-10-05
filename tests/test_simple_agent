@@ -1,0 +1,48 @@
+"""
+Basic tests for MiMinions simple agent module
+"""
+
+import pytest
+import sys
+import os
+
+# Add src to path for importing
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+
+from miminions.agent.simple_agent import Agent
+
+class TestBaseAgent:
+    """Test BaseAgent functionality"""
+    
+    def test_base_agent_init(self):
+        """Test BaseAgent initialization"""
+        agent = Agent(name="test_agent")
+        assert agent.name == "test_agent"
+        assert len(agent.list_tools()) == 0
+        agent.close()
+    
+    def test_tool_management(self):
+        """Test custom tool management"""
+        agent = Agent(name="test_agent")
+        
+        # Test adding tool
+        def test_tool(x, y):
+            return x + y
+        
+        agent.add_tool("add", test_tool)
+        assert agent.has_tool("add")
+        assert "add" in agent.list_tools()
+        
+        # Test executing tool
+        result = agent.execute_tool("add", 2, 3)
+        assert result == 5
+        
+        # Test removing tool
+        agent.remove_tool("add")
+        assert not agent.has_tool("add")
+        assert "add" not in agent.list_tools()
+        
+        agent.close()
+
+if __name__ == "__main__":
+    pytest.main([__file__])
