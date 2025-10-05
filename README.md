@@ -45,10 +45,10 @@ pip install aiohttp
 ### Basic Agent with Custom Tools
 
 ```python
-from miminions.agent import BaseAgent
+from miminions.agent.simple_agent import Agent
 
 # Create an agent
-agent = BaseAgent(name="MyAgent")
+agent = Agent(name="MyAgent")
 
 # Add a custom tool
 def calculator(operation, a, b):

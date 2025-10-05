@@ -3,7 +3,7 @@ Example usage of MiMinions Generic Tool Module
 """
 
 from miminions.tools import tool
-from miminions.agent import Agent
+from miminions.agent.simple_agent import Agent
 
 
 # Define some example tools

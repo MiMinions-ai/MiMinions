@@ -62,13 +62,13 @@ The base agent module provides a comprehensive foundation for creating AI agents
 
 ### Basic Agent Creation
 ```python
-from miminions.agent import BaseAgent
+from miminions.agent.simple_agent import Agent
 
 # Minimal agent (no database connection)
-agent = BaseAgent(name="MyAgent")
+agent = Agent(name="MyAgent")
 
 # Agent with database capabilities
-agent = BaseAgent(
+agent = Agent(
     name="DatabaseAgent",
     connection_string="postgresql://user:pass@host/db"
 )
