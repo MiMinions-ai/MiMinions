@@ -1,10 +1,9 @@
 """
-Example usage of MiMinions BaseAgent
+Example usage of MiMinions SimpleAgent
 
-This example demonstrates how to use the BaseAgent class with various tools.
+This example demonstrates how to use the SimpleAgent class with various tools.
 """
 
-from examples.base_agent_example import example_async_agent
 from miminions.agent.simple_agent import Agent
 
 # Example 1: Basic agent with custom tools
