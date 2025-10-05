@@ -4,31 +4,12 @@ This directory contains comprehensive examples demonstrating the capabilities of
 
 ## Available Examples
 
-### 1. `base_agent_example.py`
-Basic introduction to BaseAgent functionality including:
-- Basic agent initialization
-- Custom tool management
-- Database and search integration (conceptual)
-- Async operations
-- Memory and session management
+### 1. `simple_agent_example.py`
+Simple agent creation and tool usage:
+- Initialize an agent with a custom name and session
+- Register and execute basic tools
 
-### 2. `memory_management_example.py`
-Focused on the remember/recall functionality:
-- Session management and tracking
-- Remember/recall operations (with and without database)
-- Cross-session operations
-- Conversation context handling
-- Vector-based knowledge search
-
-### 3. `database_integration_example.py`
-Database operations and requirements:
-- PostgreSQL setup with pgvector and pg_graphql
-- Vector similarity search examples
-- GraphQL concept queries
-- Database schema requirements
-- Complete integration examples
-
-### 4. `custom_tools_example.py`
+### 2. `custom_tools_example.py`
 Advanced custom tool creation and management:
 - Basic tool registration and execution
 - Advanced tools with multiple operations

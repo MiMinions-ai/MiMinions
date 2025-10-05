@@ -1,217 +1,320 @@
-# MiMinions Base Agent Module
+# Simple Agent with MCP Server Support
 
-## Overview
+A lightweight, flexible agent system that can dynamically load and use tools from MCP (Model Context Protocol) servers, as well as regular Python functions. This agent provides a unified interface for working with different types of tools and can be easily integrated with various AI frameworks.
 
-The base agent module provides a comprehensive foundation for creating AI agents with integrated capabilities for:
+## Features
 
-- **Knowledge Management**: Remember and recall functionality with vector-based storage
-- **Session Tracking**: Conversation memory and context management
-- **Knowledge Retrieval**: Vector-based search using pgvector
-- **Concept Relations**: Graph-based queries using pg_graphql  
-- **Web Search**: Exploratory search via Google and DuckDuckGo
-- **Tool Management**: Custom tool integration system
+- **Generic Tool Interface**: Unified interface for all tools regardless of their source
+- **MCP Server Integration**: Dynamically load tools from MCP servers
+- **Python Function Support**: Convert regular Python functions into agent tools
+- **Tool Discovery**: Search and discover tools by name or description
+- **Framework Adapters**: Convert tools for use with LangChain, AutoGen, and other frameworks
+- **Async Support**: Handle both synchronous and asynchronous tool execution
+
+## Quick Start
+
+### Basic Agent Usage
+
+```python
+import asyncio
+from agents.mcp_simple_agent import create_simple_agent
+
+async def basic_example():
+    # Create an agent
+    agent = create_simple_agent("MyAgent", "A simple demonstration agent")
+    
+    # Add a Python function as a tool
+    def calculate_square(number: int) -> int:
+        """Calculate the square of a number"""
+        return number * number
+    
+    agent.add_function_as_tool("square", "Calculate square of a number", calculate_square)
+    
+    # Use the tool
+    result = agent.execute_tool("square", number=5)
+    print(f"Square of 5: {result}")  # Output: Square of 5: 25
+    
+    # List available tools
+    print(f"Available tools: {agent.list_tools()}")
+    
+    # Cleanup
+    await agent.cleanup()
+
+# Run the example
+asyncio.run(basic_example())
+```
+
+### MCP Server Integration
+
+```python
+import asyncio
+from agents.mcp_simple_agent import create_simple_agent
+from mcp import StdioServerParameters
+
+async def mcp_example():
+    agent = create_simple_agent("MCPAgent", "Agent with MCP server support")
+    
+    # Connect to an MCP server
+    server_params = StdioServerParameters(
+        command="python",
+        args=["server.py"]  # Your MCP server script
+    )
+    
+    await agent.connect_mcp_server("math_server", server_params)
+    
+    # Load tools from the server
+    await agent.load_tools_from_mcp_server("math_server")
+    
+    # Use MCP tools just like regular tools
+    result = agent.execute_tool("add", a=10, b=20)
+    print(f"MCP add result: {result}")
+    
+    await agent.cleanup()
+
+asyncio.run(mcp_example())
+```
 
 ## Architecture
 
 ### Core Components
 
-1. **BaseAgent** (`src/miminions/agents/base_agent.py`)
-   - Main agent class with tool management and session tracking
-   - Remember/recall functionality for knowledge management
-   - Synchronous and asynchronous operation support
-   - Resource management and cleanup
-   - Error handling and validation
+1. **GenericTool**: Base interface for all tools
+2. **SimpleTool**: Basic implementation for Python functions
+3. **MCPTool**: Specialized implementation for MCP server tools
+4. **MCPSimpleAgent**: Main agent class with MCP support
+5. **MCPToolAdapter**: Handles MCP server communication and tool conversion
 
-2. **DatabaseTools** (`src/miminions/agents/tools/database.py`)
-   - PostgreSQL connection management
-   - Vector similarity search (pgvector)
-   - Session-based conversation storage and retrieval
-   - GraphQL query execution (pg_graphql)
-   - Connection pooling and async support
+### Tool Hierarchy
 
-3. **SearchTools** (`src/miminions/agents/tools/search.py`)
-   - Google search integration
-   - DuckDuckGo search integration
-   - Parallel search capabilities
-   - Automatic engine selection
-
-### Key Features
-
-#### Knowledge Management System
-- **Remember**: Store information with vector embeddings
-- **Recall**: Retrieve conversation history and context
-- **Session Tracking**: Maintain conversation state across interactions
-- **Context Search**: Vector-based relevance matching within sessions
-
-#### Graceful Dependency Handling
-- Optional dependencies don't break basic functionality
-- Clear error messages when dependencies are missing
-- Fallback behavior for unavailable components
-
-#### Synchronous and Asynchronous APIs
-- All major operations available in both sync and async versions
-- Proper resource management with context managers
-- Concurrent operation support
-
-#### Internal Helper Functions
-- All internal methods prefixed with underscore (`_`)
-- Separation of public API and implementation details
-- Consistent error handling patterns
-
-## Usage Patterns
-
-### Basic Agent Creation
-```python
-from miminions.agent.simple_agent import Agent
-
-# Minimal agent (no database connection)
-agent = Agent(name="MyAgent")
-
-# Agent with database capabilities
-agent = Agent(
-    name="DatabaseAgent",
-    connection_string="postgresql://user:pass@host/db"
-)
+```
+GenericTool (Abstract Base)
+├── SimpleTool (Python functions)
+├── MCPTool (MCP server tools)
+└── Framework-specific tools (LangChain, AutoGen, etc.)
 ```
 
-### Tool Management
+## API Reference
+
+### MCPSimpleAgent
+
+The main agent class that manages tools and MCP server connections.
+
+#### Methods
+
+**`__init__(name: str, description: str = "")`**
+- Creates a new agent instance
+
+**`async connect_mcp_server(server_name: str, server_params: StdioServerParameters)`**
+- Connects to an MCP server
+
+**`async load_tools_from_mcp_server(server_name: str)`**
+- Loads all tools from a connected MCP server
+
+**`add_tool(tool: GenericTool)`**
+- Adds a generic tool to the agent
+
+**`add_function_as_tool(name: str, description: str, func: callable)`**
+- Converts a Python function into a tool and adds it
+
+**`execute_tool(tool_name: str, **kwargs) -> Any`**
+- Executes a tool by name with the given arguments
+
+**`list_tools() -> List[str]`**
+- Returns a list of all available tool names
+
+**`search_tools(query: str) -> List[str]`**
+- Searches for tools by name or description
+
+**`get_tool_info(tool_name: str) -> Optional[Dict[str, Any]]`**
+- Gets detailed information about a specific tool
+
+**`async cleanup()`**
+- Cleans up resources and closes MCP connections
+
+### GenericTool
+
+Base interface for all tools.
+
+#### Properties
+
+- `name`: Tool name
+- `description`: Tool description
+- `schema`: Tool parameter schema
+
+#### Methods
+
+**`run(**kwargs) -> Any`**
+- Executes the tool with the given arguments
+
+**`to_dict() -> Dict[str, Any]`**
+- Converts the tool to a dictionary representation
+
+## Framework Integration
+
+### LangChain
+
 ```python
-# Add custom tools
-def calculator(op, a, b):
-    return a + b if op == "add" else a * b
+from tools.langchain_adapter import to_langchain_tool
 
-agent.add_tool("calc", calculator)
+# Convert a generic tool to LangChain format
+langchain_tool = to_langchain_tool(agent.get_tool("square"))
 
-# Execute tools
-result = agent.execute_tool("calc", "add", 5, 3)
-
-# Async tool execution
-result = await agent.execute_tool_async("calc", "add", 5, 3)
+# Use with LangChain agents
+from langchain.agents import initialize_agent
+agent = initialize_agent([langchain_tool], llm, agent_type="zero-shot-react-description")
 ```
 
-### Knowledge Operations
+### Creating Custom Framework Adapters
 
-#### Remember and Recall (New Memory System)
 ```python
-# Create agent with session tracking
-agent = BaseAgent(
-    name="MemoryAgent",
-    connection_string="postgresql://user:pass@host/db",
-    session_id="conversation_123"
-)
+from tools import GenericTool
 
-# Remember information
-memory_id = agent.remember(
-    content="User prefers Python for data science",
-    embedding=[0.1, 0.2, 0.3],  # Optional vector embedding
-    role="system",
-    metadata={"topic": "preferences"}
-)
+class MyFrameworkTool:
+    def __init__(self, generic_tool: GenericTool):
+        self.generic_tool = generic_tool
+        self.name = generic_tool.name
+        self.description = generic_tool.description
+    
+    def execute(self, **kwargs):
+        return self.generic_tool.run(**kwargs)
 
-# Search remembered knowledge
-knowledge = agent.remember_search(
-    query_vector=[0.1, 0.2, 0.3],
-    limit=10
-)
-
-# Recall conversation history
-history = agent.recall(limit=20)
-
-# Recall relevant context using similarity
-context = agent.recall_context(
-    query_vector=[0.1, 0.2, 0.3],
-    limit=5
-)
-
-# Session management
-agent.set_session("new_conversation")
-other_history = agent.recall(session_id="previous_conversation")
+def to_my_framework_tool(generic_tool: GenericTool) -> MyFrameworkTool:
+    return MyFrameworkTool(generic_tool)
 ```
 
-#### Legacy Vector Search (Deprecated)
+## Examples
+
+### Creating an MCP Math Server
+
 ```python
-# Vector search (deprecated - use remember_search instead)
-results = agent.vector_search(
-    query_vector=[0.1, 0.2, 0.3],
-    table="knowledge_base",
-    limit=10
-)
+# server.py
+from mcp.server.fastmcp import FastMCP
 
-# GraphQL queries for concept relations
-data = agent.concept_query("""
-    { concepts { id name relations { type target } } }
-""")
+mcp = FastMCP("Math")
 
-# Combined knowledge search
-knowledge = agent.knowledge_search(
-    query="machine learning",
-    query_vector=[0.1, 0.2, 0.3],
-    include_web_search=True
-)
+@mcp.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers"""
+    return a + b
+
+@mcp.tool()
+def multiply(a: int, b: int) -> int:
+    """Multiply two numbers"""
+    return a * b
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
 ```
 
-### Web Search
+### Using the Agent with the Math Server
+
 ```python
-# Basic web search
-results = agent.web_search("AI research papers")
+import asyncio
+from agents.mcp_simple_agent import create_simple_agent
+from mcp import StdioServerParameters
 
-# Parallel search
-parallel_results = await agent.parallel_search("deep learning")
+async def math_agent_example():
+    agent = create_simple_agent("MathAgent", "Agent for mathematical operations")
+    
+    # Connect to math server
+    server_params = StdioServerParameters(command="python", args=["server.py"])
+    await agent.connect_mcp_server("math", server_params)
+    await agent.load_tools_from_mcp_server("math")
+    
+    # Add custom tools
+    def calculate_factorial(n: int) -> int:
+        """Calculate factorial of a number"""
+        if n <= 1:
+            return 1
+        return n * calculate_factorial(n - 1)
+    
+    agent.add_function_as_tool("factorial", "Calculate factorial", calculate_factorial)
+    
+    # Use tools
+    print(f"2 + 3 = {agent.execute_tool('add', a=2, b=3)}")
+    print(f"4 * 5 = {agent.execute_tool('multiply', a=4, b=5)}")
+    print(f"5! = {agent.execute_tool('factorial', n=5)}")
+    
+    await agent.cleanup()
 
-# Engine-specific search
-google_results = agent.search_tools.google_search("python tutorial")
-ddg_results = agent.search_tools.duckduckgo_search("javascript guide")
+asyncio.run(math_agent_example())
+```
+
+## Running the Demo
+
+To see the agent in action, run the included demonstration:
+
+```bash
+python demo_agent.py
+```
+
+This will show:
+1. Basic agent functionality with Python functions
+2. MCP server integration (if available)
+3. Tool discovery and search features
+
+## Installation
+
+Make sure you have the required dependencies:
+
+```bash
+pip install mcp[cli]
+```
+
+For LangChain integration:
+```bash
+pip install langchain-core
 ```
 
 ## Error Handling
 
-The module provides comprehensive error handling:
+The agent includes comprehensive error handling:
 
-1. **Missing Dependencies**: Clear messages about required packages
-2. **Database Connectivity**: Validation of connection strings and database state
-3. **Search Engine Failures**: Graceful handling of search API errors
-4. **Tool Errors**: Proper exception propagation from custom tools
+```python
+try:
+    result = agent.execute_tool("nonexistent_tool", arg=123)
+except ValueError as e:
+    print(f"Tool not found: {e}")
 
-## Testing
-
-Run tests with:
-```bash
-pytest tests/test_base_agent.py -v
+try:
+    result = agent.execute_tool("add", wrong_arg=123)
+except RuntimeError as e:
+    print(f"Execution error: {e}")
 ```
 
-Tests cover:
-- Basic agent initialization and session management
-- Tool management operations
-- Remember and recall functionality
-- Error handling scenarios for missing database/search tools
-- Resource cleanup and context management
-- Dependency validation
+## Best Practices
 
-## Future Enhancements
+1. **Always call `cleanup()`**: Ensure proper resource cleanup
+2. **Handle async properly**: Use `asyncio.run()` for top-level async calls
+3. **Check tool existence**: Use `get_tool()` to verify tools exist before execution
+4. **Use meaningful names**: Give tools clear, descriptive names
+5. **Add proper descriptions**: Include helpful descriptions for tool discovery
 
-Potential areas for expansion:
+## Troubleshooting
 
-1. **Multi-Agent Coordination**: Agent-to-agent communication
-2. **Persistent State**: Agent state serialization/deserialization  
-3. **Plugin System**: Dynamic tool loading
-4. **Performance Monitoring**: Built-in metrics and logging
-5. **Advanced Memory**: Semantic clustering and memory consolidation
-6. **Cross-Session Analytics**: Pattern recognition across conversations
+### Common Issues
 
-## Dependencies
+**MCP Server Connection Failed**
+- Ensure the server script is correct and executable
+- Check that the server parameters (command/args) are valid
+- Verify the server implements the MCP protocol correctly
 
-### Required
-- Python 3.8+
-- typing-extensions
+**Tool Execution Errors**
+- Check that all required parameters are provided
+- Verify parameter types match the tool's expectations
+- Use `get_tool_info()` to inspect tool requirements
 
-### Optional
-- psycopg[binary] >= 3.1.0 (database operations)
-- pgvector >= 0.2.0 (vector search)
-- aiohttp >= 3.8.0 (async HTTP operations)
-- googlesearch-python >= 1.2.0 (Google search)
-- duckduckgo-search >= 3.9.0 (DuckDuckGo search)
-- numpy >= 1.21.0 (vector operations)
+**Import Errors**
+- Ensure all dependencies are installed
+- Check Python path and module imports
+- Verify the project structure is correct
 
-## License
+## Contributing
 
-This module is part of the MiMinions project and is licensed under the MIT License.
+This is a simple, extensible system. Feel free to:
+- Add new framework adapters
+- Improve the MCP integration
+- Add more tool discovery features
+- Enhance error handling and logging
+
+The modular design makes it easy to extend for your specific needs.
