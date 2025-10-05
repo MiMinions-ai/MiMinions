@@ -28,7 +28,7 @@ This simple agent system provides a unified interface for working with tools fro
 
 ```python
 import asyncio
-from agents.mcp_simple_agent import create_simple_agent
+from src.miminions.agent.simple_agent import create_simple_agent
 
 async def main():
     # Create agent
@@ -82,7 +82,7 @@ async def mcp_example():
 
 ```python
 import asyncio
-from agents.mcp_simple_agent import create_simple_agent
+from src.miminions.agent.simple_agent import create_simple_agent
 
 async def complete_example():
     # Create agent
@@ -177,12 +177,12 @@ except RuntimeError as e:
 
 Run the included test suite:
 ```bash
-python3 test_agent.py
+python3 tests/test_simple_agent.py
 ```
 
 Run the demonstration:
 ```bash
-python3 working_demo.py
+python3 examples/simple_agent_example.py
 ```
 
 ## Troubleshooting

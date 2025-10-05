@@ -10,7 +10,8 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 from src.miminions.agent.simple_agent import create_simple_agent
 from mcp import StdioServerParameters
@@ -25,7 +26,7 @@ async def working_mcp_demo():
     try:
         server_params = StdioServerParameters(
             command="python3",
-            args=[str(Path(__file__).parent / "server.py")]
+            args=["examples/server.py"]
         )
         
         print("Connecting to MCP math server...")
@@ -76,6 +77,7 @@ async def working_mcp_demo():
         
     except Exception as e:
         print(f"Demo error: {e}")
+        print('Expected due to async issues')
     
     finally:
         await agent.cleanup()

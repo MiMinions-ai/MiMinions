@@ -8,10 +8,9 @@ Test suite to verify the simple agent system works correctly.
 import asyncio
 import sys
 from pathlib import Path
+from src.miminions.agent.simple_agent import create_simple_agent
 
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
-
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 async def test_basic_functionality():
     """Test basic agent functionality"""
@@ -67,9 +66,7 @@ async def test_tool_schema():
     """Test tool schema generation"""
     print("Testing tool schema generation...")
     
-    try:
-        from src.miminions.agent.simple_agent import create_simple_agent
-        
+    try:        
         agent = create_simple_agent("SchemaTestAgent")
         
         def complex_function(name: str, age: int, active: bool = True) -> str:

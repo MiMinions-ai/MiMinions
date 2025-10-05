@@ -17,7 +17,7 @@ A lightweight, flexible agent system that can dynamically load and use tools fro
 
 ```python
 import asyncio
-from agents.mcp_simple_agent import create_simple_agent
+from src.miminions.agent.simple_agent import create_simple_agent
 
 async def basic_example():
     # Create an agent
@@ -48,7 +48,7 @@ asyncio.run(basic_example())
 
 ```python
 import asyncio
-from agents.mcp_simple_agent import create_simple_agent
+from src.miminions.agent.simple_agent import create_simple_agent
 from mcp import StdioServerParameters
 
 async def mcp_example():
@@ -245,7 +245,7 @@ asyncio.run(math_agent_example())
 To see the agent in action, run the included demonstration:
 
 ```bash
-python demo_agent.py
+python examples/simple_agent_example.py
 ```
 
 This will show:
