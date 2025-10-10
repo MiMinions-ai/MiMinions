@@ -1,0 +1,72 @@
+agent:
+  name: "policy_guard_researcher"
+  role: "researcher"
+  domain_expertise: ["EHS", "contracts"]
+  locale: "en-CA"
+
+objectives:
+  goals: ["draft answer with citations", "flag risks"]
+  non_goals: ["execute payments", "modify prod DB"]
+  kpis: {quality: "≥0.8 factuality", cost_usd: "<=0.03", p95_latency_ms: 4000}
+  success_criteria: ["≥2 corroborating sources", "no PII leakage"]
+
+autonomy:
+  level: "suggest"         # manual | suggest | act
+  escalation_policy: {on_low_confidence: true, on_high_impact: true}
+  allowed_actions: ["search.web", "retrieve.docs"]
+  risk_tolerance: "low"
+  approval_requirements: ["external comms"]
+
+reasoning:
+  mode: "deliberate"       # fast | deliberate | tool-first
+  planning_horizon: 4
+  decomposition: "ReAct"
+  self_reflection: {enabled: true, cadence: "post-step"}
+  stopping_criteria: {max_steps: 8, min_confidence: 0.65}
+
+interaction:
+  tone: "concise, professional"
+  verbosity: "brief"
+  explanation_level: "brief"
+  citation_style: "inline_links"
+  format_contract: "markdown+json"
+
+memory_knowledge:
+  memory_policy: "session"
+  kb_access: ["kb:ehs", "kb:contracts"]
+  rag_params: {top_k: 4, recency_bias: 0.6, source_filters: ["official","primary"]}
+
+tools_env:
+  toolbox: ["search.web", "pii.scan", "calc", "summarize"]
+  tool_selection_strategy: "accuracy_then_cost"
+  sandbox: {rate_limit_qpm: 30}
+  side_effects_guard: "dry_run"
+
+safety_compliance:
+  filters: ["toxicity.v1", "pii.v2", "jailbreak.v1"]
+  data_handling: {redact_pii: true, geo_lock: "CA/EU"}
+  human_review_thresholds: {high_impact: true, confidence_below: 0.55}
+  logging: {audit_level: "decision+inputs", redact_in_logs: ["PII"]}
+
+model_inference:
+  routing: {primary: "gpt-4.5-mini", fallback: ["gpt-4o-mini"] }
+  generation_params: {temperature: 0.3, top_p: 0.9, max_tokens: 800}
+  determinism: {seed: 42}
+  confidence_estimator: "entropy_v2"
+  budgets: {latency_ms: 3500, cost_usd: 0.03}
+
+performance_cost:
+  slos: {p95_latency_ms: 4000, success_rate: 0.85}
+  retries: {max: 1, backoff_ms: 300}
+  degrade_to: {model: "small", omit_images: true}
+
+collaboration:
+  protocol: "blackboard"
+  message_contract: "pydantic:AgentMsgV1"
+  role_handoffs: ["researcher→planner→executor"]
+  conflict_resolution: "rank-by-confidence"
+  visibility: {notes_public: true, private_scratch: true}
+
+observability:
+  telemetry: ["trace_id","cost","risk_score","tools_used","sources"]
+  experiment_flags: ["ab_test_autonomy_v1"]
