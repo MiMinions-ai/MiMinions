@@ -7,4 +7,5 @@ from agents.agent_output import AgentOutputSchemaBase
 from agents.exceptions import ModelBehaviorError
 
 class Agent(OpenAIAgent):
-    pass
+    def __init__(self,**kwargs) -> None:
+        super().__init__(**kwargs)
