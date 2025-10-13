@@ -5,7 +5,7 @@ This example demonstrates the remember/recall functionality for knowledge manage
 and conversation session tracking.
 """
 
-from src.miminions.agent.simple_agent import Agent
+from miminions.agent.simple_agent import Agent
 import asyncio
 
 

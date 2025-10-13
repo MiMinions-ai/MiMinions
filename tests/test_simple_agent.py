@@ -7,17 +7,14 @@ Test suite to verify the simple agent system works correctly.
 
 import asyncio
 import sys
-from pathlib import Path
-from src.miminions.agent.simple_agent import create_simple_agent
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from miminions.agent.simple_agent import create_simple_agent
 
 async def test_basic_functionality():
     """Test basic agent functionality"""
     print("Testing basic agent functionality")
     
     try:
-        from src.miminions.agent.simple_agent import create_simple_agent
+        from miminions.agent.simple_agent import create_simple_agent
         
         agent = create_simple_agent("TestAgent", "Agent for testing")
         
@@ -103,7 +100,7 @@ async def test_error_handling():
     print("Testing error handling...")
     
     try:
-        from src.miminions.agent.simple_agent import create_simple_agent
+        from miminions.agent.simple_agent import create_simple_agent
         
         agent = create_simple_agent("ErrorTestAgent")
         

@@ -28,7 +28,7 @@ This simple agent system provides a unified interface for working with tools fro
 
 ```python
 import asyncio
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 
 async def main():
     # Create agent
@@ -82,7 +82,7 @@ async def mcp_example():
 
 ```python
 import asyncio
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 
 async def complete_example():
     # Create agent

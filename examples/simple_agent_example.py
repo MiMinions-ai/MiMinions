@@ -7,13 +7,8 @@ functions and MCP server integration.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 from mcp import StdioServerParameters
 
 

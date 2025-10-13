@@ -7,7 +7,7 @@ vector search, GraphQL queries, and knowledge management.
 Note: This example requires actual PostgreSQL with pgvector and pg_graphql extensions.
 """
 
-from src.miminions.agent.simple_agent import Agent
+from miminions.agent.simple_agent import Agent
 import asyncio
 
 

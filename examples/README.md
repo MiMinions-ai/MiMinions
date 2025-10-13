@@ -82,7 +82,7 @@ Note: This server is designed to work with MCP clients via stdio transport.
 ### Basic Agent with Local Tools
 
 ```python
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 
 # Create agent
 agent = create_simple_agent("MyAgent", "A simple agent")
@@ -105,7 +105,7 @@ await agent.cleanup()
 ### MCP Server Integration
 
 ```python
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 from mcp import StdioServerParameters
 
 # Create agent
