@@ -732,6 +732,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "tiktoken" },
+    { name = "tiktoken" },
 ]
 
 [package.dev-dependencies]
@@ -753,6 +754,7 @@ dev = [
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "tiktoken", specifier = ">=0.12.0" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
