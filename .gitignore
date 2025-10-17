@@ -130,3 +130,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# custom local content
+*.ipynb
+
+.outputs/
+
+# project configuration
+AGENTS.md
+.cursorignore
+.cursor
