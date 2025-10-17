@@ -11,6 +11,12 @@ from dataclasses import dataclass
 import inspect
 import json
 
+# Export main classes
+__all__ = [
+    'ToolSchema', 'GenericTool', 'SimpleTool', 
+    'create_tool', 'tool'
+]
+
 
 @dataclass
 class ToolSchema:
@@ -101,6 +107,20 @@ class SimpleTool(GenericTool):
     def run(self, **kwargs) -> Any:
         """Execute the tool function with provided arguments"""
         return self.func(**kwargs)
+    
+    @classmethod
+    def from_mcp_tool(cls, mcp_tool: Dict[str, Any]) -> 'SimpleTool':
+        """Create a SimpleTool from MCP tool definition"""
+        # This is a placeholder - actual MCP tool calling would be handled
+        # by the MCP adapter with proper session management
+        def placeholder_func(**kwargs):
+            return f"MCP tool {mcp_tool.get('name', 'unknown')} would be called with {kwargs}"
+        
+        return cls(
+            name=mcp_tool.get("name", "unknown"),
+            description=mcp_tool.get("description", ""),
+            func=placeholder_func
+        )
 
 
 def create_tool(name: str, description: str, func: Callable) -> GenericTool:
