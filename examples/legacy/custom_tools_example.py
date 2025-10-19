@@ -1,11 +1,11 @@
 """
-Custom Tools Example for MiMinions BaseAgent
+Custom Tools Example for MiMinions Simple Agent
 
 This example demonstrates how to create and manage custom tools
-with the BaseAgent for extending functionality.
+with the Simple Agent for extending functionality.
 """
 
-from miminions.agent import BaseAgent
+from miminions.agent.simple_agent import Agent
 import asyncio
 import json
 import math
@@ -15,7 +15,7 @@ def basic_tools_example():
     """Demonstrate basic tool management"""
     print("=== Basic Custom Tools Example ===")
     
-    agent = BaseAgent(name="ToolAgent")
+    agent = Agent(name="ToolAgent")
     
     # Add simple calculator tool
     def calculator(operation, a, b):
@@ -52,7 +52,7 @@ def advanced_tools_example():
     """Demonstrate advanced tool features"""
     print("\n=== Advanced Custom Tools Example ===")
     
-    agent = BaseAgent(name="AdvancedAgent")
+    agent = Agent(name="AdvancedAgent")
     
     # Add text processing tool
     def text_processor(text, operation="clean"):
@@ -139,7 +139,7 @@ async def async_tools_example():
     """Demonstrate async tool functionality"""
     print("\n=== Async Custom Tools Example ===")
     
-    agent = BaseAgent(name="AsyncAgent")
+    agent = agent(name="AsyncAgent")
     
     # Add async tool
     async def async_data_fetcher(source, delay=1):
@@ -192,7 +192,7 @@ def error_handling_example():
     """Demonstrate error handling in tools"""
     print("\n=== Tool Error Handling Example ===")
     
-    agent = BaseAgent(name="ErrorHandlingAgent")
+    agent = Agent(name="ErrorHandlingAgent")
     
     def safe_divider(a, b):
         """Tool with error handling"""
@@ -236,7 +236,7 @@ def tool_composition_example():
     """Demonstrate composing tools together"""
     print("\n=== Tool Composition Example ===")
     
-    agent = BaseAgent(name="CompositionAgent")
+    agent = Agent(name="CompositionAgent")
     
     # Add individual tools
     def text_splitter(text, delimiter=" "):
@@ -289,7 +289,7 @@ def dynamic_tools_example():
     """Demonstrate dynamic tool creation"""
     print("\n=== Dynamic Tool Creation Example ===")
     
-    agent = BaseAgent(name="DynamicAgent")
+    agent = Agent(name="DynamicAgent")
     
     # Tool factory function
     def create_converter_tool(from_unit, to_unit, factor):

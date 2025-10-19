@@ -5,7 +5,7 @@ This example demonstrates the remember/recall functionality for knowledge manage
 and conversation session tracking.
 """
 
-from miminions.agent import BaseAgent
+from miminions.agent.simple_agent import Agent
 import asyncio
 
 
@@ -14,7 +14,7 @@ def basic_memory_example():
     print("=== Basic Memory Management Example ===")
     
     # Create agent with specific session
-    agent = BaseAgent(name="MemoryAgent", session_id="demo_session")
+    agent = Agent(name="MemoryAgent", session_id="demo_session")
     print(f"Agent: {agent.name}")
     print(f"Current session: {agent.get_session()}")
     
@@ -55,7 +55,7 @@ async def async_memory_example():
     """Demonstrate async memory management"""
     print("\n=== Async Memory Management Example ===")
     
-    agent = BaseAgent(name="AsyncMemoryAgent", session_id="async_demo")
+    agent = Agent(name="AsyncMemoryAgent", session_id="async_demo")
     
     print("Async operations would work like this with a database:")
     print("1. await agent.remember_async('Async content', embedding=[0.1, 0.2])")
@@ -80,7 +80,7 @@ def conversation_session_example():
     sessions = ["user_alice_chat", "user_bob_chat", "group_discussion"]
     
     for session_id in sessions:
-        agent = BaseAgent(name="ConversationAgent", session_id=session_id)
+        agent = Agent(name="ConversationAgent", session_id=session_id)
         print(f"\nAgent in session '{session_id}':")
         print(f"  Session ID: {agent.get_session()}")
         print(f"  Agent repr: {repr(agent)}")
@@ -124,7 +124,7 @@ def knowledge_search_example():
     """Demonstrate knowledge search capabilities"""
     print("\n=== Knowledge Search Example ===")
     
-    agent = BaseAgent(name="KnowledgeAgent")
+    agent = Agent(name="KnowledgeAgent")
     
     # Show what knowledge search would do
     print("Knowledge search combines vector search and web search:")
