@@ -277,7 +277,7 @@ miminions workspace list
 # Add a new workspace
 miminions workspace add --name "My Workspace" --description "Workspace description"
 
-# Add a sample workspace with example nodes and rules
+# Add sample workspace with example nodes and rules
 miminions workspace add --name "Demo Workspace" --description "Demo workspace" --sample
 
 # Show workspace details
