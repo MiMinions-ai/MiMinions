@@ -52,6 +52,7 @@ class MetaAgent:
         model: str = "gpt-4o",
         user_location: Dict[str, Any] | None = None,
         search_context_size: str = "medium",          # "low" | "medium" | "high"
+        **kwargs,
     ):
         # Configure the web search tool
         web_tool = WebSearchTool(
@@ -115,34 +116,3 @@ If uncertainty remains, say what is uncertain and why.
             "tools": self.agent.tools  # available tools (actual usage will show in logs/tracing if enabled)
         }
 
-
-class SubAgent:
-    """Demonstrates agent functionality - LLM, instructions, tool usage (research-oriented)"""
-
-    def __init__(
-        self,
-        agent_config: AgentConfig,
-    ):
-        # Configure the web search tool
-
-
-        self.agent = Agent(
-            name="SimpleAgent",
-            instructions=agent_config.instructions,
-            model=agent_config.model,
-            tools=[mock_tools[tool] for tool in agent_config.tools],
-        )
-
-    async def generate(self, query: str) -> Dict[str, Any]:
-        print(f"\n🤖 SimpleAgent: Running with web_search for '{query}'")
-        start = time.time()
-
-        # 🔧 pass the guided research prompt
-        result = await Runner.run(self.agent, input=query)
-
-        end = time.time()
-        return {
-            "response": result.final_output,
-            "processing_time": end - start,
-            "tools": self.agent.tools  # available tools (actual usage will show in logs/tracing if enabled)
-        }
