@@ -723,16 +723,8 @@ source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
     { name = "openai-agents" },
+    { name = "tiktoken" },
     { name = "pydantic" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "tiktoken" },
-    { name = "tiktoken" },
 ]
 
 [package.dev-dependencies]
@@ -746,16 +738,8 @@ dev = [
 requires-dist = [
     { name = "fastmcp", specifier = ">=2.12.4" },
     { name = "openai-agents", specifier = ">=0.3.3" },
+    { name = "tiktoken", specifier = ">=0.12.0" },
     { name = "pydantic", specifier = ">=2.12.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-asyncio", specifier = ">=1.2.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "tiktoken", specifier = ">=0.12.0" },
-    { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
 [package.metadata.requires-dev]
