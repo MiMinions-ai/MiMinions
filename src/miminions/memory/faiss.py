@@ -23,7 +23,7 @@ class FAISSMemory(BaseMemory):
         self.index.add(vector)
         
         id = str(uuid4())
-        self.id_to_idx[id] = current_idx
+        self.id_to_idx[id] = current_idx # add id and its index mapping
         
         self.metadata.append({
             "id": id,
