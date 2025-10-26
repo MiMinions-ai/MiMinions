@@ -142,3 +142,7 @@ AGENTS.md
 .cursor
 
 *.egg-info/
+
+.reference
+.claude
+.specify
