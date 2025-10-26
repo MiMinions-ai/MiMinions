@@ -210,24 +210,40 @@ class Agent:
         self.memory = memory
         self._register_memory_tools()
 
-    def get_memory_context(self, query: str, top_k: int = 5) -> str:
-        """Get memory context as formatted string for LLM consumption"""
+    def get_memory_context(self, query: str, top_k: int = 5) -> Dict[str, Any]:
+        """Get memory context as structured data for LLM consumption"""
         if self.memory is None:
-            return ""
+            return {
+                "query": query,
+                "results": [],
+                "count": 0,
+                "message": "No memory system attached"
+            }
         
         results = self.memory.read(query, top_k=top_k)
         
         if not results:
-            return "No relevant knowledge found in memory."
+            return {
+                "query": query,
+                "results": [],
+                "count": 0,
+                "message": "No relevant knowledge found"
+            }
         
-        context_parts = ["Relevant knowledge from memory:"]
-        for i, result in enumerate(results, 1):
-            text = result.get("text", "")
-            distance = result.get("distance", 0)
-            context_parts.append(f"{i}. {text} (relevance: {1/(1+distance):.2f})")
+        clean_results = []
+        for result in results:
+            clean_results.append({
+                "text": result.get("text", ""),
+                "relevance": round(1 / (1 + result.get("distance", 0)), 2),
+                "metadata": result.get("meta", {})
+            })
         
-        return "\n".join(context_parts)
-    
+        return {
+            "query": query,
+            "results": clean_results,
+            "count": len(clean_results)
+        }
+
     def store_knowledge(self, text: str, metadata: Dict[str, Any] = None) -> str:
         """Store knowledge in memory (convenience method)"""
         return self._memory_store(text, metadata)

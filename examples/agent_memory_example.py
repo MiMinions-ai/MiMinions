@@ -98,8 +98,9 @@ async def context_retrieval_demo():
     for query in queries:
         print(f"Query: {query}")
         context = agent.get_memory_context(query, top_k=2)
-        print(context + '\n')
-    
+        for i, result in enumerate(context["results"], 1):
+            print(f"{i}. {result['text']} (Relevance: {result.get('relevance', 'N/A')})")
+        print()
     await agent.cleanup()
     print("Context retrieval demo completed!")
 

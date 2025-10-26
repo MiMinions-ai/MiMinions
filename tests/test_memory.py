@@ -136,9 +136,27 @@ async def test_context_generation():
         # Get formatted context
         context = agent.get_memory_context("topic X", top_k=2)
         
-        assert isinstance(context, str), "Context should be string"
-        assert len(context) > 0, "Context is empty"
-        assert "Fact" in context, "Context doesn't contain facts"
+        # Test structure
+        assert isinstance(context, dict), "Context should be a dictionary"
+        assert "query" in context, "Context should have 'query' field"
+        assert "results" in context, "Context should have 'results' field"
+        assert "count" in context, "Context should have 'count' field"
+        
+        # Test content
+        assert context["query"] == "topic X", "Query mismatch"
+        assert context["count"] > 0, "Should have found results"
+        assert len(context["results"]) <= 2, "Should respect top_k limit"
+        
+        # Test result structure
+        for result in context["results"]:
+            assert "text" in result, "Result should have 'text' field"
+            assert "relevance" in result, "Result should have 'relevance' field"
+            assert "metadata" in result, "Result should have 'metadata' field"
+            assert "topic X" in result["text"], "Result should be about topic X"
+        
+        # Test relevance scoring
+        first_result = context["results"][0]
+        assert 0 <= first_result["relevance"] <= 1, "Relevance should be between 0 and 1"
         
         await agent.cleanup()
         print("Context generation test passed!")
