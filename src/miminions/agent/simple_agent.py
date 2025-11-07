@@ -68,6 +68,12 @@ class Agent:
             "List all knowledge entries in memory",
             self._memory_list
         )
+        
+        self.add_function_as_tool(
+            "ingest_file",
+            "Ingest a text file into memory",
+            self._ingest_file
+        )
     
     def _memory_store(self, text: str, metadata: Dict[str, Any] = None) -> str:
         """Store knowledge in memory"""
@@ -108,6 +114,16 @@ class Agent:
         if hasattr(self.memory, 'list_all'):
             return self.memory.list_all()
         return []
+    
+    def _ingest_file(self, filepath: str) -> str:
+        """Ingest a text file into memory"""
+        if not self.memory:
+            raise ValueError("No memory system attached to agent")
+        
+        with open(filepath, 'r') as f:
+            text = f.read()
+        
+        return self.memory.create(text, {"source": filepath})
     
     async def connect_mcp_server(self, server_name: str, server_params: StdioServerParameters):
         """Connect to an MCP server"""
@@ -165,20 +181,37 @@ class Agent:
         return [tool.to_dict() for tool in self.tools]
     
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
-        """Execute a tool by name"""
+        """Execute a tool by name (for synchronous tools only)
+        
+        For MCP tools or other async tools, use execute_tool_async() instead.
+        """
         tool = self.get_tool(tool_name)
         if tool is None:
             raise ValueError(f"Tool '{tool_name}' not found. Available tools: {self.list_tools()}")
         
         try:
             result = tool.run(**kwargs)
+            if asyncio.iscoroutine(result):
+                raise RuntimeError(
+                    f"Tool '{tool_name}' is async. Use 'await agent.execute_tool_async()' instead."
+                )
             return result
         except Exception as e:
             raise RuntimeError(f"Error executing tool '{tool_name}': {str(e)}")
     
     async def execute_tool_async(self, tool_name: str, **kwargs) -> Any:
         """Execute a tool by name (async version for MCP tools)"""
-        return self.execute_tool(tool_name, **kwargs)
+        tool = self.get_tool(tool_name)
+        if tool is None:
+            raise ValueError(f"Tool '{tool_name}' not found. Available tools: {self.list_tools()}")
+        
+        try:
+            result = tool.run(**kwargs)
+            if asyncio.iscoroutine(result):
+                return await result
+            return result
+        except Exception as e:
+            raise RuntimeError(f"Error executing tool '{tool_name}': {str(e)}")
     
     def get_tool_info(self, tool_name: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a specific tool"""

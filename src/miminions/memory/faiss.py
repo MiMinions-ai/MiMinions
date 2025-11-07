@@ -1,7 +1,9 @@
 # src/miminions/memory/faiss_memory.py
 
 import faiss
+import re
 import numpy as np
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .base_memory import BaseMemory
 from uuid import uuid4

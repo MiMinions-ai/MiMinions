@@ -17,7 +17,7 @@ from miminions.memory.faiss import FAISSMemory
 
 async def test_memory_crud():
     """Test basic CRUD operations through agent tools"""
-    print("Testing memory CRUD operations...")
+    print("Testing memory CRUD operations")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -50,7 +50,7 @@ async def test_memory_crud():
         assert deleted is None, "Entry not deleted"
         
         await agent.cleanup()
-        print("Memory CRUD test passed!")
+        print("Memory CRUD test passed")
         return True
         
     except Exception as e:
@@ -62,7 +62,7 @@ async def test_memory_crud():
 
 async def test_memory_search():
     """Test semantic search functionality"""
-    print("Testing memory search...")
+    print("Testing memory search")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -80,7 +80,7 @@ async def test_memory_search():
         assert "learning" in results[0]["text"] or "algorithms" in results[0]["text"], "Semantic search failed"
         
         await agent.cleanup()
-        print("Memory search test passed!")
+        print("Memory search test passed")
         return True
         
     except Exception as e:
@@ -92,7 +92,7 @@ async def test_memory_search():
 
 async def test_memory_with_metadata():
     """Test memory storage with metadata"""
-    print("Testing memory with metadata...")
+    print("Testing memory with metadata")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -111,7 +111,7 @@ async def test_memory_with_metadata():
         assert entry["meta"]["importance"] == "high", "Metadata incomplete"
         
         await agent.cleanup()
-        print("Memory metadata test passed!")
+        print("Memory metadata test passed")
         return True
         
     except Exception as e:
@@ -123,7 +123,7 @@ async def test_memory_with_metadata():
 
 async def test_context_generation():
     """Test context generation for LLM use"""
-    print("Testing context generation...")
+    print("Testing context generation")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -159,7 +159,7 @@ async def test_context_generation():
         assert 0 <= first_result["relevance"] <= 1, "Relevance should be between 0 and 1"
         
         await agent.cleanup()
-        print("Context generation test passed!")
+        print("Context generation test passed")
         return True
         
     except Exception as e:
@@ -195,7 +195,7 @@ async def main():
     print(f"Tests completed: {passed}/{total} passed")
     
     if passed == total:
-        print("All tests passed!")
+        print("All tests passed")
         return 0
     else:
         print("Some tests failed")
