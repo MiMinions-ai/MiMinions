@@ -466,13 +466,18 @@ class TestErrorHandling:
         repo.save_task(task_a)
         repo.save_task(task_b)
 
-        # Create dependencies: a->b
-        queue.enqueue(task_a, dependencies=["b"])
+        # Add both tasks to queue first  
+        queue.enqueue(task_b)  # Add task B first (no dependencies)
+        queue.enqueue(task_a, dependencies=["b"])  # Add task A with dependency on B
+        
+        # Save the dependency to repository
         repo.save_dependency(TaskDependency(task_id="a", depends_on_task_id="b"))
 
-        # Try to create cycle: b->a
+        # Try to create cycle: b->a (this should be detected by queue)
         with pytest.raises(CyclicDependencyError):
-            queue.enqueue(task_b, dependencies=["a"])
+            # Try to update task B to depend on task A, which would create a cycle
+            updated_task_b = create_task("Task B Updated", task_id="b")
+            queue.enqueue(updated_task_b, dependencies=["a"])
 
         # Verify cycle not persisted
         deps_b = repo.load_dependencies("b")

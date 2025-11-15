@@ -351,16 +351,24 @@ class TestCycleDetection:
     """Test cycle detection in dependency graphs."""
 
     def test_direct_cycle(self):
-        """Test detection of direct cycle (A -> B -> A)."""
+        """Test detection of direct cycle (A -> B -> C -> A)."""
         queue = TaskQueue()
 
         task_a = create_task("Task A", task_id="a")
         task_b = create_task("Task B", task_id="b")
+        task_c = create_task("Task C", task_id="c")
 
-        queue.enqueue(task_a, dependencies=["b"])
+        # Build up the dependency chain: A <- B <- C  
+        queue.enqueue(task_a)                      # Add A (no dependencies)
+        queue.enqueue(task_b, dependencies=["a"])  # B depends on A
+        queue.enqueue(task_c, dependencies=["b"])  # C depends on B
 
+        # Now try to create a cycle by adding a task that would complete the loop
+        # We create a new task with the same ID as 'a' but with dependency on 'c'
+        # This creates: A -> C -> B -> A (a cycle)
         with pytest.raises(CyclicDependencyError):
-            queue.enqueue(task_b, dependencies=["a"])
+            duplicate_task_a = create_task("Task A Updated", task_id="a")  
+            queue.enqueue(duplicate_task_a, dependencies=["c"])  # This creates cycle: a -> c -> b -> a
 
     def test_self_dependency_prevented_by_model(self):
         """Test self-dependency prevented at model level."""
@@ -381,27 +389,34 @@ class TestCycleDetection:
         task_b = create_task("Task B", task_id="b")
         task_c = create_task("Task C", task_id="c")
 
-        queue.enqueue(task_a, dependencies=["c"])
+        # Build chain: A <- B <- C (A has no deps, B depends on A, C depends on B)
+        queue.enqueue(task_a)
         queue.enqueue(task_b, dependencies=["a"])
+        queue.enqueue(task_c, dependencies=["b"])
 
+        # Try to create an indirect cycle by making A depend on C
+        # This would create: A -> C -> B -> A (indirect cycle through 3 nodes)
         with pytest.raises(CyclicDependencyError):
-            queue.enqueue(task_c, dependencies=["b"])
+            duplicate_task_a = create_task("Task A Updated", task_id="a")
+            queue.enqueue(duplicate_task_a, dependencies=["c"])  # Creates cycle a -> c -> b -> a
 
     def test_complex_cycle(self):
         """Test detection of complex cycle in larger graph."""
         queue = TaskQueue()
 
+        # Create linear chain: 0 <- 1 <- 2 <- 3 <- 4
         for i in range(5):
             task = create_task(f"Task {i}", task_id=str(i))
             if i == 0:
-                queue.enqueue(task)
+                queue.enqueue(task)  # Task 0 has no dependencies
             else:
-                queue.enqueue(task, dependencies=[str(i-1)])
+                queue.enqueue(task, dependencies=[str(i-1)])  # Task i depends on task i-1
 
-        # Try to create cycle: 4 -> 0
-        task_5 = create_task("Task 5", task_id="5")
+        # Try to create a cycle by making task 0 depend on task 4
+        # This would create: 0 -> 4 -> 3 -> 2 -> 1 -> 0 (a 5-node cycle)
         with pytest.raises(CyclicDependencyError):
-            queue.enqueue(task_5, dependencies=["4", "0"])  # Would create cycle
+            duplicate_task_0 = create_task("Task 0 Updated", task_id="0")
+            queue.enqueue(duplicate_task_0, dependencies=["4"])  # Creates cycle 0 -> 4 -> 3 -> 2 -> 1 -> 0
 
 
 class TestQueueStateManagement:

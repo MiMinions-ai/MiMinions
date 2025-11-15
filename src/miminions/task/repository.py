@@ -38,8 +38,10 @@ class TaskRepository:
         if self._conn is None:
             self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self._conn.row_factory = sqlite3.Row
-            # Enable WAL mode for concurrent access
+            # Enable WAL mode for concurrent access  
             self._conn.execute("PRAGMA journal_mode=WAL")
+            # Enable foreign key constraints for cascade delete
+            self._conn.execute("PRAGMA foreign_keys=ON")
         return self._conn
 
     def _init_schema(self) -> None:
@@ -107,7 +109,7 @@ class TaskRepository:
             task.status.value,
             task.assigned_agent_id,
             json.dumps(task.input_data),
-            json.dumps(task.output_data) if task.output_data else None,
+            json.dumps(task.output_data) if task.output_data is not None else None,
             task.created_at.timestamp(),
             task.started_at.timestamp() if task.started_at else None,
             task.completed_at.timestamp() if task.completed_at else None,

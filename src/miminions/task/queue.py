@@ -45,7 +45,8 @@ class TaskQueue:
         self._tasks: dict[str, Task] = {}  # task_id -> Task
         self._dependencies: dict[str, set[str]] = defaultdict(set)  # task_id -> set(depends_on_ids)
         self._dependents: dict[str, set[str]] = defaultdict(set)  # task_id -> set(dependent_ids)
-        self._heap: list[tuple[int, str]] = []  # Min-heap of (priority, task_id) for ready tasks
+        self._heap: list[tuple[int, int, str]] = []  # Min-heap of (priority, sequence, task_id) for ready tasks
+        self._sequence_counter: int = 0  # Counter for FIFO ordering within same priority
 
     @property
     def pending_count(self) -> int:
@@ -104,7 +105,8 @@ class TaskQueue:
 
         # If no dependencies or all dependencies met, add to ready heap
         if self._is_ready(task.task_id):
-            heapq.heappush(self._heap, (task.priority, task.task_id))
+            self._sequence_counter += 1
+            heapq.heappush(self._heap, (task.priority, self._sequence_counter, task.task_id))
 
     def dequeue(self) -> Optional[Task]:
         """
@@ -120,7 +122,7 @@ class TaskQueue:
 
         # Clean up heap (remove tasks that are no longer pending/ready)
         while self._heap:
-            priority, task_id = heapq.heappop(self._heap)
+            priority, sequence, task_id = heapq.heappop(self._heap)
 
             if task_id not in self._tasks:
                 continue  # Task was removed
@@ -178,7 +180,8 @@ class TaskQueue:
         for dependent_id in self._dependents.get(task_id, set()):
             if self._is_ready(dependent_id):
                 dependent_task = self._tasks[dependent_id]
-                heapq.heappush(self._heap, (dependent_task.priority, dependent_id))
+                self._sequence_counter += 1
+                heapq.heappush(self._heap, (dependent_task.priority, self._sequence_counter, dependent_id))
                 newly_ready.append(dependent_id)
 
         return newly_ready
