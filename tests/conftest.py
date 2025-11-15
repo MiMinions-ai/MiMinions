@@ -26,3 +26,26 @@ def isolated_cli_runner():
     """Provide a CLI runner with isolated configuration."""
     from click.testing import CliRunner
     return CliRunner()
+
+
+@pytest.fixture
+def temp_db_path(tmp_path):
+    """Provide a temporary database path."""
+    return tmp_path / "test.db"
+
+
+# Pytest markers
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests"
+    )
+    config.addinivalue_line(
+        "markers", "unit: marks tests as unit tests"
+    )
+    config.addinivalue_line(
+        "markers", "stress: marks tests as stress tests"
+    )

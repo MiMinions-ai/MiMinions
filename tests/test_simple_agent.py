@@ -7,8 +7,10 @@ Test suite to verify the simple agent system works correctly.
 
 import asyncio
 import sys
+import pytest
 from miminions.agent.simple_agent import create_simple_agent
 
+@pytest.mark.asyncio
 async def test_basic_functionality():
     """Test basic agent functionality"""
     print("Testing basic agent functionality")
@@ -59,6 +61,7 @@ async def test_basic_functionality():
         return False
 
 
+@pytest.mark.asyncio
 async def test_tool_schema():
     """Test tool schema generation"""
     print("Testing tool schema generation...")
@@ -95,6 +98,7 @@ async def test_tool_schema():
         return False
 
 
+@pytest.mark.asyncio
 async def test_error_handling():
     """Test error handling"""
     print("Testing error handling...")

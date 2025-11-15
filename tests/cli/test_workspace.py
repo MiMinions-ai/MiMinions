@@ -44,13 +44,7 @@ def test_workspace_creation():
         assert loaded_workspace.description == workspace.description
         
         print("✓ Workspace creation test passed")
-        return True
         
-    except Exception as e:
-        print(f"✗ Workspace creation test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
     finally:
         shutil.rmtree(temp_dir)
 
@@ -101,13 +95,7 @@ def test_node_management():
         assert 'task' in summary['node_types']
         
         print("✓ Node management test passed")
-        return True
         
-    except Exception as e:
-        print(f"✗ Node management test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
     finally:
         shutil.rmtree(temp_dir)
 
@@ -116,97 +104,81 @@ def test_rule_system():
     """Test rule creation and evaluation."""
     print("Testing rule system...")
     
-    try:
-        workspace = Workspace(name="Rule Test", description="Testing rule system")
-        
-        # Create a rule
-        rule = Rule(
-            name="Test Rule",
-            description="A test rule",
-            condition={
-                "type": "state_equals",
-                "key": "test_key",
-                "value": "test_value"
-            },
-            action={
-                "type": "test_action",
-                "message": "Rule triggered"
-            },
-            priority=RulePriority.HIGH
-        )
-        
-        workspace.add_rule(rule)
-        assert len(workspace.rules) == 1
-        assert rule.id in workspace.rules
-        
-        # Test rule evaluation with matching state
-        workspace.state = {"test_key": "test_value"}
-        actions = workspace.evaluate_state_logic()
-        assert len(actions) == 1
-        assert actions[0]['rule_name'] == "Test Rule"
-        assert actions[0]['action']['message'] == "Rule triggered"
-        
-        # Test rule evaluation with non-matching state
-        workspace.state = {"test_key": "different_value"}
-        actions = workspace.evaluate_state_logic()
-        assert len(actions) == 0
-        
-        print("✓ Rule system test passed")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Rule system test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    workspace = Workspace(name="Rule Test", description="Testing rule system")
+    
+    # Create a rule
+    rule = Rule(
+        name="Test Rule",
+        description="A test rule",
+        condition={
+            "type": "state_equals",
+            "key": "test_key",
+            "value": "test_value"
+        },
+        action={
+            "type": "test_action",
+            "message": "Rule triggered"
+        },
+        priority=RulePriority.HIGH
+    )
+    
+    workspace.add_rule(rule)
+    assert len(workspace.rules) == 1
+    assert rule.id in workspace.rules
+    
+    # Test rule evaluation with matching state
+    workspace.state = {"test_key": "test_value"}
+    actions = workspace.evaluate_state_logic()
+    assert len(actions) == 1
+    assert actions[0]['rule_name'] == "Test Rule"
+    assert actions[0]['action']['message'] == "Rule triggered"
+    
+    # Test rule evaluation with non-matching state
+    workspace.state = {"test_key": "different_value"}
+    actions = workspace.evaluate_state_logic()
+    assert len(actions) == 0
+    
+    print("✓ Rule system test passed")
 
 
 def test_rule_inheritance():
     """Test rule inheritance between workspaces."""
     print("Testing rule inheritance...")
     
-    try:
-        # Create parent workspace with rules
-        parent_workspace = Workspace(name="Parent", description="Parent workspace")
-        
-        parent_rule = Rule(
-            name="Parent Rule",
-            description="A rule from parent workspace",
-            condition={"type": "always"},
-            action={"type": "parent_action"},
-            priority=RulePriority.MEDIUM
-        )
-        
-        parent_workspace.add_rule(parent_rule)
-        
-        # Create child workspace
-        child_workspace = Workspace(name="Child", description="Child workspace")
-        
-        # Test inheritance
-        child_workspace.inherit_rules_from(parent_workspace)
-        
-        assert len(child_workspace.inherited_rules) == 1
-        assert child_workspace.parent_workspace == parent_workspace.id
-        
-        # Verify inherited rule properties
-        inherited_rule = list(child_workspace.inherited_rules.values())[0]
-        assert inherited_rule.name == parent_rule.name
-        assert inherited_rule.priority == parent_rule.priority
-        assert inherited_rule.inherited_from.startswith("Parent:")
-        
-        # Test that child can evaluate inherited rules
-        actions = child_workspace.evaluate_state_logic()
-        assert len(actions) == 1
-        assert actions[0]['rule_name'] == "Parent Rule"
-        
-        print("✓ Rule inheritance test passed")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Rule inheritance test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Create parent workspace with rules
+    parent_workspace = Workspace(name="Parent", description="Parent workspace")
+    
+    parent_rule = Rule(
+        name="Parent Rule",
+        description="A rule from parent workspace",
+        condition={"type": "always"},
+        action={"type": "parent_action"},
+        priority=RulePriority.MEDIUM
+    )
+    
+    parent_workspace.add_rule(parent_rule)
+    
+    # Create child workspace
+    child_workspace = Workspace(name="Child", description="Child workspace")
+    
+    # Test inheritance
+    child_workspace.inherit_rules_from(parent_workspace)
+    
+    assert len(child_workspace.inherited_rules) == 1
+    assert child_workspace.parent_workspace == parent_workspace.id
+    
+    # Verify inherited rule properties
+    inherited_rule = list(child_workspace.inherited_rules.values())[0]
+    assert inherited_rule.name == parent_rule.name
+    assert inherited_rule.priority == parent_rule.priority
+    assert inherited_rule.inherited_from.startswith("Parent:")
+    
+    # Test that child can evaluate inherited rules
+    actions = child_workspace.evaluate_state_logic()
+    assert len(actions) == 1
+    assert actions[0]['rule_name'] == "Parent Rule"
+    
+    print("✓ Rule inheritance test passed")
 
 
 def test_sample_workspace():
@@ -236,13 +208,7 @@ def test_sample_workspace():
         assert len(actions) > 0  # Should have applicable actions
         
         print("✓ Sample workspace test passed")
-        return True
         
-    except Exception as e:
-        print(f"✗ Sample workspace test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
     finally:
         shutil.rmtree(temp_dir)
 
@@ -264,9 +230,13 @@ def main():
     
     for test_name, test_func in tests:
         print(f"\n--- Running {test_name} Test ---")
-        if test_func():
+        try:
+            test_func()
             passed += 1
-        else:
+        except Exception as e:
+            print(f"✗ {test_name} test failed: {e}")
+            import traceback
+            traceback.print_exc()
             failed += 1
     
     print(f"\n--- Test Results ---")
