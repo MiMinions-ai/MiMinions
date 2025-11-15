@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP("DocumentServer")
 
 @mcp.tool()
-def ingest_file(filepath: str) -> str:
+def ingest_document(filepath: str) -> str:
     """Ingest a text file and return its content"""
     with open(filepath, 'r') as f:
         return f.read()

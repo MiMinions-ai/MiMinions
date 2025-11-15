@@ -15,17 +15,20 @@ sys.path.append(str(Path(__file__).parent.parent))
 from tools import GenericTool, SimpleTool
 from tools.mcp_adapter import MCPToolAdapter
 from memory.base_memory import BaseMemory
+from utils.chunker import TextChunker
 
 class Agent:
     """Enhanced simple agent that can work with MCP servers and generic tools"""
     
-    def __init__(self, name: str, description: str = "", memory: Optional[BaseMemory] = None):
+    def __init__(self, name: str, description: str = "", memory: Optional[BaseMemory] = None, 
+                 chunk_size: int = 800, overlap: int = 150):
         self.name = name
         self.description = description
         self.tools: List[GenericTool] = []
         self.memory = memory
         self.mcp_adapter = MCPToolAdapter()
         self.connected_servers: Dict[str, StdioServerParameters] = {}
+        self.chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
         
         # Auto-register memory tools if memory is provided
         if self.memory:
@@ -70,9 +73,9 @@ class Agent:
         )
         
         self.add_function_as_tool(
-            "ingest_file",
-            "Ingest a text file into memory",
-            self._ingest_file
+            "ingest_document",
+            "Ingest a document (PDF or text) into memory with chunking and detailed stats",
+            self._ingest_document
         )
     
     def _memory_store(self, text: str, metadata: Dict[str, Any] = None) -> str:
@@ -115,15 +118,93 @@ class Agent:
             return self.memory.list_all()
         return []
     
-    def _ingest_file(self, filepath: str) -> str:
-        """Ingest a text file into memory"""
+    def _extract_text_from_pdf(self, filepath: str) -> str:
+        """Extract text from a PDF file"""
+        try:
+            import pdfplumber
+        except ImportError:
+            raise ImportError(
+                "pdfplumber is required for PDF support. "
+                "Install it with: pip install pdfplumber"
+            )
+        
+        text_parts = []
+        with pdfplumber.open(filepath) as pdf:
+            for page_num, page in enumerate(pdf.pages, start=1):
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+        
+        return "\n\n".join(text_parts)
+    
+    def _ingest_document(self, filepath: str, chunk_size: Optional[int] = None, 
+                        overlap: Optional[int] = None) -> Dict[str, Any]:
+        """Ingest a document (PDF or text) into memory with chunking"""
         if not self.memory:
             raise ValueError("No memory system attached to agent")
         
-        with open(filepath, 'r') as f:
-            text = f.read()
+        from pathlib import Path
+        path = Path(filepath)
         
-        return self.memory.create(text, {"source": filepath})
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+        
+        # Determine file type and extract text
+        file_extension = path.suffix.lower()
+        
+        if file_extension == '.pdf':
+            text = self._extract_text_from_pdf(filepath)
+            file_type = 'pdf'
+        elif file_extension in ['.txt', '.md', '.text']:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                text = f.read()
+            file_type = 'text'
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}. Supported: .pdf, .txt, .md")
+        
+        if not text.strip():
+            return {
+                "status": "error",
+                "message": "No text could be extracted from the document",
+                "filepath": str(filepath),
+                "chunks_stored": 0
+            }
+        
+        # Create chunker with custom settings if provided
+        if chunk_size or overlap:
+            chunker = TextChunker(
+                chunk_size=chunk_size or self.chunker.chunk_size,
+                overlap=overlap or self.chunker.overlap
+            )
+        else:
+            chunker = self.chunker
+        
+        # Chunk the document
+        base_metadata = {
+            "source": str(filepath),
+            "filename": path.name,
+            "file_type": file_type
+        }
+        
+        chunks = chunker.chunk_text(text, metadata=base_metadata)
+        
+        # Store each chunk in memory
+        chunk_ids = []
+        for chunk in chunks:
+            chunk_id = self.memory.create(chunk["text"], chunk["metadata"])
+            chunk_ids.append(chunk_id)
+        
+        return {
+            "status": "success",
+            "message": f"Successfully ingested {path.name}",
+            "filepath": str(filepath),
+            "file_type": file_type,
+            "total_characters": len(text),
+            "chunks_stored": len(chunks),
+            "chunk_ids": chunk_ids,
+            "chunk_size": chunker.chunk_size,
+            "overlap": chunker.overlap
+        }
     
     async def connect_mcp_server(self, server_name: str, server_params: StdioServerParameters):
         """Connect to an MCP server"""

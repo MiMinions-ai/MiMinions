@@ -27,7 +27,7 @@ async def main():
     test_file = Path("test_mcp.txt")
     test_file.write_text("MCP document server is working!")
     
-    content = await agent.execute_tool_async("ingest_file", filepath=str(test_file))
+    content = await agent.execute_tool_async("ingest_document", filepath=str(test_file))
     print(f"Ingested content: {content}")
     
     test_file.unlink()
