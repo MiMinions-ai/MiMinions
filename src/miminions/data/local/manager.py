@@ -8,7 +8,7 @@ transaction logs, and hash-based storage.
 import getpass
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 
@@ -58,8 +58,8 @@ class LocalDataManager:
         from .transaction_log import TransactionRecord
         self.transaction_log._write_transaction_record(
             TransactionRecord(
-                id=f"init_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
-                timestamp=datetime.utcnow().isoformat(),
+                id=f"init_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 transaction_type=TransactionType.CREATE_INDEX,
                 author=self.default_author,
                 details={"base_dir": str(self.base_dir)}
@@ -477,7 +477,7 @@ class LocalDataManager:
             
             # Create backup metadata
             backup_metadata = {
-                "backup_created": datetime.utcnow().isoformat(),
+                "backup_created": datetime.now(timezone.utc).isoformat(),
                 "source_directory": str(self.base_dir),
                 "backup_directory": str(backup_data_dir),
                 "stats": self.get_stats()

@@ -211,8 +211,8 @@ def update_workspace(workspace_id, name, description):
     if description is not None:
         workspace.description = description
     
-    from datetime import datetime
-    workspace.updated_at = datetime.utcnow().isoformat()
+    from datetime import datetime, timezone
+    workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Workspace updated successfully.")
@@ -420,8 +420,8 @@ def set_state(workspace_id, key, value):
     
     workspace.state[key] = parsed_value
     
-    from datetime import datetime
-    workspace.updated_at = datetime.utcnow().isoformat()
+    from datetime import datetime, timezone
+    workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Set state '{key}' = '{parsed_value}' in workspace '{workspace.name}'.")

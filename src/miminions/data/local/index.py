@@ -7,7 +7,7 @@ description, author, and creation date.
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, asdict, field
@@ -25,8 +25,8 @@ class FileMetadata:
     tags: List[str] = field(default_factory=list)
     description: str = ""
     author: str = ""
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     access_count: int = 0
     last_accessed: Optional[str] = None
     
@@ -43,20 +43,20 @@ class FileMetadata:
         """Add a tag if not already present."""
         if tag not in self.tags:
             self.tags.append(tag)
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
     
     def remove_tag(self, tag: str) -> bool:
         """Remove a tag if present."""
         if tag in self.tags:
             self.tags.remove(tag)
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
             return True
         return False
     
     def increment_access(self) -> None:
         """Increment access count and update last accessed time."""
         self.access_count += 1
-        self.last_accessed = datetime.utcnow().isoformat()
+        self.last_accessed = datetime.now(timezone.utc).isoformat()
 
 
 class MasterIndex:
@@ -142,7 +142,7 @@ class MasterIndex:
         index_data = {
             'metadata': {
                 'version': '1.0',
-                'created_at': datetime.utcnow().isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'total_entries': len(self._index),
                 'max_entries_per_file': self.max_entries_per_file
             },
@@ -208,7 +208,7 @@ class MasterIndex:
             if hasattr(metadata, field):
                 setattr(metadata, field, value)
         
-        metadata.updated_at = datetime.utcnow().isoformat()
+        metadata.updated_at = datetime.now(timezone.utc).isoformat()
         
         # Update hash mapping if hash changed
         if 'file_hash' in updates:

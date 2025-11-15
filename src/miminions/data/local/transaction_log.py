@@ -6,7 +6,7 @@ Records all read, write, and removal operations for audit trail and consistency.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TextIO
 from dataclasses import dataclass, asdict
@@ -84,7 +84,7 @@ class TransactionLog:
             header = {
                 'log_type': 'miminions_transaction_log',
                 'version': '1.0',
-                'created_at': datetime.utcnow().isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'format': 'jsonlines'
             }
             f.write(json.dumps(header) + '\n')
@@ -120,8 +120,8 @@ class TransactionLog:
             
             # Log the rotation event
             self._write_transaction_record(TransactionRecord(
-                id=f"rotate_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
-                timestamp=datetime.utcnow().isoformat(),
+                id=f"rotate_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 transaction_type=TransactionType.ROTATE_LOG,
                 details={'rotated_to': str(next_filename)}
             ))
@@ -156,8 +156,8 @@ class TransactionLog:
             details: Additional operation details
         """
         record = TransactionRecord(
-            id=f"read_{file_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}",
-            timestamp=datetime.utcnow().isoformat(),
+            id=f"read_{file_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             transaction_type=TransactionType.READ,
             file_id=file_id,
             file_hash=file_hash,
@@ -183,8 +183,8 @@ class TransactionLog:
             error_message: Error message if operation failed
         """
         record = TransactionRecord(
-            id=f"write_{file_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}",
-            timestamp=datetime.utcnow().isoformat(),
+            id=f"write_{file_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             transaction_type=TransactionType.WRITE,
             file_id=file_id,
             file_hash=file_hash,
@@ -212,8 +212,8 @@ class TransactionLog:
             error_message: Error message if operation failed
         """
         record = TransactionRecord(
-            id=f"update_{file_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}",
-            timestamp=datetime.utcnow().isoformat(),
+            id=f"update_{file_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             transaction_type=TransactionType.UPDATE,
             file_id=file_id,
             file_hash=file_hash,
@@ -241,8 +241,8 @@ class TransactionLog:
             error_message: Error message if operation failed
         """
         record = TransactionRecord(
-            id=f"delete_{file_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}",
-            timestamp=datetime.utcnow().isoformat(),
+            id=f"delete_{file_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             transaction_type=TransactionType.DELETE,
             file_id=file_id,
             file_hash=file_hash,

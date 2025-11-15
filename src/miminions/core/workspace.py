@@ -7,7 +7,7 @@ and structured logic based on internal state.
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict, field
 from enum import Enum
@@ -39,7 +39,7 @@ class Node:
     properties: Dict[str, Any] = field(default_factory=dict)
     connections: List[str] = field(default_factory=list)  # IDs of connected nodes
     state: Dict[str, Any] = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert node to dictionary."""
@@ -66,7 +66,7 @@ class Rule:
     priority: RulePriority = RulePriority.MEDIUM
     inherited_from: Optional[str] = None  # Source workspace/rule set
     enabled: bool = True
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert rule to dictionary."""
@@ -93,13 +93,13 @@ class Workspace:
     inherited_rules: Dict[str, Rule] = field(default_factory=dict)
     state: Dict[str, Any] = field(default_factory=dict)
     parent_workspace: Optional[str] = None  # For rule inheritance
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def add_node(self, node: Node) -> None:
         """Add a node to the workspace."""
         self.nodes[node.id] = node
-        self.updated_at = datetime.utcnow().isoformat()
+        self.updated_at = datetime.now(timezone.utc).isoformat()
     
     def remove_node(self, node_id: str) -> bool:
         """Remove a node from the workspace."""
@@ -110,7 +110,7 @@ class Workspace:
                     other_node.connections.remove(node_id)
             
             del self.nodes[node_id]
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
             return True
         return False
     
@@ -121,7 +121,7 @@ class Workspace:
                 self.nodes[node1_id].connections.append(node2_id)
             if node1_id not in self.nodes[node2_id].connections:
                 self.nodes[node2_id].connections.append(node1_id)
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
             return True
         return False
     
@@ -136,19 +136,19 @@ class Workspace:
             success = True
         
         if success:
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
         return success
     
     def add_rule(self, rule: Rule) -> None:
         """Add a rule to the workspace."""
         self.rules[rule.id] = rule
-        self.updated_at = datetime.utcnow().isoformat()
+        self.updated_at = datetime.now(timezone.utc).isoformat()
     
     def remove_rule(self, rule_id: str) -> bool:
         """Remove a rule from the workspace."""
         if rule_id in self.rules:
             del self.rules[rule_id]
-            self.updated_at = datetime.utcnow().isoformat()
+            self.updated_at = datetime.now(timezone.utc).isoformat()
             return True
         return False
     
@@ -184,7 +184,7 @@ class Workspace:
             )
             self.inherited_rules[inherited_rule.id] = inherited_rule
         
-        self.updated_at = datetime.utcnow().isoformat()
+        self.updated_at = datetime.now(timezone.utc).isoformat()
     
     def get_all_rules(self) -> List[Rule]:
         """Get all rules (own + inherited) sorted by priority."""
@@ -378,7 +378,7 @@ class WorkspaceManager:
             name="Project Knowledge",
             type=NodeType.KNOWLEDGE,
             properties={"domain": "software", "confidence": 0.8},
-            state={"last_updated": datetime.utcnow().isoformat()}
+            state={"last_updated": datetime.now(timezone.utc).isoformat()}
         )
         
         workspace.add_node(agent_node)
