@@ -1,5 +1,6 @@
 """Module for runtime models."""
 from uuid import uuid1
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
@@ -7,6 +8,14 @@ from miminions.utils import (
     generate_random_name,
     generate_random_description,
 )
+
+# Task models
+class TaskStatus(Enum):
+    INITIALIZED = "initialized"
+    IDLE = "idle"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 class Task(BaseModel):
     """Model representing a task in the runtime environment."""
@@ -22,7 +31,3 @@ class AgentTask(Task):
     agent_id: str = Field(..., description="Identifier of the agent assigned to the task")
     deadline: str = Field(..., description="Deadline for task completion")
 
-class Runtime(BaseModel):
-    """Model representing the runtime environment."""
-    tasks: list[Task] = Field(default_factory=list, description="List of tasks in the runtime environment")
-    agents: list[str] = Field(default_factory=list, description="List of agents in the runtime environment")
