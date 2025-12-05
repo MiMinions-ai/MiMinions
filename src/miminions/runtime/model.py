@@ -1,8 +1,10 @@
 """Module for runtime models."""
 from uuid import uuid1
 from enum import Enum
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 
 from miminions.utils import (
     generate_random_name,
@@ -28,6 +30,6 @@ class Task(BaseModel):
 
 class AgentTask(Task):
     """Model representing a task assigned to an agent."""
-    agent_id: str = Field(..., description="Identifier of the agent assigned to the task")
-    deadline: str = Field(..., description="Deadline for task completion")
-
+    agent: Agent = Field(..., description="Agent assigned to the task")
+    args: List[Any] = Field(default=[], description="Arguments for the task execution")
+    kwargs: Dict[str, Any] = Field(default_factory=dict, description="Keyword arguments for the task execution")
