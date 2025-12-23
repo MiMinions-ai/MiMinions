@@ -5,17 +5,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.miminions.agent.simple_agent import create_simple_agent
-from src.miminions.memory.faiss import FAISSMemory
+from miminions.agent.simple_agent import create_simple_agent
+from miminions.memory.faiss import FAISSMemory
 
 async def test_ingest_document_text():
     """Test document ingestion with chunking for text files"""
     agent = create_simple_agent("ChunkAgent", memory=FAISSMemory())
     
     test_file = Path("test_chunked.txt")
-    # Create longer text to test chunking
     test_content = """This is a test document for chunking.
 
 Machine learning is a subset of artificial intelligence that focuses on the development of algorithms.
@@ -45,7 +42,7 @@ These technologies are transforming industries worldwide."""
         results = agent.recall_knowledge("machine learning", top_k=3)
         assert len(results) > 0, "Should find matching chunks"
         
-        print("✓ Document ingestion with chunking test passed")
+        print("Document ingestion with chunking test passed")
         
     finally:
         test_file.unlink()
@@ -60,7 +57,7 @@ async def test_ingest_pdf():
     pdf_path = Path(__file__).parent.parent / "examples" / "example_files" / "resume.pdf"
     
     if not pdf_path.exists():
-        print("⚠ PDF file not found, skipping PDF test")
+        print("PDF file not found, skipping PDF test")
         return True
     
     agent = create_simple_agent("PDFAgent", memory=FAISSMemory())
@@ -87,7 +84,7 @@ async def test_ingest_pdf():
         if results:
             print(f"  Top result preview: {results[0]['text'][:100]}...")
         
-        print("✓ PDF ingestion test passed")
+        print("PDF ingestion test passed")
         
     finally:
         await agent.cleanup()
@@ -102,13 +99,11 @@ async def main():
         await test_ingest_document_text()
         await test_ingest_pdf()
         
-        print("\n" + "="*50)
-        print("All tests passed! ✓")
-        print("="*50)
+        print("All tests passed!")
         return 0
         
     except Exception as e:
-        print(f"\n✗ Test failed: {e}")
+        print(f"\nTest failed: {e}")
         import traceback
         traceback.print_exc()
         return 1

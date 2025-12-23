@@ -1,5 +1,6 @@
 import sqlite3
-import numpy as np
+import sqlite_vec
+import struct
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .base_memory import BaseMemory
@@ -7,20 +8,46 @@ from uuid import uuid4
 from sentence_transformers import SentenceTransformer
 
 
-class SQLiteMemory(BaseMemory):    
-    def __init__(self, db_path: str = ":memory:", model_name: str = "all-MiniLM-L6-v2", dim: int = 384):
-        """
-        Initialize SQLite vector memory
+_DEFAULT_DB_DIR = Path(__file__).parent / ".data"
+_DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "memory.db"
+
+
+def _serialize_f32(vector: list) -> bytes:
+    return struct.pack(f"{len(vector)}f", *vector)
+
+
+class SQLiteMemory(BaseMemory):
+    """
+    SQLite-based vector memory using sqlite-vec.
+    
+    Storage options:
+        - db_path=":memory:" -> temporary, session-based (lost when process ends)
+        - db_path=None -> persistent, uses default location in package
+        - db_path="/your/path.db" -> persistent, uses your specified path
+    """
+    
+    def __init__(
+        self, 
+        db_path: Optional[str] = None,
+        model_name: str = "all-MiniLM-L6-v2", 
+        dim: int = 384
+    ):
+        if db_path is None:
+            _DEFAULT_DB_DIR.mkdir(parents=True, exist_ok=True)
+            self.db_path = str(_DEFAULT_DB_PATH)
+        elif db_path == ":memory:":
+            self.db_path = ":memory:"
+        else:
+            user_path = Path(db_path)
+            user_path.parent.mkdir(parents=True, exist_ok=True)
+            self.db_path = str(user_path)
         
-        Args:
-            db_path: Path to SQLite database file, or ":memory:" for in-memory
-            model_name: SentenceTransformer model for embeddings
-            dim: Dimension of embeddings (must match model output)
-        """
-        self.db_path = db_path
         self.dim = dim
         self.encoder = SentenceTransformer(model_name)
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.enable_load_extension(True)
+        sqlite_vec.load(self.conn)
+        self.conn.enable_load_extension(False)
         self._setup_tables()
     
     def _setup_tables(self):
@@ -28,72 +55,84 @@ class SQLiteMemory(BaseMemory):
             CREATE TABLE IF NOT EXISTS knowledge (
                 id TEXT PRIMARY KEY,
                 text TEXT NOT NULL,
-                embedding BLOB NOT NULL,
                 metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_text ON knowledge(text)")
+        
+        self.conn.execute(f"""
+            CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vec USING vec0(
+                id TEXT PRIMARY KEY,
+                embedding float[{self.dim}]
+            )
+        """)
         self.conn.commit()
     
     def create(self, text: str, metadata: Dict[str, Any] = None) -> str:
-        """Add knowledge to memory and return its ID"""
         id = str(uuid4())
-        vector = self.encoder.encode([text])[0].astype("float32")
+        vector = self.encoder.encode([text])[0].tolist()
         
         self.conn.execute(
-            "INSERT INTO knowledge (id, text, embedding, metadata) VALUES (?, ?, ?, ?)",
-            (id, text, vector.tobytes(), str(metadata or {}))
+            "INSERT INTO knowledge (id, text, metadata) VALUES (?, ?, ?)",
+            (id, text, str(metadata or {}))
+        )
+        self.conn.execute(
+            "INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)",
+            (id, _serialize_f32(vector))
         )
         self.conn.commit()
         return id
     
     def read(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Retrieve top-k similar knowledge entries using vector similarity"""
-        query_vec = self.encoder.encode([query])[0].astype("float32")
+        query_vec = self.encoder.encode([query])[0].tolist()
         
-        cursor = self.conn.execute("SELECT id, text, embedding, metadata FROM knowledge")
+        cursor = self.conn.execute("""
+            SELECT v.id, v.distance, k.text, k.metadata
+            FROM knowledge_vec v
+            JOIN knowledge k ON v.id = k.id
+            WHERE embedding MATCH ? AND k = ?
+            ORDER BY distance
+        """, (_serialize_f32(query_vec), top_k))
+        
         results = []
-        
         for row in cursor:
-            id, text, embedding_blob, metadata = row
-            embedding = np.frombuffer(embedding_blob, dtype="float32")
-            
-            distance = float(np.linalg.norm(query_vec - embedding))
-            
+            id, distance, text, metadata = row
             results.append({
                 "id": id,
                 "text": text,
                 "meta": eval(metadata) if metadata else {},
-                "distance": distance
+                "distance": float(distance)
             })
         
-        results.sort(key=lambda x: x["distance"])
-        return results[:top_k]
+        return results
     
     def update(self, id: str, new_text: str) -> bool:
-        """Update an entry by ID"""
         cursor = self.conn.execute("SELECT id FROM knowledge WHERE id = ?", (id,))
         if not cursor.fetchone():
             return False
         
-        new_vec = self.encoder.encode([new_text])[0].astype("float32")
+        new_vec = self.encoder.encode([new_text])[0].tolist()
         
         self.conn.execute(
-            "UPDATE knowledge SET text = ?, embedding = ? WHERE id = ?",
-            (new_text, new_vec.tobytes(), id)
+            "UPDATE knowledge SET text = ? WHERE id = ?",
+            (new_text, id)
+        )
+        self.conn.execute("DELETE FROM knowledge_vec WHERE id = ?", (id,))
+        self.conn.execute(
+            "INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)",
+            (id, _serialize_f32(new_vec))
         )
         self.conn.commit()
         return True
     
     def delete(self, id: str) -> bool:
-        """Delete an entry by ID"""
         cursor = self.conn.execute("DELETE FROM knowledge WHERE id = ?", (id,))
+        self.conn.execute("DELETE FROM knowledge_vec WHERE id = ?", (id,))
         self.conn.commit()
         return cursor.rowcount > 0
     
     def get_by_id(self, id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve an entry by ID"""
         cursor = self.conn.execute(
             "SELECT id, text, metadata FROM knowledge WHERE id = ?", (id,)
         )
@@ -126,7 +165,6 @@ class SQLiteMemory(BaseMemory):
         pass
     
     def list_all(self) -> List[Dict[str, Any]]:
-        """List all knowledge entries"""
         cursor = self.conn.execute("SELECT id, text, metadata FROM knowledge")
         return [
             {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
@@ -134,12 +172,11 @@ class SQLiteMemory(BaseMemory):
         ]
     
     def clear(self) -> None:
-        """Clear all knowledge from memory"""
         self.conn.execute("DELETE FROM knowledge")
+        self.conn.execute("DELETE FROM knowledge_vec")
         self.conn.commit()
     
     def search_keyword(self, keyword: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Simple keyword search using SQL LIKE"""
         cursor = self.conn.execute(
             "SELECT id, text, metadata FROM knowledge WHERE text LIKE ? LIMIT ?",
             (f"%{keyword}%", top_k)
@@ -150,10 +187,8 @@ class SQLiteMemory(BaseMemory):
         ]
     
     def close(self):
-        """Close database connection"""
         self.conn.close()
     
     def __del__(self):
-        """Cleanup on deletion"""
         if hasattr(self, 'conn'):
             self.conn.close()

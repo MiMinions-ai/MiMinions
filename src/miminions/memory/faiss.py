@@ -1,5 +1,3 @@
-# src/miminions/memory/faiss_memory.py
-
 import faiss
 import re
 import numpy as np
