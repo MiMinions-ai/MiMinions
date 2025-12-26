@@ -146,23 +146,108 @@ class SQLiteMemory(BaseMemory):
             }
         return None
     
-    def get_by_keyword():
-        pass
+    def get_by_keyword(self, keyword: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search entries containing keyword (case-insensitive)."""
+        cursor = self.conn.execute(
+            "SELECT id, text, metadata FROM knowledge WHERE LOWER(text) LIKE LOWER(?) LIMIT ?",
+            (f"%{keyword}%", top_k)
+        )
+        return [
+            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
+            for row in cursor.fetchall()
+        ]
 
-    def full_test_search():
-        pass
+    def full_text_search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search for entries containing all words in query."""
+        words = query.lower().split()
+        if not words:
+            return []
+        
+        conditions = " AND ".join(["LOWER(text) LIKE ?" for _ in words])
+        params = [f"%{word}%" for word in words] + [top_k]
+        
+        cursor = self.conn.execute(
+            f"SELECT id, text, metadata FROM knowledge WHERE {conditions} LIMIT ?",
+            params
+        )
+        return [
+            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
+            for row in cursor.fetchall()
+        ]
     
-    def metadata_search():
-        pass
+    def metadata_search(self, key: str, value: Any, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search entries by metadata key-value pair."""
+        cursor = self.conn.execute(
+            "SELECT id, text, metadata FROM knowledge LIMIT ?", (top_k * 10,)
+        )
+        results = []
+        for row in cursor.fetchall():
+            meta = eval(row[2]) if row[2] else {}
+            if meta.get(key) == value:
+                results.append({"id": row[0], "text": row[1], "meta": meta})
+                if len(results) >= top_k:
+                    break
+        return results
 
-    def regex_search():
-        pass
+    def regex_search(self, pattern: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search entries matching regex pattern."""
+        import re
+        cursor = self.conn.execute("SELECT id, text, metadata FROM knowledge")
+        results = []
+        for row in cursor.fetchall():
+            if re.search(pattern, row[1], re.IGNORECASE):
+                results.append({
+                    "id": row[0], "text": row[1], 
+                    "meta": eval(row[2]) if row[2] else {}
+                })
+                if len(results) >= top_k:
+                    break
+        return results
 
-    def hybrid_search():
-        pass
+    def hybrid_search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Combine vector and keyword search."""
+        vector_results = self.read(query, top_k=top_k)
+        keyword_results = self.get_by_keyword(query, top_k=top_k)
+        
+        seen_ids = set()
+        combined = []
+        for r in vector_results:
+            if r["id"] not in seen_ids:
+                r["source"] = "vector"
+                combined.append(r)
+                seen_ids.add(r["id"])
+        for r in keyword_results:
+            if r["id"] not in seen_ids:
+                r["source"] = "keyword"
+                combined.append(r)
+                seen_ids.add(r["id"])
+        return combined[:top_k]
 
-    def date_time_search():
-        pass
+    def date_time_search(self, start: str = None, end: str = None, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search entries by creation date range (ISO format: YYYY-MM-DD)."""
+        if start and end:
+            cursor = self.conn.execute(
+                "SELECT id, text, metadata, created_at FROM knowledge WHERE created_at BETWEEN ? AND ? LIMIT ?",
+                (start, end, top_k)
+            )
+        elif start:
+            cursor = self.conn.execute(
+                "SELECT id, text, metadata, created_at FROM knowledge WHERE created_at >= ? LIMIT ?",
+                (start, top_k)
+            )
+        elif end:
+            cursor = self.conn.execute(
+                "SELECT id, text, metadata, created_at FROM knowledge WHERE created_at <= ? LIMIT ?",
+                (end, top_k)
+            )
+        else:
+            cursor = self.conn.execute(
+                "SELECT id, text, metadata, created_at FROM knowledge LIMIT ?", (top_k,)
+            )
+        return [
+            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}, "created_at": row[3]}
+            for row in cursor.fetchall()
+        ]
     
     def list_all(self) -> List[Dict[str, Any]]:
         cursor = self.conn.execute("SELECT id, text, metadata FROM knowledge")
@@ -175,16 +260,6 @@ class SQLiteMemory(BaseMemory):
         self.conn.execute("DELETE FROM knowledge")
         self.conn.execute("DELETE FROM knowledge_vec")
         self.conn.commit()
-    
-    def search_keyword(self, keyword: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        cursor = self.conn.execute(
-            "SELECT id, text, metadata FROM knowledge WHERE text LIKE ? LIMIT ?",
-            (f"%{keyword}%", top_k)
-        )
-        return [
-            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
-            for row in cursor.fetchall()
-        ]
     
     def close(self):
         self.conn.close()
