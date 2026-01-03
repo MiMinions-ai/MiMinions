@@ -9,6 +9,10 @@ _FILE_DIR = Path(__file__).parent
 _DATA_DIR = _FILE_DIR / ".data"
 _TEST_DB = _DATA_DIR / "test_crud.db"
 
+# Default database location
+_DEFAULT_DB_DIR = Path(__file__).parent.parent / "src" / "miminions" / "memory" / ".data"
+_DEFAULT_DB = _DEFAULT_DB_DIR / "memory.db"
+
 
 def cleanup():
     """Remove persistent databases created by tests."""
@@ -16,6 +20,11 @@ def cleanup():
         _TEST_DB.unlink()
     if _DATA_DIR.exists() and not any(_DATA_DIR.iterdir()):
         _DATA_DIR.rmdir()
+    # Clean up default database
+    if _DEFAULT_DB.exists():
+        _DEFAULT_DB.unlink()
+    if _DEFAULT_DB_DIR.exists() and not any(_DEFAULT_DB_DIR.iterdir()):
+        _DEFAULT_DB_DIR.rmdir()
 
 
 def test_create():

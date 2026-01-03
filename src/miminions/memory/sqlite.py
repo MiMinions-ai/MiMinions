@@ -1,6 +1,8 @@
 import sqlite3
 import sqlite_vec
 import struct
+import json
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .base_memory import BaseMemory
@@ -48,7 +50,19 @@ class SQLiteMemory(BaseMemory):
         self.conn.enable_load_extension(True)
         sqlite_vec.load(self.conn)
         self.conn.enable_load_extension(False)
+        self._register_regex_function()
         self._setup_tables()
+    
+    def _register_regex_function(self):
+        """Register custom REGEXP function for SQLite."""
+        def regexp(pattern, text):
+            if text is None:
+                return False
+            try:
+                return re.search(pattern, text, re.IGNORECASE) is not None
+            except re.error:
+                return False
+        self.conn.create_function("REGEXP", 2, regexp)
     
     def _setup_tables(self):
         self.conn.execute("""
@@ -75,7 +89,7 @@ class SQLiteMemory(BaseMemory):
         
         self.conn.execute(
             "INSERT INTO knowledge (id, text, metadata) VALUES (?, ?, ?)",
-            (id, text, str(metadata or {}))
+            (id, text, json.dumps(metadata or {}))
         )
         self.conn.execute(
             "INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)",
@@ -101,7 +115,7 @@ class SQLiteMemory(BaseMemory):
             results.append({
                 "id": id,
                 "text": text,
-                "meta": eval(metadata) if metadata else {},
+                "meta": json.loads(metadata) if metadata else {},
                 "distance": float(distance)
             })
         
@@ -142,7 +156,7 @@ class SQLiteMemory(BaseMemory):
             return {
                 "id": row[0],
                 "text": row[1],
-                "meta": eval(row[2]) if row[2] else {}
+                "meta": json.loads(row[2]) if row[2] else {}
             }
         return None
     
@@ -153,7 +167,7 @@ class SQLiteMemory(BaseMemory):
             (f"%{keyword}%", top_k)
         )
         return [
-            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}}
             for row in cursor.fetchall()
         ]
 
@@ -171,38 +185,32 @@ class SQLiteMemory(BaseMemory):
             params
         )
         return [
-            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}}
             for row in cursor.fetchall()
         ]
     
     def metadata_search(self, key: str, value: Any, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Search entries by metadata key-value pair."""
+        """Search entries by metadata key-value pair using json_extract."""
+        # Use json_extract to filter directly in SQL
         cursor = self.conn.execute(
-            "SELECT id, text, metadata FROM knowledge LIMIT ?", (top_k * 10,)
+            "SELECT id, text, metadata FROM knowledge WHERE json_extract(metadata, ?) = ? LIMIT ?",
+            (f"$.{key}", value, top_k)
         )
-        results = []
-        for row in cursor.fetchall():
-            meta = eval(row[2]) if row[2] else {}
-            if meta.get(key) == value:
-                results.append({"id": row[0], "text": row[1], "meta": meta})
-                if len(results) >= top_k:
-                    break
-        return results
+        return [
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}}
+            for row in cursor.fetchall()
+        ]
 
     def regex_search(self, pattern: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """Search entries matching regex pattern."""
-        import re
-        cursor = self.conn.execute("SELECT id, text, metadata FROM knowledge")
-        results = []
-        for row in cursor.fetchall():
-            if re.search(pattern, row[1], re.IGNORECASE):
-                results.append({
-                    "id": row[0], "text": row[1], 
-                    "meta": eval(row[2]) if row[2] else {}
-                })
-                if len(results) >= top_k:
-                    break
-        return results
+        """Search entries matching regex pattern using SQLite REGEXP."""
+        cursor = self.conn.execute(
+            "SELECT id, text, metadata FROM knowledge WHERE text REGEXP ? LIMIT ?",
+            (pattern, top_k)
+        )
+        return [
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}}
+            for row in cursor.fetchall()
+        ]
 
     def hybrid_search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Combine vector and keyword search."""
@@ -245,14 +253,14 @@ class SQLiteMemory(BaseMemory):
                 "SELECT id, text, metadata, created_at FROM knowledge LIMIT ?", (top_k,)
             )
         return [
-            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}, "created_at": row[3]}
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}, "created_at": row[3]}
             for row in cursor.fetchall()
         ]
     
     def list_all(self) -> List[Dict[str, Any]]:
         cursor = self.conn.execute("SELECT id, text, metadata FROM knowledge")
         return [
-            {"id": row[0], "text": row[1], "meta": eval(row[2]) if row[2] else {}}
+            {"id": row[0], "text": row[1], "meta": json.loads(row[2]) if row[2] else {}}
             for row in cursor.fetchall()
         ]
     
