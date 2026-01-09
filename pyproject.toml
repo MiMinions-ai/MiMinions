@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 sqlite = [
     "sqlite-vec>=0.1.0",
+    "pysqlite3>=0.5.0",
 ]
 faiss = [
     "faiss-cpu>=1.7.0",

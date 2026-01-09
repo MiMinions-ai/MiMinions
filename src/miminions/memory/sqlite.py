@@ -1,4 +1,9 @@
-import sqlite3
+# Try to use pysqlite3 first (has extension support), fallback to sqlite3
+try:
+    import pysqlite3.dbapi2 as sqlite3
+except ImportError:
+    import sqlite3
+
 import sqlite_vec
 import struct
 import json
@@ -47,9 +52,19 @@ class SQLiteMemory(BaseMemory):
         self.dim = dim
         self.encoder = SentenceTransformer(model_name)
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.conn.enable_load_extension(True)
-        sqlite_vec.load(self.conn)
-        self.conn.enable_load_extension(False)
+        
+        # Try to load sqlite-vec extension if available
+        try:
+            self.conn.enable_load_extension(True)
+            sqlite_vec.load(self.conn)
+            self.conn.enable_load_extension(False)
+        except AttributeError:
+            # Python sqlite3 was compiled without extension support
+            raise RuntimeError(
+                "SQLite extension loading not supported. "
+                "Install pysqlite3: pip install pysqlite3"
+            )
+        
         self._register_regex_function()
         self._setup_tables()
     
