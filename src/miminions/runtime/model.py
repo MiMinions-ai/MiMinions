@@ -35,5 +35,7 @@ class AgentTask(Task):
     """Model representing a task assigned to an agent."""
     agent: Agent = Field(..., description="Agent assigned to the task")
     args: List[Any] = Field(default=[], description="Arguments for the task execution")
+    max_turns: int = Field(default=5, description="Maximum number of turns for the agent to complete the task")
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="Keyword arguments for the task execution")
+    call_back: Optional[callable] = Field(default=None, description="Callback function after task completion")
     result: AgentRunResult = Field(default=None, description="Result of the task execution")

@@ -9,7 +9,6 @@ from miminions.runtime.model import (
 )
 
 
-
 class TaskRuntime:
     """Agentic Task Runner for managing and executing async tasks."""
     def __init__(self):
@@ -81,16 +80,16 @@ class TaskRuntime:
         Returns:
             Dict[str, Any]: A dictionary with task names as keys and their status and result.
         """
-        tasks = {}
+        async_tasks = {}
         async with asyncio.TaskGroup() as tg:
             for name, task in self.tasks.items():
-                tasks[name] = tg.create_task(
+                async_tasks[name] = tg.create_task(
                     coro=task.agent.run(*task.args, **task.kwargs),
                     name=name
                 )
                 task.status = TaskStatus.RUNNING
         
-        for name, task in tasks.items():
+        for name, task in async_tasks.items():
             try:
                 self.tasks[name].result = task.result()
                 self.tasks[name].status = TaskStatus.COMPLETED
