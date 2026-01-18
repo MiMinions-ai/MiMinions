@@ -20,13 +20,21 @@ class MCPToolAdapter:
     
     def __init__(self):
         self.sessions: Dict[str, ClientSession] = {}
+        self.stdio_contexts: Dict[str, Any] = {}
+        self.session_contexts: Dict[str, Any] = {}
     
     async def connect_to_server(self, server_name: str, server_params: StdioServerParameters) -> None:
         """Connect to an MCP server"""
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                self.sessions[server_name] = session
+        stdio_ctx = stdio_client(server_params)
+        read, write = await stdio_ctx.__aenter__()
+        self.stdio_contexts[server_name] = stdio_ctx
+        
+        session = ClientSession(read, write)
+        session_ctx = await session.__aenter__()
+        await session.initialize()
+        
+        self.sessions[server_name] = session
+        self.session_contexts[server_name] = session_ctx
     
     async def get_tools_from_server(self, server_name: str) -> List[Dict[str, Any]]:
         """Get all tools from a specific MCP server"""
@@ -37,10 +45,15 @@ class MCPToolAdapter:
         tools_response = await session.list_tools()
         return tools_response.tools if tools_response else []
     
-    async def convert_mcp_tool_to_generic(self, mcp_tool: Dict[str, Any], server_name: str) -> GenericTool:
+    async def convert_mcp_tool_to_generic(self, mcp_tool: Any, server_name: str) -> GenericTool:
         """Convert an MCP tool to GenericTool format"""
-        tool_name = mcp_tool.get("name", "unknown")
-        tool_description = mcp_tool.get("description", "")
+        # Handle both dict and Tool object formats
+        if hasattr(mcp_tool, 'name'):
+            tool_name = mcp_tool.name
+            tool_description = mcp_tool.description if hasattr(mcp_tool, 'description') else ""
+        else:
+            tool_name = mcp_tool.get("name", "unknown")
+            tool_description = mcp_tool.get("description", "")
         
         async def mcp_tool_wrapper(**kwargs):
             if server_name not in self.sessions:
@@ -48,27 +61,25 @@ class MCPToolAdapter:
             
             session = self.sessions[server_name]
             result = await session.call_tool(tool_name, kwargs)
-            return result.content if result else None
+            
+            # Extract the actual content from the result
+            if result and hasattr(result, 'content'):
+                content_list = result.content
+                if content_list and len(content_list) > 0:
+                    # Get the first content item's text
+                    first_item = content_list[0]
+                    if hasattr(first_item, 'text'):
+                        return first_item.text
+                    return first_item
+                return content_list
+            return result
         
-        # Create a sync wrapper for the async function
-        def sync_wrapper(**kwargs):
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(asyncio.run, mcp_tool_wrapper(**kwargs))
-                        return future.result()
-                else:
-                    return loop.run_until_complete(mcp_tool_wrapper(**kwargs))
-            except RuntimeError:
-                # No event loop running, create one
-                return asyncio.run(mcp_tool_wrapper(**kwargs))
-        
+        # Return the async function directly as a SimpleTool
+        # The SimpleTool will handle it properly
         return SimpleTool(
             name=tool_name,
             description=tool_description,
-            func=sync_wrapper
+            func=mcp_tool_wrapper
         )
     
     async def load_all_tools_from_server(self, server_name: str) -> List[GenericTool]:
@@ -84,10 +95,24 @@ class MCPToolAdapter:
     
     async def close_all_connections(self):
         """Close all server connections"""
-        for session in self.sessions.values():
-            if hasattr(session, 'close'):
-                await session.close()
+        for server_name in list(self.sessions.keys()):
+            session = self.sessions[server_name]
+            stdio_ctx = self.stdio_contexts.get(server_name)
+            
+            try:
+                await session.__aexit__(None, None, None)
+            except Exception as e:
+                print(f"Error closing session for {server_name}: {e}")
+            
+            try:
+                if stdio_ctx:
+                    await stdio_ctx.__aexit__(None, None, None)
+            except Exception as e:
+                print(f"Error closing stdio context for {server_name}: {e}")
+        
         self.sessions.clear()
+        self.stdio_contexts.clear()
+        self.session_contexts.clear()
 
 
 class MCPTool(GenericTool):

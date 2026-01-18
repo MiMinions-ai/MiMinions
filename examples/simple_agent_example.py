@@ -21,7 +21,7 @@ async def working_mcp_demo():
     try:
         server_params = StdioServerParameters(
             command="python3",
-            args=["examples/server.py"]
+            args=["examples/servers/math_server.py"]
         )
         
         print("Connecting to MCP math server...")
@@ -53,16 +53,16 @@ async def working_mcp_demo():
         print(f"factorial(5) = {agent.execute_tool('factorial', n=5)}")
         
         try:
-            result = agent.execute_tool("add", a=15, b=25)
+            result = await agent.execute_tool_async("add", a=15, b=25)
             print(f"MCP add(15, 25) = {result}")
         except Exception as e:
-            print(f"MCP add failed (expected): {e}")
+            print(f"MCP add failed: {e}")
         
         try:
-            result = agent.execute_tool("multiply", a=6, b=9)
+            result = await agent.execute_tool_async("multiply", a=6, b=9)
             print(f"MCP multiply(6, 9) = {result}")
         except Exception as e:
-            print(f"MCP multiply failed (expected): {e}")
+            print(f"MCP multiply failed: {e}")
         
         print("\n=== Tool Information ===")
         for tool_name in agent.list_tools():
@@ -72,7 +72,8 @@ async def working_mcp_demo():
         
     except Exception as e:
         print(f"Demo error: {e}")
-        print('Expected due to async issues')
+        import traceback
+        traceback.print_exc()
     
     finally:
         await agent.cleanup()
