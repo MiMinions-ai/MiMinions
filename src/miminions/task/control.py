@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Any
 from datetime import datetime
 
-from miminions.runtime.model import (
+from miminions.task.model import (
     AgentTask,
     TaskStatus
 )

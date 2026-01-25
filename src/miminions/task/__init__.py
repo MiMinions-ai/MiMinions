@@ -1,6 +1,6 @@
 """Initialization of the runtime module."""
-from miminions.runtime.control import TaskRuntime
-from miminions.runtime.model import Task, AgentTask, TaskStatus
+from miminions.task.control import TaskRuntime
+from miminions.task.model import Task, AgentTask, TaskStatus
 
 DEFAULT_RUNTIME = TaskRuntime()
 
