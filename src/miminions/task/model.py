@@ -39,3 +39,11 @@ class AgentTask(Task):
     kwargs: Dict[str, Any] = Field(default_factory=dict, description="Keyword arguments for the task execution")
     call_back: Optional[callable] = Field(default=None, description="Callback function after task completion")
     result: AgentRunResult = Field(default=None, description="Result of the task execution")
+
+class TaskInput(BaseModel):
+    """Model representing input parameters for a task."""
+    params: Dict[str, Any] = Field(..., description="Input parameters for the task")
+
+class TaskOutput(BaseModel):
+    """Model representing output results of a task."""
+    results: Dict[str, Any] = Field(..., description="Output results of the task")
