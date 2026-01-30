@@ -17,7 +17,7 @@ from miminions.agent.simple_agent import create_simple_agent
 
 async def test_basic_functionality():
     """Test basic agent functionality"""
-    print("Testing basic agent functionality...")
+    print("Testing basic agent functionality")
     
     try:
         agent = create_simple_agent("TestAgent", "Agent for testing")
@@ -53,11 +53,11 @@ async def test_basic_functionality():
         assert add_info["name"] == "add", "Tool name mismatch"
         
         await agent.cleanup()
-        print("✓ Basic functionality test passed!")
+        print("Basic functionality test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Basic functionality test failed: {e}")
+        print(f"Basic functionality test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -65,7 +65,7 @@ async def test_basic_functionality():
 
 async def test_tool_schema():
     """Test tool schema generation"""
-    print("Testing tool schema generation...")
+    print("Testing tool schema generation")
     
     try:        
         agent = create_simple_agent("SchemaTestAgent")
@@ -90,11 +90,11 @@ async def test_tool_schema():
         assert "active" in params, "active parameter missing"
         
         await agent.cleanup()
-        print("✓ Tool schema test passed!")
+        print("Tool schema test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Tool schema test failed: {e}")
+        print(f"Tool schema test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -102,7 +102,7 @@ async def test_tool_schema():
 
 async def test_error_handling():
     """Test error handling"""
-    print("Testing error handling...")
+    print("Testing error handling")
     
     try:
         agent = create_simple_agent("ErrorTestAgent")
@@ -127,11 +127,11 @@ async def test_error_handling():
             pass  # Expected
         
         await agent.cleanup()
-        print("✓ Error handling test passed!")
+        print("Error handling test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Error handling test failed: {e}")
+        print(f"Error handling test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -139,7 +139,7 @@ async def test_error_handling():
 
 async def test_tool_replacement():
     """Test that tools can be replaced"""
-    print("Testing tool replacement...")
+    print("Testing tool replacement")
     
     try:
         agent = create_simple_agent("ReplaceTestAgent")
@@ -164,11 +164,11 @@ async def test_tool_replacement():
         assert add_count == 1, f"Expected 1 add tool, got {add_count}"
         
         await agent.cleanup()
-        print("✓ Tool replacement test passed!")
+        print("Tool replacement test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Tool replacement test failed: {e}")
+        print(f"Tool replacement test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -176,7 +176,7 @@ async def test_tool_replacement():
 
 async def test_agent_string_representation():
     """Test agent string representation"""
-    print("Testing agent string representation...")
+    print("Testing agent string representation")
     
     try:
         agent = create_simple_agent("StringTestAgent", "Test description")
@@ -186,11 +186,11 @@ async def test_agent_string_representation():
         assert "tools=" in agent_str, "Tool count not in string"
         
         await agent.cleanup()
-        print("✓ Agent string representation test passed!")
+        print("Agent string representation test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Agent string representation test failed: {e}")
+        print(f"Agent string representation test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -199,7 +199,6 @@ async def test_agent_string_representation():
 async def main():
     """Run all tests"""
     print("Running Simple Agent Tests")
-    print("=" * 50)
     
     tests = [
         test_basic_functionality,
@@ -219,14 +218,13 @@ async def main():
         except Exception as e:
             print(f"Test {test.__name__} crashed: {e}")
     
-    print("\n" + "=" * 50)
-    print(f"Tests completed: {passed}/{total} passed")
+    print(f"\nTests completed: {passed}/{total} passed")
     
     if passed == total:
-        print("✓ All tests passed!")
+        print("All tests passed")
         return 0
     else:
-        print("✗ Some tests failed")
+        print("Some tests failed")
         return 1
 
 

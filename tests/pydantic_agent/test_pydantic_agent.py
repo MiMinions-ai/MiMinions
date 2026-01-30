@@ -33,7 +33,7 @@ from miminions.agent.pydantic_agent import (
 
 async def test_agent_creation():
     """Test basic agent creation"""
-    print("Testing agent creation...")
+    print("Testing agent creation")
     
     try:
         agent = create_pydantic_agent("TestAgent", "A test agent")
@@ -48,11 +48,11 @@ async def test_agent_creation():
         assert state.has_memory == False, "Should start without memory"
         
         await agent.cleanup()
-        print("✓ Agent creation test passed!")
+        print("Agent creation test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Agent creation test failed: {e}")
+        print(f"Agent creation test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -60,7 +60,7 @@ async def test_agent_creation():
 
 async def test_tool_registration():
     """Test tool registration with automatic schema extraction"""
-    print("Testing tool registration...")
+    print("Testing tool registration")
     
     try:
         agent = create_pydantic_agent("ToolRegAgent")
@@ -102,11 +102,11 @@ async def test_tool_registration():
         assert "greet" in tools, "greet should be in tools"
         
         await agent.cleanup()
-        print("✓ Tool registration test passed!")
+        print("Tool registration test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Tool registration test failed: {e}")
+        print(f"Tool registration test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -114,7 +114,7 @@ async def test_tool_registration():
 
 async def test_tool_execution_pydantic_style():
     """Test Pydantic-style tool execution"""
-    print("Testing Pydantic-style execution...")
+    print("Testing Pydantic-style execution")
     
     try:
         agent = create_pydantic_agent("ExecAgent")
@@ -139,11 +139,11 @@ async def test_tool_execution_pydantic_style():
         assert result2.result == 10.0, f"Expected 10.0, got {result2.result}"
         
         await agent.cleanup()
-        print("✓ Pydantic-style execution test passed!")
+        print("Pydantic-style execution test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Pydantic-style execution test failed: {e}")
+        print(f"Pydantic-style execution test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -151,7 +151,7 @@ async def test_tool_execution_pydantic_style():
 
 async def test_tool_execution_request():
     """Test execution via ToolExecutionRequest"""
-    print("Testing execution request...")
+    print("Testing execution request")
     
     try:
         agent = create_pydantic_agent("RequestAgent")
@@ -175,11 +175,11 @@ async def test_tool_execution_request():
         assert result.tool_name == "concat"
         
         await agent.cleanup()
-        print("✓ Execution request test passed!")
+        print("Execution request test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Execution request test failed: {e}")
+        print(f"Execution request test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -187,7 +187,7 @@ async def test_tool_execution_request():
 
 async def test_simple_agent_compatible_execution():
     """Test Simple Agent compatible execution style"""
-    print("Testing Simple Agent compatible execution...")
+    print("Testing Simple Agent compatible execution")
     
     try:
         agent = create_pydantic_agent("CompatAgent")
@@ -210,11 +210,11 @@ async def test_simple_agent_compatible_execution():
         assert result2 == 5.0, f"Expected 5.0, got {result2}"
         
         await agent.cleanup()
-        print("✓ Simple Agent compatible execution test passed!")
+        print("Simple Agent compatible execution test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Simple Agent compatible execution test failed: {e}")
+        print(f"Simple Agent compatible execution test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -222,7 +222,7 @@ async def test_simple_agent_compatible_execution():
 
 async def test_error_handling_pydantic_style():
     """Test error handling with Pydantic-style execution"""
-    print("Testing Pydantic-style error handling...")
+    print("Testing Pydantic-style error handling")
     
     try:
         agent = create_pydantic_agent("ErrorAgent")
@@ -246,11 +246,11 @@ async def test_error_handling_pydantic_style():
         assert "not found" in result2.error.lower()
         
         await agent.cleanup()
-        print("✓ Pydantic-style error handling test passed!")
+        print("Pydantic-style error handling test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Pydantic-style error handling test failed: {e}")
+        print(f"Pydantic-style error handling test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -258,7 +258,7 @@ async def test_error_handling_pydantic_style():
 
 async def test_error_handling_compatible_style():
     """Test error handling with Simple Agent compatible style"""
-    print("Testing compatible-style error handling...")
+    print("Testing compatible-style error handling")
     
     try:
         agent = create_pydantic_agent("CompatErrorAgent")
@@ -282,11 +282,11 @@ async def test_error_handling_compatible_style():
             assert "not found" in str(e).lower()
         
         await agent.cleanup()
-        print("✓ Compatible-style error handling test passed!")
+        print("Compatible-style error handling test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Compatible-style error handling test failed: {e}")
+        print(f"Compatible-style error handling test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -294,7 +294,7 @@ async def test_error_handling_compatible_style():
 
 async def test_tool_schema_json():
     """Test JSON schema generation for LLM integration"""
-    print("Testing JSON schema generation...")
+    print("Testing JSON schema generation")
     
     try:
         agent = create_pydantic_agent("SchemaAgent")
@@ -336,11 +336,11 @@ async def test_tool_schema_json():
         assert "fuzzy" not in params["required"]
         
         await agent.cleanup()
-        print("✓ JSON schema generation test passed!")
+        print("JSON schema generation test passed")
         return True
         
     except Exception as e:
-        print(f"✗ JSON schema generation test failed: {e}")
+        print(f"JSON schema generation test failed: {e}"))
         import traceback
         traceback.print_exc()
         return False
@@ -348,7 +348,7 @@ async def test_tool_schema_json():
 
 async def test_custom_schema():
     """Test registration with custom schema"""
-    print("Testing custom schema registration...")
+    print("Testing custom schema registration")
     
     try:
         agent = create_pydantic_agent("CustomSchemaAgent")
@@ -381,11 +381,11 @@ async def test_custom_schema():
         assert data_param.description == "The data to process"
         
         await agent.cleanup()
-        print("✓ Custom schema registration test passed!")
+        print("Custom schema registration test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Custom schema registration test failed: {e}")
+        print(f"Custom schema registration test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -393,7 +393,7 @@ async def test_custom_schema():
 
 async def test_tool_unregistration():
     """Test tool unregistration"""
-    print("Testing tool unregistration...")
+    print("Testing tool unregistration")
     
     try:
         agent = create_pydantic_agent("UnregAgent")
@@ -414,11 +414,11 @@ async def test_tool_unregistration():
         assert result2 == False, "Should return False for nonexistent tool"
         
         await agent.cleanup()
-        print("✓ Tool unregistration test passed!")
+        print("Tool unregistration test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Tool unregistration test failed: {e}")
+        print(f"Tool unregistration test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -426,7 +426,7 @@ async def test_tool_unregistration():
 
 async def test_tool_search():
     """Test tool search functionality"""
-    print("Testing tool search...")
+    print("Testing tool search")
     
     try:
         agent = create_pydantic_agent("SearchAgent")
@@ -459,11 +459,11 @@ async def test_tool_search():
         assert len(no_match) == 0
         
         await agent.cleanup()
-        print("✓ Tool search test passed!")
+        print("Tool search test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Tool search test failed: {e}")
+        print(f"Tool search test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -471,7 +471,7 @@ async def test_tool_search():
 
 async def test_agent_state():
     """Test agent state tracking"""
-    print("Testing agent state...")
+    print("Testing agent state")
     
     try:
         agent = create_pydantic_agent("StateAgent", "State test agent")
@@ -493,11 +493,11 @@ async def test_agent_state():
         assert state2.config.description == "State test agent"
         
         await agent.cleanup()
-        print("✓ Agent state test passed!")
+        print("Agent state test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Agent state test failed: {e}")
+        print(f"Agent state test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -505,7 +505,7 @@ async def test_agent_state():
 
 async def test_execution_timing():
     """Test that execution timing is tracked"""
-    print("Testing execution timing...")
+    print("Testing execution timing")
     
     try:
         import time
@@ -525,11 +525,11 @@ async def test_execution_timing():
         assert result.execution_time_ms >= 50, f"Expected >= 50ms, got {result.execution_time_ms}ms"
         
         await agent.cleanup()
-        print("✓ Execution timing test passed!")
+        print("Execution timing test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Execution timing test failed: {e}")
+        print(f"Execution timing test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -538,7 +538,6 @@ async def test_execution_timing():
 async def main():
     """Run all tests"""
     print("Running Pydantic Agent Tests")
-    print("=" * 60)
     
     tests = [
         test_agent_creation,
@@ -566,14 +565,13 @@ async def main():
         except Exception as e:
             print(f"Test {test.__name__} crashed: {e}")
     
-    print("\n" + "=" * 60)
-    print(f"Tests completed: {passed}/{total} passed")
+    print(f"\nTests completed: {passed}/{total} passed")
     
     if passed == total:
-        print("✓ All tests passed!")
+        print("All tests passed")
         return 0
     else:
-        print("✗ Some tests failed")
+        print("Some tests failed")
         return 1
 
 

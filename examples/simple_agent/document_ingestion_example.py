@@ -20,13 +20,13 @@ async def main():
         print(f"  Chunks: {result['chunks_stored']}")
         print(f"  Characters: {result['total_characters']:,}")
         
-        print("Querying PDF...")
+        print("Querying PDF")
         for query in ["experience", "education", "skills"]:
             results = agent.recall_knowledge(query, top_k=1)
             if results:
-                print(f"  '{query}': {results[0]['text'][:80]}...")
+                print(f"  '{query}': {results[0]['text'][:80]}")
     
-    print("Ingesting text file...")
+    print("Ingesting text file")
     text_file = Path("sample_doc.txt")
     text_file.write_text("""Artificial Intelligence and Machine Learning
 
@@ -39,10 +39,10 @@ Computer vision enables computers to interpret visual information.""")
     print(f"  Status: {result['status']}")
     print(f"  Chunks: {result['chunks_stored']}")
     
-    print("Querying text...")
+    print("Querying text")
     results = agent.recall_knowledge("What is deep learning?", top_k=2)
     for i, r in enumerate(results, 1):
-        print(f"  {i}. {r['text'][:100]}...")
+        print(f"  {i}. {r['text'][:100]}")
     
     all_knowledge = agent.execute_tool("memory_list")
     print(f"Total entries: {len(all_knowledge)}")

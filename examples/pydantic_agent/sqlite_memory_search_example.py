@@ -41,7 +41,7 @@ def demo_searches():
     print(f"  Query: {context.query}")
     print(f"  Count: {context.count}")
     for entry in context.results:
-        print(f"  - ID: {entry.id[:8]}... Text: {entry.text}")
+        print(f"  - ID: {entry.id[:8]} Text: {entry.text}")
     
     memory.close()
     print("Done")

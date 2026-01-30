@@ -17,13 +17,13 @@ from miminions.memory.faiss import FAISSMemory
 
 async def basic_memory_demo():
     """Demonstrate basic memory operations"""
-    print("=== Basic Memory Demo ===\n")
+    print("Basic Memory Demo")
     
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("MemoryAgent", "Agent with long-term memory", memory=memory)
     
     print(f"Agent created: {agent}")
-    print(f"Available tools: {agent.list_tools()}\n")
+    print(f"Available tools: {agent.list_tools()}")
     
     print("Storing knowledge")
     id1 = agent.execute_tool("memory_store", 
@@ -38,25 +38,25 @@ async def basic_memory_demo():
                             text="FAISS is a library for efficient similarity search",
                             metadata={"category": "libraries", "topic": "search"})
     
-    print(f"Stored 3 knowledge entries: {id1[:10]}, {id2[:10]}, {id3[:10]}\n")
+    print(f"Stored 3 knowledge entries: {id1[:10]}, {id2[:10]}, {id3[:10]}")
     
     print("Recalling knowledge about 'programming languages'")
     results = agent.execute_tool("memory_recall", query="programming languages", top_k=2)
     for i, result in enumerate(results, 1):
         print(f"{i}. {result['text']}")
         print(f"   Distance: {result.get('distance', 'N/A')}")
-        print(f"   Metadata: {result.get('meta', {})}\n")
+        print(f"   Metadata: {result.get('meta', {})}")
     
     print("Updating knowledge")
     success = agent.execute_tool("memory_update", 
                                  id=id1, 
                                  new_text="Python is a popular high-level programming language known for its simplicity")
-    print(f"Update successful: {success}\n")
+    print(f"Update successful: {success}")
     
     print("Retrieving updated entry")
     updated = agent.execute_tool("memory_get", id=id1)
     if updated:
-        print(f"Updated text: {updated['text']}\n")
+        print(f"Updated text: {updated['text']}")
     
     print("Listing all knowledge entries")
     all_entries = agent.execute_tool("memory_list")
@@ -65,12 +65,12 @@ async def basic_memory_demo():
         print(f"- {entry['text'][:50]}")
     
     await agent.cleanup()
-    print("\nBasic memory demo completed")
+    print("Done")
 
 
 async def context_retrieval_demo():
     """Demonstrate using memory for context in conversations"""
-    print("\n=== Context Retrieval Demo ===\n")
+    print("\nContext Retrieval Demo")
     
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("ContextAgent", memory=memory)
@@ -87,7 +87,7 @@ async def context_retrieval_demo():
     for text in knowledge:
         agent.store_knowledge(text, metadata={"source": "documentation"})
     
-    print(f"Stored {len(knowledge)} knowledge entries\n")
+    print(f"Stored {len(knowledge)} knowledge entries")
     
     queries = [
         "How do agents interact with tools?",
@@ -103,12 +103,12 @@ async def context_retrieval_demo():
         print()
     
     await agent.cleanup()
-    print("Context retrieval demo completed")
+    print("Done")
 
 
 async def memory_with_tools_demo():
     """Demonstrate memory alongside other tools"""
-    print("\n=== Memory with Tools Demo ===\n")
+    print("\nMemory with Tools Demo")
     
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("HybridAgent", memory=memory)
@@ -124,11 +124,11 @@ async def memory_with_tools_demo():
     agent.add_function_as_tool("calculate_area", "Calculate rectangle area", calculate_area)
     agent.add_function_as_tool("greet", "Generate greeting", greet)
     
-    print(f"Available tools: {agent.list_tools()}\n")
+    print(f"Available tools: {agent.list_tools()}")
     
     print("Using calculation tool")
     area = agent.execute_tool("calculate_area", width=5.0, height=3.0)
-    print(f"Area of 5x3 rectangle: {area}\n")
+    print(f"Area of 5x3 rectangle: {area}")
     
     print("Storing calculation in memory")
     agent.store_knowledge(
@@ -139,7 +139,7 @@ async def memory_with_tools_demo():
     print("Recalling calculation")
     results = agent.recall_knowledge("rectangle area calculation", top_k=1)
     if results:
-        print(f"Found: {results[0]['text']}\n")
+        print(f"Found: {results[0]['text']}")
     
     greeting = agent.execute_tool("greet", name="User")
     print(f"Greeting: {greeting}")
@@ -155,20 +155,18 @@ async def memory_with_tools_demo():
         print(f"- {interaction['text']}")
     
     await agent.cleanup()
-    print("\nMemory with tools demo completed")
+    print("Done")
 
 
 async def main():
     """Run all memory demonstrations"""
     print("Simple Agent Memory System Demonstration")
-    print("=" * 60)
     
     await basic_memory_demo()
     await context_retrieval_demo()
     await memory_with_tools_demo()
     
-    print("\n" + "=" * 60)
-    print("All demonstrations completed")
+    print("\nAll demonstrations completed")
 
 
 if __name__ == "__main__":

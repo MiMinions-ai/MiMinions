@@ -23,7 +23,7 @@ from miminions.memory.faiss import FAISSMemory
 
 async def test_memory_attachment():
     """Test attaching memory to agent"""
-    print("Testing memory attachment...")
+    print("Testing memory attachment")
     
     try:
         # Create agent without memory
@@ -44,11 +44,11 @@ async def test_memory_attachment():
         assert "memory_recall" in tools, "memory_recall tool should be registered"
         
         await agent.cleanup()
-        print("✓ Memory attachment test passed!")
+        print("Memory attachment test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory attachment test failed: {e}")
+        print(f"Memory attachment test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -56,7 +56,7 @@ async def test_memory_attachment():
 
 async def test_memory_initialization():
     """Test creating agent with memory"""
-    print("Testing memory initialization...")
+    print("Testing memory initialization")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -73,11 +73,11 @@ async def test_memory_initialization():
             assert tool in tools, f"{tool} should be registered"
         
         await agent.cleanup()
-        print("✓ Memory initialization test passed!")
+        print("Memory initialization test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory initialization test failed: {e}")
+        print(f"Memory initialization test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -85,7 +85,7 @@ async def test_memory_initialization():
 
 async def test_memory_store_and_recall():
     """Test storing and recalling from memory"""
-    print("Testing memory store and recall...")
+    print("Testing memory store and recall")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -109,11 +109,11 @@ async def test_memory_store_and_recall():
         assert "Python" in recall_result.result[0]["text"]
         
         await agent.cleanup()
-        print("✓ Memory store and recall test passed!")
+        print("Memory store and recall test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory store and recall test failed: {e}")
+        print(f"Memory store and recall test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -121,7 +121,7 @@ async def test_memory_store_and_recall():
 
 async def test_memory_convenience_methods():
     """Test convenience methods for memory operations"""
-    print("Testing memory convenience methods...")
+    print("Testing memory convenience methods")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -139,11 +139,11 @@ async def test_memory_convenience_methods():
         assert "Machine learning" in results[0]["text"]
         
         await agent.cleanup()
-        print("✓ Memory convenience methods test passed!")
+        print("Memory convenience methods test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory convenience methods test failed: {e}")
+        print(f"Memory convenience methods test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -151,7 +151,7 @@ async def test_memory_convenience_methods():
 
 async def test_memory_context_structured():
     """Test structured memory context retrieval"""
-    print("Testing structured memory context...")
+    print("Testing structured memory context")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -177,11 +177,11 @@ async def test_memory_context_structured():
             assert hasattr(entry, "metadata"), "Entry should have metadata"
         
         await agent.cleanup()
-        print("✓ Structured memory context test passed!")
+        print("Structured memory context test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Structured memory context test failed: {e}")
+        print(f"Structured memory context test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -189,7 +189,7 @@ async def test_memory_context_structured():
 
 async def test_memory_context_empty():
     """Test memory context with no results"""
-    print("Testing empty memory context...")
+    print("Testing empty memory context")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -204,11 +204,11 @@ async def test_memory_context_empty():
         assert context.message is not None  # Should have a message
         
         await agent.cleanup()
-        print("✓ Empty memory context test passed!")
+        print("Empty memory context test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Empty memory context test failed: {e}")
+        print(f"Empty memory context test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -216,7 +216,7 @@ async def test_memory_context_empty():
 
 async def test_memory_context_no_memory():
     """Test memory context when no memory is attached"""
-    print("Testing memory context without memory...")
+    print("Testing memory context without memory")
     
     try:
         agent = create_pydantic_agent("NoMemAgent")
@@ -229,11 +229,11 @@ async def test_memory_context_no_memory():
         assert "No memory system attached" in context.message
         
         await agent.cleanup()
-        print("✓ Memory context without memory test passed!")
+        print("Memory context without memory test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory context without memory test failed: {e}")
+        print(f"Memory context without memory test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -241,7 +241,7 @@ async def test_memory_context_no_memory():
 
 async def test_memory_crud_operations():
     """Test full CRUD operations on memory"""
-    print("Testing memory CRUD operations...")
+    print("Testing memory CRUD operations")
     
     try:
         memory = FAISSMemory(dim=384)
@@ -284,11 +284,11 @@ async def test_memory_crud_operations():
         assert delete_result.status == ExecutionStatus.SUCCESS
         
         await agent.cleanup()
-        print("✓ Memory CRUD operations test passed!")
+        print("Memory CRUD operations test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory CRUD operations test failed: {e}")
+        print(f"Memory CRUD operations test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -296,7 +296,7 @@ async def test_memory_crud_operations():
 
 async def test_memory_error_without_attachment():
     """Test memory operations fail gracefully without memory"""
-    print("Testing memory error handling...")
+    print("Testing memory error handling")
     
     try:
         agent = create_pydantic_agent("NoMemErrorAgent")
@@ -309,11 +309,11 @@ async def test_memory_error_without_attachment():
             assert "No memory system attached" in str(e)
         
         await agent.cleanup()
-        print("✓ Memory error handling test passed!")
+        print("Memory error handling test passed")
         return True
         
     except Exception as e:
-        print(f"✗ Memory error handling test failed: {e}")
+        print(f"Memory error handling test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -322,7 +322,6 @@ async def test_memory_error_without_attachment():
 async def main():
     """Run all memory tests"""
     print("Running Pydantic Agent Memory Tests")
-    print("=" * 60)
     
     tests = [
         test_memory_attachment,
@@ -346,14 +345,13 @@ async def main():
         except Exception as e:
             print(f"Test {test.__name__} crashed: {e}")
     
-    print("\n" + "=" * 60)
-    print(f"Tests completed: {passed}/{total} passed")
+    print(f"\nTests completed: {passed}/{total} passed")
     
     if passed == total:
-        print("✓ All tests passed!")
+        print("All tests passed")
         return 0
     else:
-        print("✗ Some tests failed")
+        print("Some tests failed")
         return 1
 
 

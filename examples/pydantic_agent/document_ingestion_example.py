@@ -23,13 +23,13 @@ async def main():
         print(f"  Chunks: {result.result['chunks_stored']}")
         print(f"  Characters: {result.result['total_characters']:,}")
         
-        print("Querying PDF...")
+        print("Querying PDF")
         for query in ["experience", "education", "skills"]:
             results = agent.recall_knowledge(query, top_k=1)
             if results:
-                print(f"  '{query}': {results[0]['text'][:80]}...")
+                print(f"  '{query}': {results[0]['text'][:80]}")
     
-    print("Ingesting text file...")
+    print("Ingesting text file"))
     text_file = Path("sample_doc.txt")
     text_file.write_text("""Artificial Intelligence and Machine Learning
 
@@ -48,7 +48,7 @@ Computer vision enables computers to interpret visual information.""")
     print(f"  Query: {context.query}")
     print(f"  Results: {context.count}")
     for entry in context.results:
-        print(f"    - {entry.text[:80]}...")
+        print(f"    - {entry.text[:80]}")
     
     list_result = agent.execute("memory_list")
     print(f"Total entries: {len(list_result.result)}")
