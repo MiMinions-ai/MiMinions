@@ -17,35 +17,35 @@ def setup_memory():
 
 
 def demo_searches():
-    print("SQLite Memory Search Demo\n")
+    print("SQLite Memory Search Demo")
     memory = setup_memory()
     
     print("Vector Search:")
     for r in memory.read("What is artificial intelligence?", top_k=2):
         print(f"  {r['text']} (dist: {r['distance']:.3f})")
     
-    print("\nKeyword Search:")
+    print("Keyword Search:")
     for r in memory.get_by_keyword("learning"):
         print(f"  {r['text']}")
     
-    print("\nFull Text Search:")
+    print("Full Text Search:")
     for r in memory.full_text_search("high level"):
         print(f"  {r['text']}")
     
-    print("\nMetadata Search:")
+    print("Metadata Search:")
     for r in memory.metadata_search("type", "ai"):
         print(f"  {r['text']}")
     
-    print("\nRegex Search:")
+    print("Regex Search:")
     for r in memory.regex_search(r".*learning.*"):
         print(f"  {r['text']}")
     
-    print("\nHybrid Search:")
+    print("Hybrid Search:")
     for r in memory.hybrid_search("programming language"):
         print(f"  [{r.get('source', 'unknown')}] {r['text']}")
     
     memory.close()
-    print("\nDone!")
+    print("Done")
 
 
 if __name__ == "__main__":

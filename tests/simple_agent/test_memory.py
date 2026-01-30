@@ -12,27 +12,22 @@ from miminions.memory.faiss import FAISSMemory
 
 
 async def test_memory_crud():
-    """Test CRUD operations through agent tools."""
-    print("Testing memory CRUD...")
+    print("test_memory_crud")
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("TestAgent", memory=memory)
 
-    # CREATE
     id1 = agent.execute_tool("memory_store", text="Test knowledge 1")
     assert id1 is not None
 
-    # READ
     results = agent.execute_tool("memory_recall", query="Test knowledge", top_k=1)
     assert len(results) > 0
     assert "Test knowledge 1" in results[0]["text"]
 
-    # UPDATE
     success = agent.execute_tool("memory_update", id=id1, new_text="Updated test knowledge")
     assert success
     updated = agent.execute_tool("memory_get", id=id1)
     assert "Updated" in updated["text"]
 
-    # DELETE
     success = agent.execute_tool("memory_delete", id=id1)
     assert success
     deleted = agent.execute_tool("memory_get", id=id1)
@@ -44,8 +39,7 @@ async def test_memory_crud():
 
 
 async def test_memory_search():
-    """Test semantic search."""
-    print("Testing memory search...")
+    print("test_memory_search")
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("SearchAgent", memory=memory)
 
@@ -63,8 +57,7 @@ async def test_memory_search():
 
 
 async def test_memory_with_metadata():
-    """Test memory with metadata."""
-    print("Testing memory metadata...")
+    print("test_memory_with_metadata")
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("MetadataAgent", memory=memory)
 
@@ -81,8 +74,7 @@ async def test_memory_with_metadata():
 
 
 async def test_context_generation():
-    """Test context generation for LLM use."""
-    print("Testing context generation...")
+    print("test_context_generation")
     memory = FAISSMemory(dim=384)
     agent = create_simple_agent("ContextAgent", memory=memory)
 
@@ -104,7 +96,7 @@ async def test_context_generation():
 
 
 async def main():
-    print("Simple Agent Memory Tests\n" + "=" * 40)
+    print("Simple Agent Memory Tests")
     tests = [test_memory_crud, test_memory_search, test_memory_with_metadata, test_context_generation]
     
     passed = 0

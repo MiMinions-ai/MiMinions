@@ -62,9 +62,9 @@ def test_hybrid_search():
 
 
 if __name__ == "__main__":
-    print("SQLite Memory Search Tests\n" + "=" * 40)
+    print("SQLite Memory Search Tests")
     tests = [test_vector_search, test_keyword_search, test_full_text_search, 
              test_metadata_search, test_regex_search, test_hybrid_search]
     for test in tests:
         test()
-    print("\nAll tests passed!")
+    print("All tests passed")

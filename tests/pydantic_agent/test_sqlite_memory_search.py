@@ -17,7 +17,7 @@ def setup_agent():
 
 
 def test_vector_search():
-    print("test: vector search via agent")
+    print("test_vector_search")
     agent, memory = setup_agent()
     
     result = agent.execute("memory_recall", query="What is Python?", top_k=2)
@@ -28,7 +28,7 @@ def test_vector_search():
 
 
 def test_recall_knowledge():
-    print("test: recall_knowledge method")
+    print("test_recall_knowledge")
     agent, memory = setup_agent()
     
     results = agent.recall_knowledge("artificial intelligence", top_k=2)
@@ -37,22 +37,20 @@ def test_recall_knowledge():
 
 
 def test_memory_context():
-    print("test: get_memory_context (Pydantic model)")
+    print("test_memory_context")
     agent, memory = setup_agent()
     
     context = agent.get_memory_context("programming", top_k=2)
     
-    # Returns MemoryQueryResult Pydantic model
     assert context.query == "programming"
     assert context.count > 0
     assert len(context.results) <= 2
-    # Results are MemoryEntry models
     assert hasattr(context.results[0], 'text')
     memory.close()
 
 
 def test_execution_timing():
-    print("test: execution timing")
+    print("test_execution_timing")
     agent, memory = setup_agent()
     
     result = agent.execute("memory_recall", query="Python", top_k=1)
@@ -62,8 +60,8 @@ def test_execution_timing():
 
 
 if __name__ == "__main__":
-    print("Pydantic Agent SQLite Search Tests\n" + "=" * 40)
+    print("Pydantic Agent SQLite Search Tests")
     tests = [test_vector_search, test_recall_knowledge, test_memory_context, test_execution_timing]
     for test in tests:
         test()
-    print("\nAll tests passed!")
+    print("All tests passed")

@@ -8,8 +8,7 @@ from miminions.memory.faiss import FAISSMemory
 
 
 async def test_ingest_text():
-    """Test text document ingestion with typed result."""
-    print("Testing text ingestion...")
+    print("test_ingest_text")
     agent = create_pydantic_agent("ChunkAgent", memory=FAISSMemory())
     
     test_file = Path("test_chunked.txt")
@@ -37,8 +36,7 @@ Natural language processing enables computers to understand human language.""")
 
 
 async def test_ingest_pdf():
-    """Test PDF ingestion if available."""
-    print("Testing PDF ingestion...")
+    print("test_ingest_pdf")
     pdf_path = Path(__file__).parent.parent.parent / "examples" / "example_files" / "resume.pdf"
     
     if not pdf_path.exists():
@@ -60,8 +58,7 @@ async def test_ingest_pdf():
 
 
 async def test_ingest_error():
-    """Test error handling with typed result."""
-    print("Testing ingestion error handling...")
+    print("test_ingest_error")
     agent = create_pydantic_agent("ErrorAgent", memory=FAISSMemory())
     
     result = agent.execute("ingest_document", filepath="nonexistent.pdf")
@@ -76,7 +73,7 @@ async def test_ingest_error():
 
 
 async def main():
-    print("Pydantic Agent Document Ingestion Tests\n" + "=" * 40)
+    print("Pydantic Agent Document Ingestion Tests")
     tests = [test_ingest_text, test_ingest_pdf, test_ingest_error]
     
     passed = 0

@@ -8,7 +8,7 @@ from mcp import StdioServerParameters
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.miminions.agent.simple_agent import create_simple_agent
+from miminions.agent.simple_agent import create_simple_agent
 
 
 async def main():

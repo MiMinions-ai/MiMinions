@@ -80,8 +80,8 @@ def test_list_all():
 
 
 if __name__ == "__main__":
-    print("Pydantic Agent SQLite CRUD Tests\n" + "=" * 40)
+    print("Pydantic Agent SQLite CRUD Tests")
     tests = [test_create, test_get_by_id, test_update, test_delete, test_list_all]
     for test in tests:
         test()
-    print("\nAll tests passed!")
+    print("All tests passed")

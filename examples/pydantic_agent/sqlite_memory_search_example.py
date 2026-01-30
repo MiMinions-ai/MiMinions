@@ -21,10 +21,9 @@ def setup_agent():
 
 
 def demo_searches():
-    print("Pydantic Agent SQLite Memory Search Demo\n")
+    print("Pydantic Agent SQLite Memory Search Demo")
     agent, memory = setup_agent()
     
-    # Using execute() - returns ToolExecutionResult
     print("Vector Search (via execute):")
     result = agent.execute("memory_recall", query="What is artificial intelligence?", top_k=2)
     print(f"  Status: {result.status.value}")
@@ -32,14 +31,12 @@ def demo_searches():
     for r in result.result:
         print(f"  - {r['text']} (dist: {r['distance']:.3f})")
     
-    # Using recall_knowledge() - returns raw list
-    print("\nRecall Knowledge (convenience method):")
+    print("Recall Knowledge (convenience method):")
     results = agent.recall_knowledge("programming", top_k=2)
     for r in results:
         print(f"  - {r['text']}")
     
-    # Using get_memory_context() - returns MemoryQueryResult model
-    print("\nMemory Context (Pydantic model):")
+    print("Memory Context (Pydantic model):")
     context = agent.get_memory_context("learning", top_k=2)
     print(f"  Query: {context.query}")
     print(f"  Count: {context.count}")
@@ -47,7 +44,7 @@ def demo_searches():
         print(f"  - ID: {entry.id[:8]}... Text: {entry.text}")
     
     memory.close()
-    print("\nDone!")
+    print("Done")
 
 
 if __name__ == "__main__":

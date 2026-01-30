@@ -68,8 +68,8 @@ def test_clear():
 
 
 if __name__ == "__main__":
-    print("SQLite Memory CRUD Tests\n" + "=" * 40)
+    print("SQLite Memory CRUD Tests")
     tests = [test_create, test_get_by_id, test_update, test_delete, test_list_all, test_clear]
     for test in tests:
         test()
-    print("\nAll tests passed!")
+    print("All tests passed")

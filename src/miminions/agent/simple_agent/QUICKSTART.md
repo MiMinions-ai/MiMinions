@@ -1,227 +1,87 @@
-# Quick Start Guide: Simple Agent with MCP Support
+# Simple Agent Quick Start
 
-## Overview
+Lightweight agent that returns raw values and raises exceptions on errors.
 
-This simple agent system provides a unified interface for working with tools from multiple sources:
-- Regular Python functions
-- MCP (Model Context Protocol) servers
-- Framework-specific tools (LangChain, AutoGen, etc.)
-
-## Installation
-
-1. **Install dependencies:**
-   ```bash
-   pip install mcp[cli]>=1.15.0
-   ```
-
-2. **Optional framework dependencies:**
-   ```bash
-   # For LangChain integration
-   pip install langchain-core
-   
-   # For other frameworks as needed
-   ```
-
-## Basic Usage
-
-### 1. Create an Agent
+## Create an Agent
 
 ```python
 import asyncio
 from miminions.agent.simple_agent import create_simple_agent
 
 async def main():
-    # Create agent
-    agent = create_simple_agent("MyAgent", "Description of my agent")
+    agent = create_simple_agent("MyAgent", "Optional description")
     
-    # Always remember to cleanup
+    # Register Python functions as tools
+    def add(a: int, b: int) -> int:
+        return a + b
+    
+    agent.add_function_as_tool("add", "Add two numbers", add)
+    
+    # Execute tools - returns raw result or raises exception
+    result = agent.execute_tool("add", a=5, b=3)
+    print(f"Result: {result}")  # 8
+    
+    # Tool discovery
+    print(agent.list_tools())  # ['add']
+    print(agent.get_tool_info("add"))
+    
     await agent.cleanup()
 
 asyncio.run(main())
 ```
 
-### 2. Add Python Functions as Tools
+## With Memory
 
 ```python
-def calculate_area(width: float, height: float) -> float:
-    """Calculate the area of a rectangle"""
-    return width * height
+from miminions.memory.faiss import FAISSMemory
+from miminions.memory.sqlite import SQLiteMemory
 
-# Add to agent
-agent.add_function_as_tool("area", "Calculate rectangle area", calculate_area)
+# FAISS (in-memory vector search)
+memory = FAISSMemory(dim=384)
+agent = create_simple_agent("MemoryAgent", memory=memory)
 
-# Use the tool
-result = agent.execute_tool("area", width=5.0, height=3.0)
-print(f"Area: {result}")  # Area: 15.0
+# Or SQLite (persistent storage with vector + keyword search)
+memory = SQLiteMemory(db_path="memory.db")
+agent = create_simple_agent("MemoryAgent", memory=memory)
+
+# Store and recall knowledge
+entry_id = agent.store_knowledge("Python is a programming language", metadata={"topic": "coding"})
+results = agent.recall_knowledge("programming", top_k=5)
+for r in results:
+    print(f"{r['text']} (score: {r['distance']:.3f})")
 ```
 
-### 3. Working with MCP Servers
+## With MCP Server
 
 ```python
 from mcp import StdioServerParameters
 
-async def mcp_example():
-    agent = create_simple_agent("MCPAgent")
-    
-    # Connect to MCP server
-    server_params = StdioServerParameters(
-        command="python3",
-        args=["your_mcp_server.py"]
-    )
-    
-    await agent.connect_mcp_server("my_server", server_params)
-    await agent.load_tools_from_mcp_server("my_server")
-    
-    # Use MCP tools just like regular tools
-    # result = agent.execute_tool("mcp_tool_name", param=value)
-    
-    await agent.cleanup()
-```
+# Connect to MCP server (e.g., math operations, file tools)
+server_params = StdioServerParameters(
+    command="python3",
+    args=["examples/servers/math_server.py"]
+)
 
-## Example: Complete Agent Setup
+await agent.connect_mcp_server("math_server", server_params)
+tools = await agent.load_tools_from_mcp_server("math_server")
+print(f"Loaded {len(tools)} tools from MCP server")
 
-```python
-import asyncio
-from miminions.agent.simple_agent import create_simple_agent
-
-async def complete_example():
-    # Create agent
-    agent = create_simple_agent("CompleteAgent", "Agent with multiple tool types")
-    
-    # Add local Python function tools
-    def add_numbers(a: int, b: int) -> int:
-        """Add two numbers"""
-        return a + b
-    
-    def greet_user(name: str, formal: bool = False) -> str:
-        """Greet a user"""
-        greeting = "Good day" if formal else "Hello"
-        return f"{greeting}, {name}!"
-    
-    agent.add_function_as_tool("add", "Add two numbers", add_numbers)
-    agent.add_function_as_tool("greet", "Greet someone", greet_user)
-    
-    # List available tools
-    print(f"Available tools: {agent.list_tools()}")
-    
-    # Execute tools
-    sum_result = agent.execute_tool("add", a=10, b=5)
-    greet_result = agent.execute_tool("greet", name="Alice", formal=True)
-    
-    print(f"10 + 5 = {sum_result}")
-    print(f"Greeting: {greet_result}")
-    
-    # Search for tools
-    math_tools = agent.search_tools("add")
-    print(f"Math tools: {math_tools}")
-    
-    # Get tool information
-    tool_info = agent.get_tool_info("greet")
-    print(f"Greet tool info: {tool_info}")
-    
-    await agent.cleanup()
-
-# Run the example
-asyncio.run(complete_example())
-```
-
-## Working with Memory
-
-The Simple Agent supports memory integration for knowledge storage and retrieval:
-
-```python
-from miminions.agent.simple_agent import create_simple_agent
-from miminions.memory.faiss import FAISSMemory
-
-async def memory_example():
-    # Create agent with memory
-    memory = FAISSMemory(dim=384)
-    agent = create_simple_agent("MemoryAgent", memory=memory)
-    
-    # Store knowledge
-    agent.execute_tool("memory_store", 
-                       text="Python is a programming language",
-                       metadata={"topic": "programming"})
-    
-    # Recall knowledge
-    results = agent.execute_tool("memory_recall", 
-                                 query="programming language", 
-                                 top_k=3)
-    
-    await agent.cleanup()
-```
-
-## Tool Discovery
-
-```python
-# List all tools
-all_tools = agent.list_tools()
-
-# Search for specific tools
-math_tools = agent.search_tools("math")
-string_tools = agent.search_tools("string")
-
-# Get detailed tool information
-tool_info = agent.get_tool_info("tool_name")
-```
-
-## Framework Integration
-
-### LangChain
-
-```python
-from tools.langchain_adapter import to_langchain_tool
-
-# Convert agent tool to LangChain format
-langchain_tool = to_langchain_tool(agent.get_tool("add"))
-
-# Use with LangChain agents
-from langchain.agents import initialize_agent
-langchain_agent = initialize_agent([langchain_tool], llm)
+# Use MCP tools like regular tools
+result = agent.execute_tool("add", a=10, b=20)  # 30
 ```
 
 ## Error Handling
 
 ```python
 try:
-    result = agent.execute_tool("add", a=5, b=3)
+    result = agent.execute_tool("missing_tool", x=1)
 except ValueError as e:
     print(f"Tool not found: {e}")
+
+try:
+    result = agent.execute_tool("add", wrong_param=5)
 except RuntimeError as e:
-    print(f"Execution error: {e}")
+    print(f"Execution failed: {e}")
 ```
 
-## Best Practices
-
-1. **Always call `cleanup()`** to properly close MCP connections
-2. **Use descriptive names** for tools and clear descriptions
-3. **Handle errors appropriately** when calling tools
-4. **Use type hints** in your tool functions for better schema generation
-5. **Test tools individually** before adding to complex workflows
-
-## Testing Your Setup
-
-Run the included test suite:
-```bash
-python3 tests/simple_agent/test_simple_agent.py
-```
-
-Run the demonstration:
-```bash
-python3 examples/simple_agent/simple_agent_example.py
-```
-
-## Troubleshooting
-
-**Import Errors:** Make sure you're running from the project root directory
-
-**MCP Connection Errors:** Verify your MCP server is correctly implemented and the command path is correct
-
-**Tool Execution Errors:** Check that you're providing all required parameters with correct types
-
-## Next Steps
-
-- Explore the framework adapters in the `tools/` directory
-- Create your own MCP servers for custom functionality
-- Integrate with your preferred AI framework (LangChain, AutoGen, etc.)
-- Consider using the **Pydantic Agent** for stronger typing and validation
+See `examples/simple_agent/` for complete examples and `tests/simple_agent/` for usage patterns.

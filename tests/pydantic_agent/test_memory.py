@@ -13,23 +13,19 @@ from miminions.memory.faiss import FAISSMemory
 
 
 async def test_memory_crud():
-    """Test CRUD operations through agent tools."""
-    print("Testing memory CRUD...")
+    print("test_memory_crud")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("TestAgent", memory=memory)
 
-    # CREATE
     result = agent.execute("memory_store", text="Test knowledge 1")
     assert result.status == ExecutionStatus.SUCCESS
     id1 = result.result
 
-    # READ
     result = agent.execute("memory_recall", query="Test knowledge", top_k=1)
     assert result.status == ExecutionStatus.SUCCESS
     assert len(result.result) > 0
     assert "Test knowledge 1" in result.result[0]["text"]
 
-    # UPDATE
     result = agent.execute("memory_update", id=id1, new_text="Updated test knowledge")
     assert result.status == ExecutionStatus.SUCCESS
     assert result.result is True
@@ -37,7 +33,6 @@ async def test_memory_crud():
     result = agent.execute("memory_get", id=id1)
     assert "Updated" in result.result["text"]
 
-    # DELETE
     result = agent.execute("memory_delete", id=id1)
     assert result.result is True
 
@@ -50,8 +45,7 @@ async def test_memory_crud():
 
 
 async def test_memory_search():
-    """Test semantic search."""
-    print("Testing memory search...")
+    print("test_memory_search")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("SearchAgent", memory=memory)
 
@@ -69,8 +63,7 @@ async def test_memory_search():
 
 
 async def test_memory_with_metadata():
-    """Test memory with metadata."""
-    print("Testing memory metadata...")
+    print("test_memory_with_metadata")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("MetadataAgent", memory=memory)
 
@@ -87,8 +80,7 @@ async def test_memory_with_metadata():
 
 
 async def test_context_generation():
-    """Test context generation as Pydantic model."""
-    print("Testing context generation...")
+    print("test_context_generation")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("ContextAgent", memory=memory)
 
@@ -98,11 +90,9 @@ async def test_context_generation():
 
     context = agent.get_memory_context("topic X", top_k=2)
     
-    # Returns MemoryQueryResult model
     assert context.query == "topic X"
     assert context.count > 0
     assert len(context.results) <= 2
-    # Results are MemoryEntry models
     assert all(hasattr(r, 'id') and hasattr(r, 'text') for r in context.results)
 
     await agent.cleanup()
@@ -111,8 +101,7 @@ async def test_context_generation():
 
 
 async def test_execution_result():
-    """Test that execute() returns proper ToolExecutionResult."""
-    print("Testing execution result...")
+    print("test_execution_result")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("ResultAgent", memory=memory)
 
@@ -129,7 +118,7 @@ async def test_execution_result():
 
 
 async def main():
-    print("Pydantic Agent Memory Tests\n" + "=" * 40)
+    print("Pydantic Agent Memory Tests")
     tests = [
         test_memory_crud, 
         test_memory_search, 

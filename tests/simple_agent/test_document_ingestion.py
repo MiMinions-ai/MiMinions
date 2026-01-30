@@ -7,8 +7,7 @@ from miminions.memory.faiss import FAISSMemory
 
 
 async def test_ingest_text():
-    """Test text document ingestion."""
-    print("Testing text ingestion...")
+    print("test_ingest_text")
     agent = create_simple_agent("ChunkAgent", memory=FAISSMemory())
     
     test_file = Path("test_chunked.txt")
@@ -32,8 +31,7 @@ Natural language processing enables computers to understand human language.""")
 
 
 async def test_ingest_pdf():
-    """Test PDF ingestion if available."""
-    print("Testing PDF ingestion...")
+    print("test_ingest_pdf")
     pdf_path = Path(__file__).parent.parent.parent / "examples" / "example_files" / "resume.pdf"
     
     if not pdf_path.exists():
@@ -54,10 +52,10 @@ async def test_ingest_pdf():
 
 
 async def main():
-    print("Document Ingestion Tests\n" + "=" * 40)
+    print("Document Ingestion Tests")
     await test_ingest_text()
     await test_ingest_pdf()
-    print("\nAll tests passed!")
+    print("All tests passed")
 
 
 if __name__ == "__main__":
