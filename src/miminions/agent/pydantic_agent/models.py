@@ -112,10 +112,15 @@ class ToolExecutionResult(BaseModel):
     tool_name: str = Field(..., description="Name of the executed tool")
     status: ExecutionStatus = Field(..., description="Execution status")
     result: Optional[Any] = Field(default=None, description="Result value if successful")
-    error: Optional[str] = Field(default=None, description="Error message if failed")
+    error_message: Optional[str] = Field(default=None, description="Error message if failed", alias="error")
     execution_time_ms: Optional[float] = Field(default=None, description="Execution time in milliseconds")
     
-    model_config = {"extra": "forbid"}
+    model_config = {"extra": "forbid", "populate_by_name": True}
+    
+    @property
+    def error(self) -> Optional[str]:
+        """Alias for error_message for backward compatibility"""
+        return self.error_message
     
     @classmethod
     def success(cls, tool_name: str, result: Any, execution_time_ms: Optional[float] = None) -> "ToolExecutionResult":
@@ -128,12 +133,12 @@ class ToolExecutionResult(BaseModel):
         )
     
     @classmethod
-    def error(cls, tool_name: str, error: str, execution_time_ms: Optional[float] = None) -> "ToolExecutionResult":
+    def from_error(cls, tool_name: str, error: str, execution_time_ms: Optional[float] = None) -> "ToolExecutionResult":
         """Create an error result"""
         return cls(
             tool_name=tool_name,
             status=ExecutionStatus.ERROR,
-            error=error,
+            error_message=error,
             execution_time_ms=execution_time_ms,
         )
 

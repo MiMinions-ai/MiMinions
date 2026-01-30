@@ -338,7 +338,7 @@ class PydanticAgent:
         args = {**(arguments or {}), **kwargs}
         
         if tool_name not in self._tools:
-            return ToolExecutionResult.error(
+            return ToolExecutionResult.from_error(
                 tool_name=tool_name,
                 error=f"Tool '{tool_name}' not found. Available tools: {self.list_tools()}",
             )
@@ -350,7 +350,7 @@ class PydanticAgent:
             result = tool.execute(**args)
             
             if asyncio.iscoroutine(result):
-                return ToolExecutionResult.error(
+                return ToolExecutionResult.from_error(
                     tool_name=tool_name,
                     error=f"Tool '{tool_name}' is async. Use 'await agent.execute_async()' instead.",
                 )
@@ -363,7 +363,7 @@ class PydanticAgent:
             )
         except Exception as e:
             execution_time = (time.time() - start_time) * 1000
-            return ToolExecutionResult.error(
+            return ToolExecutionResult.from_error(
                 tool_name=tool_name,
                 error=str(e),
                 execution_time_ms=execution_time,
@@ -384,7 +384,7 @@ class PydanticAgent:
         args = {**(arguments or {}), **kwargs}
         
         if tool_name not in self._tools:
-            return ToolExecutionResult.error(
+            return ToolExecutionResult.from_error(
                 tool_name=tool_name,
                 error=f"Tool '{tool_name}' not found. Available tools: {self.list_tools()}",
             )
@@ -402,7 +402,7 @@ class PydanticAgent:
             )
         except Exception as e:
             execution_time = (time.time() - start_time) * 1000
-            return ToolExecutionResult.error(
+            return ToolExecutionResult.from_error(
                 tool_name=tool_name,
                 error=str(e),
                 execution_time_ms=execution_time,
