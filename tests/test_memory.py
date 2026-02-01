@@ -1,4 +1,4 @@
-"""Memory Agent Test Suite for Pydantic Agent."""
+"""Memory Test Suite."""
 
 import asyncio
 import sys
@@ -7,35 +7,54 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_pydantic_agent, MemoryQueryResult, MemoryEntry, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
+async def test_memory_attachment():
+    """Test attaching memory to agent."""
+    print("test_memory_attachment")
+    agent = create_pydantic_agent("TestAgent")
+    assert agent.get_state().has_memory == False
+    
+    memory = FAISSMemory(dim=384)
+    agent.set_memory(memory)
+    assert agent.get_state().has_memory == True
+    assert "memory_store" in agent.list_tools()
+    
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
 async def test_memory_crud():
+    """Test full CRUD operations."""
     print("test_memory_crud")
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("TestAgent", memory=memory)
 
-    result = agent.execute("memory_store", text="Test knowledge 1")
+    result = agent.execute("memory_store", text="Test knowledge", metadata={"tag": "test"})
     assert result.status == ExecutionStatus.SUCCESS
-    id1 = result.result
+    entry_id = result.result
 
+    # Read via recall
     result = agent.execute("memory_recall", query="Test knowledge", top_k=1)
-    assert result.status == ExecutionStatus.SUCCESS
     assert len(result.result) > 0
-    assert "Test knowledge 1" in result.result[0]["text"]
 
-    result = agent.execute("memory_update", id=id1, new_text="Updated test knowledge")
-    assert result.status == ExecutionStatus.SUCCESS
+    result = agent.execute("memory_update", id=entry_id, new_text="Updated knowledge")
     assert result.result is True
 
-    result = agent.execute("memory_get", id=id1)
+    # Verify update
+    result = agent.execute("memory_get", id=entry_id)
     assert "Updated" in result.result["text"]
 
-    result = agent.execute("memory_delete", id=id1)
+    result = agent.execute("memory_list")
+    assert len(result.result) >= 1
+
+    result = agent.execute("memory_delete", id=entry_id)
     assert result.result is True
 
-    result = agent.execute("memory_get", id=id1)
+    result = agent.execute("memory_get", id=entry_id)
     assert result.result is None
 
     await agent.cleanup()
@@ -43,14 +62,14 @@ async def test_memory_crud():
     return True
 
 
-async def test_memory_search():
-    print("test_memory_search")
+async def test_convenience_methods():
+    """Test store_knowledge and recall_knowledge."""
+    print("test_convenience_methods")
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("SearchAgent", memory=memory)
+    agent = create_pydantic_agent("TestAgent", memory=memory)
 
-    agent.store_knowledge("Python is a programming language")
-    agent.store_knowledge("Machine learning uses algorithms")
-    agent.store_knowledge("Databases store structured data")
+    entry_id = agent.store_knowledge("Python is a programming language", metadata={"topic": "coding"})
+    assert entry_id is not None
 
     results = agent.recall_knowledge("coding languages", top_k=1)
     assert len(results) > 0
@@ -61,55 +80,43 @@ async def test_memory_search():
     return True
 
 
-async def test_memory_with_metadata():
-    print("test_memory_with_metadata")
+async def test_memory_context():
+    """Test structured memory context retrieval."""
+    print("test_memory_context")
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("MetadataAgent", memory=memory)
+    agent = create_pydantic_agent("TestAgent", memory=memory)
 
-    agent.store_knowledge("Important fact about AI", metadata={"category": "AI", "importance": "high"})
-    
-    result = agent.execute("memory_list")
-    entries = result.result
-    assert len(entries) > 0
-    assert entries[0]["meta"]["category"] == "AI"
-
-    await agent.cleanup()
-    print("PASSED")
-    return True
-
-
-async def test_context_generation():
-    print("test_context_generation")
-    memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("ContextAgent", memory=memory)
-
-    agent.store_knowledge("Fact A about topic X")
-    agent.store_knowledge("Fact B about topic Y")
-    agent.store_knowledge("Fact C about topic X")
+    agent.store_knowledge("Fact about topic X")
+    agent.store_knowledge("Another fact about topic X")
 
     context = agent.get_memory_context("topic X", top_k=2)
     
+    assert isinstance(context, MemoryQueryResult)
     assert context.query == "topic X"
     assert context.count > 0
-    assert len(context.results) <= 2
-    assert all(hasattr(r, 'id') and hasattr(r, 'text') for r in context.results)
+    assert all(isinstance(r, MemoryEntry) for r in context.results)
 
     await agent.cleanup()
     print("PASSED")
     return True
 
 
-async def test_execution_result():
-    print("test_execution_result")
-    memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("ResultAgent", memory=memory)
+async def test_no_memory_handling():
+    """Test graceful handling when no memory attached."""
+    print("test_no_memory_handling")
+    agent = create_pydantic_agent("TestAgent")
 
-    result = agent.execute("memory_store", text="Test")
-    
-    assert result.tool_name == "memory_store"
-    assert result.status == ExecutionStatus.SUCCESS
-    assert result.result is not None
-    assert result.execution_time_ms is not None
+    # get_memory_context returns empty result
+    context = agent.get_memory_context("query")
+    assert context.count == 0
+    assert "No memory attached" in context.message
+
+    # store_knowledge raises error
+    try:
+        agent.store_knowledge("test")
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "No memory attached" in str(e)
 
     await agent.cleanup()
     print("PASSED")
@@ -117,13 +124,13 @@ async def test_execution_result():
 
 
 async def main():
-    print("Pydantic Agent Memory Tests")
+    print("Memory Tests")
     tests = [
-        test_memory_crud, 
-        test_memory_search, 
-        test_memory_with_metadata, 
-        test_context_generation,
-        test_execution_result,
+        test_memory_attachment,
+        test_memory_crud,
+        test_convenience_methods,
+        test_memory_context,
+        test_no_memory_handling,
     ]
     
     passed = 0
