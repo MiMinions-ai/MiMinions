@@ -1,7 +1,4 @@
-"""Document Ingestion Example for Pydantic Agent.
-
-Demonstrates document ingestion using the pydantic_ai-powered agent.
-"""
+"""Document Ingestion Example for Pydantic Agent."""
 
 import asyncio
 from pathlib import Path

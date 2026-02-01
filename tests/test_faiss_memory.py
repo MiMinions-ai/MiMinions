@@ -1,4 +1,4 @@
-"""Memory Test Suite."""
+"""FAISS Memory Test Suite."""
 
 import asyncio
 import sys

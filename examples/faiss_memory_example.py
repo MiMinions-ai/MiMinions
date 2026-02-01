@@ -1,8 +1,4 @@
-"""
-Memory-Enabled Pydantic AI Agent Example
-
-Demonstrates how to use a Pydantic AI Agent with FAISS memory for knowledge storage & retrieval. 
-"""
+"""Memory-Enabled Pydantic AI Agent Example"""
 
 import asyncio
 import sys
