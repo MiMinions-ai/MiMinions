@@ -14,10 +14,10 @@ import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from miminions.agent.pydantic_agent import (
+from miminions.agent import (
     PydanticAgent,
     create_pydantic_agent,
     ToolDefinition,
@@ -330,7 +330,7 @@ async def test_tool_schema_json():
         return True
         
     except Exception as e:
-        print(f"JSON schema generation test failed: {e}"))
+        print(f"JSON schema generation test failed: {e}")
         import traceback
         traceback.print_exc()
         return False

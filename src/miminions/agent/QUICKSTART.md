@@ -96,7 +96,7 @@ schemas = agent.get_tools_schema()
 # ]
 
 # Execute from LLM tool call
-from miminions.agent.pydantic_agent import ToolExecutionRequest
+from miminions.agent import ToolExecutionRequest
 
 request = ToolExecutionRequest(
     tool_name="add",

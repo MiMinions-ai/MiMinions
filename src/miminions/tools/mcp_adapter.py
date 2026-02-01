@@ -1,8 +1,4 @@
-"""
-MCP Tool Adapter
-
-Provides conversion between MCP tools and GenericTool format.
-"""
+"""MCP Tool Adapter - Provides conversion between MCP tools and GenericTool format."""
 
 from typing import Any, Dict, Optional, List
 from mcp import ClientSession, StdioServerParameters
@@ -10,10 +6,7 @@ from mcp.client.stdio import stdio_client
 import asyncio
 import json
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent))
-from tools import GenericTool, SimpleTool
+from . import GenericTool, SimpleTool
 
 class MCPToolAdapter:
     """Adapter to work with MCP servers and convert their tools to GenericTool format"""
@@ -66,7 +59,6 @@ class MCPToolAdapter:
             if result and hasattr(result, 'content'):
                 content_list = result.content
                 if content_list and len(content_list) > 0:
-                    # Get the first content item's text
                     first_item = content_list[0]
                     if hasattr(first_item, 'text'):
                         return first_item.text
@@ -75,7 +67,6 @@ class MCPToolAdapter:
             return result
         
         # Return the async function directly as a SimpleTool
-        # The SimpleTool will handle it properly
         return SimpleTool(
             name=tool_name,
             description=tool_description,

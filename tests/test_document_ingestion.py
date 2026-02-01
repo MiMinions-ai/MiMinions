@@ -2,8 +2,7 @@
 
 import asyncio
 from pathlib import Path
-from miminions.agent.pydantic_agent import create_pydantic_agent
-from miminions.agent.pydantic_agent.models import ExecutionStatus
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
@@ -25,7 +24,6 @@ Natural language processing enables computers to understand human language.""")
         assert result.result['chunks_stored'] >= 1
         assert result.execution_time_ms is not None
         
-        # Test recall
         results = agent.recall_knowledge("machine learning", top_k=3)
         assert len(results) > 0
         print("PASSED")

@@ -1,4 +1,4 @@
-"""Pydantic Agent Implementation"""
+"""Pydantic AI Agent Implementation"""
 
 import asyncio
 import inspect
@@ -6,15 +6,14 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
+from pydantic_ai import Agent, Tool, RunContext
+from pydantic_ai.models.test import TestModel
 from mcp import StdioServerParameters
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from tools import GenericTool
-from tools.mcp_adapter import MCPToolAdapter
-from memory.base_memory import BaseMemory
-from utils.chunker import TextChunker
+from ..tools import GenericTool
+from ..tools.mcp_adapter import MCPToolAdapter
+from ..memory.base_memory import BaseMemory
+from ..utils.chunker import TextChunker
 
 from .models import (
     AgentConfig, AgentState, ExecutionStatus, MemoryEntry, MemoryQueryResult,
@@ -50,7 +49,7 @@ def _extract_schema(func: Callable) -> ToolSchema:
 
 
 class RegisteredTool:
-    """Internal tool wrapper."""
+    """Internal tool wrapper for direct execution."""
     def __init__(self, definition: ToolDefinition, func: Callable):
         self.definition = definition
         self.func = func
@@ -64,7 +63,13 @@ class RegisteredTool:
 
 
 class PydanticAgent:
-    """Pydantic-based agent implementation."""
+    """
+    Pydantic AI-based agent implementation.
+    
+    Uses pydantic_ai infrastructure for LLM-ready tool management.
+    Currently operates in direct execution mode (no LLM) but structured
+    for easy LLM integration by replacing TestModel with a real model.
+    """
 
     def __init__(
         self,
@@ -73,6 +78,7 @@ class PydanticAgent:
         memory: Optional[BaseMemory] = None,
         chunk_size: int = 800,
         overlap: int = 150,
+        model: Optional[Any] = None,
     ):
         self.config = AgentConfig(name=name, description=description, chunk_size=chunk_size, overlap=overlap)
         self._tools: Dict[str, RegisteredTool] = {}
@@ -80,6 +86,12 @@ class PydanticAgent:
         self._mcp_adapter = MCPToolAdapter()
         self._connected_servers: Dict[str, StdioServerParameters] = {}
         self._chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
+        
+        # Replace TestModel with real model for LLM support
+        self._model = model or TestModel()
+        self._pydantic_ai_agent: Optional[Agent] = None
+        self._pydantic_ai_tools: List[Tool] = []
+        
         if self._memory:
             self._register_memory_tools()
 
@@ -103,6 +115,14 @@ class PydanticAgent:
             connected_servers=list(self._connected_servers.keys()),
         )
     
+    def _rebuild_pydantic_ai_agent(self) -> None:
+        """Rebuild the pydantic_ai Agent with current tools."""
+        self._pydantic_ai_agent = Agent(
+            model=self._model,
+            tools=self._pydantic_ai_tools,
+            instructions=self.config.description or f"Agent: {self.config.name}",
+        )
+    
     # tool management
     def register_tool(self, name: str, description: str, func: Callable, schema: Optional[ToolSchema] = None) -> ToolDefinition:
         """Register a tool with the agent."""
@@ -110,7 +130,14 @@ class PydanticAgent:
         definition = ToolDefinition(name=name, description=description, schema=schema)
         if name in self._tools:
             print(f"Warning: Replacing existing tool '{name}'")
+            # Remove old tool from pydantic_ai tools
+            self._pydantic_ai_tools = [t for t in self._pydantic_ai_tools if t.name != name]
+        
         self._tools[name] = RegisteredTool(definition=definition, func=func)
+        
+        pydantic_ai_tool = Tool(func, name=name, description=description, takes_ctx=False)
+        self._pydantic_ai_tools.append(pydantic_ai_tool)
+        
         return definition
 
     def add_function_as_tool(self, name: str, description: str, func: Callable) -> ToolDefinition:
@@ -140,6 +167,7 @@ class PydanticAgent:
         """Remove a tool by name."""
         if name in self._tools:
             del self._tools[name]
+            self._pydantic_ai_tools = [t for t in self._pydantic_ai_tools if t.name != name]
             return True
         return False
 
@@ -362,14 +390,41 @@ class PydanticAgent:
     async def cleanup(self) -> None:
         await self._mcp_adapter.close_all_connections()
 
+    def get_pydantic_ai_agent(self) -> Agent:
+        """Get the underlying pydantic_ai Agent for LLM operations. Use for when integrating with an LLM."""
+        self._rebuild_pydantic_ai_agent()
+        return self._pydantic_ai_agent
+
+    def set_model(self, model: Any) -> None:
+        self._model = model
+        self._rebuild_pydantic_ai_agent()
+
     def __str__(self) -> str:
         mem = "with memory" if self._memory else "no memory"
-        return f"PydanticAgent({self.name}, tools={len(self._tools)}, servers={len(self._connected_servers)}, {mem})"
+        model_name = getattr(self._model, 'model_name', 'test') if self._model else 'none'
+        return f"PydanticAgent({self.name}, tools={len(self._tools)}, model={model_name}, {mem})"
 
     def __repr__(self) -> str:
         return self.__str__()
 
 
-def create_pydantic_agent(name: str, description: str = "", memory: Optional[BaseMemory] = None) -> PydanticAgent:
-    """Create a new PydanticAgent instance."""
-    return PydanticAgent(name=name, description=description, memory=memory)
+def create_pydantic_agent(
+    name: str,
+    description: str = "",
+    memory: Optional[BaseMemory] = None,
+    model: Optional[Any] = None,
+) -> PydanticAgent:
+    """
+    Create a new PydanticAgent instance.
+    
+    Args:
+        name: Agent name
+        description: Agent description
+        memory: Optional memory backend (FAISSMemory, SQLiteMemory)
+        model: Optional pydantic_ai model. Defaults to TestModel (no LLM).
+               Pass a real model like 'openai:gpt-4' for LLM support.
+    
+    Returns:
+        PydanticAgent instance ready for tool registration and execution
+    """
+    return PydanticAgent(name=name, description=description, memory=memory, model=model)

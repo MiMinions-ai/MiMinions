@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""
-Pydantic Agent Memory Test Suite
-
-Tests for memory integration with the Pydantic Agent.
-"""
+"""Pydantic Agent Memory Test Suite"""
 
 import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from miminions.agent.pydantic_agent import (
+from miminions.agent import (
     create_pydantic_agent,
     MemoryQueryResult,
     MemoryEntry,
@@ -26,7 +22,6 @@ async def test_memory_attachment():
     print("Testing memory attachment")
     
     try:
-        # Create agent without memory
         agent = create_pydantic_agent("MemTestAgent")
         state1 = agent.get_state()
         assert state1.has_memory == False, "Should start without memory"
@@ -91,7 +86,6 @@ async def test_memory_store_and_recall():
         memory = FAISSMemory(dim=384)
         agent = create_pydantic_agent("StoreRecallAgent", memory=memory)
         
-        # Store using execute
         result = agent.execute(
             "memory_store",
             text="Python is a programming language",
@@ -102,7 +96,6 @@ async def test_memory_store_and_recall():
         assert result.result is not None  # Should return ID
         stored_id = result.result
         
-        # Recall
         recall_result = agent.execute("memory_recall", query="programming", top_k=1)
         assert recall_result.status == ExecutionStatus.SUCCESS
         assert len(recall_result.result) >= 1
@@ -127,7 +120,6 @@ async def test_memory_convenience_methods():
         memory = FAISSMemory(dim=384)
         agent = create_pydantic_agent("ConvenienceAgent", memory=memory)
         
-        # Use convenience methods
         entry_id = agent.store_knowledge(
             "Machine learning is part of AI",
             metadata={"category": "AI"}
@@ -157,7 +149,6 @@ async def test_memory_context_structured():
         memory = FAISSMemory(dim=384)
         agent = create_pydantic_agent("ContextAgent", memory=memory)
         
-        # Store some knowledge
         agent.store_knowledge("FAISS is a vector database library")
         agent.store_knowledge("Vectors can represent semantic meaning")
         
@@ -201,7 +192,7 @@ async def test_memory_context_empty():
         assert isinstance(context, MemoryQueryResult)
         assert context.count == 0
         assert len(context.results) == 0
-        assert context.message is not None  # Should have a message
+        assert context.message is not None
         
         await agent.cleanup()
         print("Empty memory context test passed")
@@ -226,7 +217,7 @@ async def test_memory_context_no_memory():
         
         assert isinstance(context, MemoryQueryResult)
         assert context.count == 0
-        assert "No memory system attached" in context.message
+        assert "No memory attached" in context.message
         
         await agent.cleanup()
         print("Memory context without memory test passed")
@@ -306,7 +297,7 @@ async def test_memory_error_without_attachment():
             agent.store_knowledge("test")
             assert False, "Should have raised ValueError"
         except ValueError as e:
-            assert "No memory system attached" in str(e)
+            assert "No memory attached" in str(e)
         
         await agent.cleanup()
         print("Memory error handling test passed")

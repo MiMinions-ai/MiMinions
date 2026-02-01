@@ -1,6 +1,6 @@
 """SQLite Memory Search Example for Pydantic Agent."""
 from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent.pydantic_agent import create_pydantic_agent
+from miminions.agent import create_pydantic_agent
 
 
 def setup_agent():
@@ -26,8 +26,8 @@ def demo_searches():
     
     print("Vector Search (via execute):")
     result = agent.execute("memory_recall", query="What is artificial intelligence?", top_k=2)
-    print(f"  Status: {result.status.value}")
-    print(f"  Time: {result.execution_time_ms:.2f}ms")
+    print(f"- Status: {result.status.value}")
+    print(f"- Time: {result.execution_time_ms:.2f}ms")
     for r in result.result:
         print(f"  - {r['text']} (dist: {r['distance']:.3f})")
     
@@ -38,10 +38,10 @@ def demo_searches():
     
     print("Memory Context (Pydantic model):")
     context = agent.get_memory_context("learning", top_k=2)
-    print(f"  Query: {context.query}")
-    print(f"  Count: {context.count}")
+    print(f"- Query: {context.query}")
+    print(f"- Count: {context.count}")
     for entry in context.results:
-        print(f"  - ID: {entry.id[:8]} Text: {entry.text}")
+        print(f" - ID: {entry.id[:8]} Text: {entry.text}")
     
     memory.close()
     print("Done")

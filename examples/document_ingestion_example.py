@@ -1,9 +1,11 @@
-"""Document Ingestion Example for Pydantic Agent."""
+"""Document Ingestion Example for Pydantic Agent.
+
+Demonstrates document ingestion using the pydantic_ai-powered agent.
+"""
 
 import asyncio
 from pathlib import Path
-from miminions.agent.pydantic_agent import create_pydantic_agent
-from miminions.agent.pydantic_agent.models import ExecutionStatus
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
@@ -18,18 +20,18 @@ async def main():
         print(f"Ingesting PDF: {pdf_path.name}")
         result = agent.execute("ingest_document", filepath=str(pdf_path))
         
-        print(f"  Status: {result.status.value}")
-        print(f"  Time: {result.execution_time_ms:.2f}ms")
-        print(f"  Chunks: {result.result['chunks_stored']}")
-        print(f"  Characters: {result.result['total_characters']:,}")
+        print(f"- Status: {result.status.value}")
+        print(f"- Time: {result.execution_time_ms:.2f}ms")
+        print(f"- Chunks: {result.result['chunks_stored']}")
+        print(f"- Characters: {result.result['total_characters']:,}")
         
         print("Querying PDF")
         for query in ["experience", "education", "skills"]:
             results = agent.recall_knowledge(query, top_k=1)
             if results:
-                print(f"  '{query}': {results[0]['text'][:80]}")
+                print(f"- '{query}': {results[0]['text'][:80]}")
     
-    print("Ingesting text file"))
+    print("Ingesting text file")
     text_file = Path("sample_doc.txt")
     text_file.write_text("""Artificial Intelligence and Machine Learning
 
@@ -39,14 +41,14 @@ Natural language processing helps machines understand human language.
 Computer vision enables computers to interpret visual information.""")
     
     result = agent.execute("ingest_document", filepath=str(text_file))
-    print(f"  Status: {result.status.value}")
-    print(f"  Time: {result.execution_time_ms:.2f}ms")
-    print(f"  Chunks: {result.result['chunks_stored']}")
+    print(f"- Status: {result.status.value}")
+    print(f"- Time: {result.execution_time_ms:.2f}ms")
+    print(f"- Chunks: {result.result['chunks_stored']}")
     
     print("Querying with get_memory_context (Pydantic model):")
     context = agent.get_memory_context("What is deep learning?", top_k=2)
-    print(f"  Query: {context.query}")
-    print(f"  Results: {context.count}")
+    print(f"- Query: {context.query}")
+    print(f"- Results: {context.count}")
     for entry in context.results:
         print(f"    - {entry.text[:80]}")
     

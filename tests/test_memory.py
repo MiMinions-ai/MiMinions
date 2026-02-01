@@ -4,11 +4,10 @@ import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from miminions.agent.pydantic_agent import create_pydantic_agent
-from miminions.agent.pydantic_agent.models import ExecutionStatus
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 

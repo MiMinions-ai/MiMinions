@@ -1,4 +1,8 @@
-"""Pydantic models for the Pydantic Agent."""
+"""Pydantic models for the Agent.
+
+Uses pydantic BaseModel for validation. These models are compatible with pydantic_ai
+and provide structured data types for tool definitions, execution results, and memory.
+"""
 
 from typing import Any, Dict, List, Optional
 from enum import Enum

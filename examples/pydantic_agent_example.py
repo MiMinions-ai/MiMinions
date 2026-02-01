@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Pydantic Agent Demo"""
+"""Pydantic AI Agent Demo
+
+Demonstrates the pydantic_ai-based agent with tool registration and execution.
+Uses TestModel by default (no LLM required). Pass a real model for LLM support.
+"""
 
 import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
 
-from miminions.agent.pydantic_agent import (
+from miminions.agent import (
     create_pydantic_agent,
     ToolExecutionRequest,
     ExecutionStatus,
@@ -18,7 +22,6 @@ from mcp import StdioServerParameters
 
 async def basic_usage_example():
     print("Basic Usage")
-    
     agent = create_pydantic_agent("PydanticAgent", "A strongly-typed agent")
     
     def add_numbers(a: int, b: int) -> int:

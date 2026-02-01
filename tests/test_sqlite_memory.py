@@ -1,7 +1,6 @@
 """SQLite Memory CRUD tests for Pydantic Agent."""
 from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent.pydantic_agent import create_pydantic_agent
-from miminions.agent.pydantic_agent.models import ExecutionStatus
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 
 
 def test_create():

@@ -1,18 +1,17 @@
 """
-Memory-Enabled Pydantic Agent Example
+Memory-Enabled Pydantic AI Agent Example
 
-Demonstrates how to use a Pydantic Agent with FAISS memory for knowledge storage 
-and retrieval, showcasing structured Pydantic models for results.
+Demonstrates how to use a Pydantic AI Agent with FAISS memory for knowledge storage & retrieval. 
 """
 
 import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
 
-from miminions.agent.pydantic_agent import create_pydantic_agent, MemoryQueryResult
+from miminions.agent import create_pydantic_agent, MemoryQueryResult
 from miminions.memory.faiss import FAISSMemory
 
 
@@ -27,7 +26,6 @@ async def basic_memory_demo():
     print(f"Agent state: {agent.get_state()}")
     print(f"Available tools: {agent.list_tools()}")
     
-    # Store knowledge using memory tools
     print("Storing knowledge")
     result1 = agent.execute("memory_store",
                            text="Python is a high-level programming language",
@@ -44,7 +42,6 @@ async def basic_memory_demo():
                            metadata={"category": "libraries", "topic": "search"})
     print(f"Store result: {result3.status}, ID: {result3.result[:10]}")
     
-    # Recall knowledge
     print("Recalling knowledge about 'programming languages'")
     recall_result = agent.execute("memory_recall", query="programming languages", top_k=2)
     
@@ -79,7 +76,6 @@ async def structured_context_demo():
     
     print(f"Stored {len(knowledge)} knowledge entries")
     
-    # Get structured memory context
     queries = [
         "How do agents interact with tools?",
         "What is used for similarity search?",
@@ -92,12 +88,12 @@ async def structured_context_demo():
         # get_memory_context returns a MemoryQueryResult Pydantic model
         context: MemoryQueryResult = agent.get_memory_context(query, top_k=2)
         
-        print(f"  Results: {context.count}")
-        print(f"  Message: {context.message or 'None'}")
+        print(f"- Results: {context.count}")
+        print(f"- Message: {context.message or 'None'}")
         
         for entry in context.results:
             print(f"  - {entry.text[:60]}")
-            print(f"    ID: {entry.id[:10]}" if entry.id else "    ID: None")
+            print(f"    - ID: {entry.id[:10]}" if entry.id else "  ID: None")
         print()
     
     await agent.cleanup()
@@ -125,24 +121,20 @@ async def memory_with_tools_demo():
     
     print(f"Available tools: {agent.list_tools()}")
     
-    # Use calculation tool
     print("Performing calculation")
     area_result = agent.execute("calculate_area", width=5.0, height=3.0)
     print(f"Area calculation: {area_result.status}, Result: {area_result.result}")
     print(f"Execution time: {area_result.execution_time_ms:.2f}ms")
     
-    # Format and store the result
     format_result = agent.execute("format_result", value=area_result.result, unit="square meters")
     print(f"Formatted: {format_result.result}")
     
-    # Store calculation in memory
     print("Storing calculation in memory")
     agent.store_knowledge(
         f"Calculated area of a 5x3 rectangle: {format_result.result}",
         metadata={"type": "calculation", "operation": "area", "dimensions": "5x3"}
     )
     
-    # Recall the calculation
     print("Recalling calculation")
     context = agent.get_memory_context("rectangle area calculation", top_k=1)
     
@@ -161,31 +153,29 @@ async def compare_execution_styles():
     memory = FAISSMemory(dim=384)
     agent = create_pydantic_agent("CompareAgent", memory=memory)
     
-    # Store some knowledge
     agent.store_knowledge("The Pydantic Agent provides strong typing")
     agent.store_knowledge("The agent is lightweight and flexible")
     
     # Structured: Returns ToolExecutionResult
     print("Structured execution (execute):")
     result = agent.execute("memory_recall", query="agent typing", top_k=1)
-    print(f"  Type: {type(result).__name__}")
-    print(f"  Status: {result.status}")
-    print(f"  Has timing: {result.execution_time_ms is not None}")
-    print(f"  Result type: {type(result.result).__name__}")
+    print(f"- Type: {type(result).__name__}")
+    print(f"- Status: {result.status}")
+    print(f"- Has timing: {result.execution_time_ms is not None}")
+    print(f"- Result type: {type(result.result).__name__}")
     
     # Raw: Returns raw value
     print("Raw execution (execute_tool):")
     raw_result = agent.execute_tool("memory_recall", query="agent typing", top_k=1)
-    print(f"  Type: {type(raw_result).__name__}")
-    print(f"  Value: {raw_result[0]['text'][:40]}")
+    print(f"- Type: {type(raw_result).__name__}")
+    print(f"- Value: {raw_result[0]['text'][:40]}")
     
-    # Structured context retrieval
     print("Structured context retrieval:")
     context = agent.get_memory_context("agent comparison", top_k=2)
-    print(f"  Type: {type(context).__name__}")
-    print(f"  Query: {context.query}")
-    print(f"  Count: {context.count}")
-    print(f"  Results type: {type(context.results).__name__}")
+    print(f"- Type: {type(context).__name__}")
+    print(f"- Query: {context.query}")
+    print(f"- Count: {context.count}")
+    print(f"- Results type: {type(context.results).__name__}")
     
     await agent.cleanup()
     print("Done")
