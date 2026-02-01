@@ -1,44 +1,44 @@
 """
-MiMinions Agent Module
+Pydantic Agent Module
 
-This module provides agent implementations for the MiMinions framework.
+This module provides a Pydantic-based agent implementation with strong typing,
+validation, and structured schemas for tools, inputs, and outputs.
 
-Available agents:
-- Simple Agent: Lightweight agent with MCP server support and memory integration
-- Pydantic Agent: Strongly-typed agent using Pydantic models for validation
+The Pydantic Agent is designed to:
+- Use Pydantic models for all inputs, outputs, and tool schemas
+- Support flexible tool registration from Python functions
+- Support memory integration (FAISS, SQLite)
+- Execute tools deterministically (explicit calls, no reasoning loop)
+- Be structured for easy future LLM integration
 
 Example:
-    # Simple Agent (original)
-    from miminions.agent import create_simple_agent
-    agent = create_simple_agent("MyAgent")
+    from miminions.agent.pydantic_agent import PydanticAgent, ToolDefinition
     
-    # Pydantic Agent (new)
-    from miminions.agent import create_pydantic_agent
-    agent = create_pydantic_agent("MyAgent")
+    agent = PydanticAgent(name="MyAgent")
+    
+    def add(a: int, b: int) -> int:
+        return a + b
+    
+    agent.register_tool("add", "Add two numbers", add)
+    result = agent.execute("add", {"a": 1, "b": 2})
 """
 
-# Simple Agent exports (for backward compatibility)
-from .simple_agent import Agent, create_simple_agent
-
-# Pydantic Agent exports
-from .pydantic_agent import (
-    PydanticAgent,
-    create_pydantic_agent,
+from .agent import PydanticAgent, create_pydantic_agent
+from .models import (
     ToolDefinition,
     ToolParameter,
     ToolSchema,
     ToolExecutionRequest,
     ToolExecutionResult,
+    ExecutionStatus,
+    ParameterType,
     AgentConfig,
+    AgentState,
     MemoryEntry,
     MemoryQueryResult,
 )
 
 __all__ = [
-    # Simple Agent
-    "Agent",
-    "create_simple_agent",
-    # Pydantic Agent
     "PydanticAgent",
     "create_pydantic_agent",
     "ToolDefinition",
@@ -46,7 +46,10 @@ __all__ = [
     "ToolSchema",
     "ToolExecutionRequest",
     "ToolExecutionResult",
+    "ExecutionStatus",
+    "ParameterType",
     "AgentConfig",
+    "AgentState",
     "MemoryEntry",
     "MemoryQueryResult",
 ]

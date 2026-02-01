@@ -73,7 +73,6 @@ async def test_tool_registration():
             """Greet someone"""
             return f"{'Good day' if formal else 'Hello'}, {name}!"
         
-        # Register tools
         add_def = agent.register_tool("add", "Add two numbers", add)
         greet_def = agent.register_tool("greet", "Greet someone", greet)
         
@@ -124,7 +123,6 @@ async def test_tool_execution_pydantic_style():
         
         agent.register_tool("multiply", "Multiply two numbers", multiply)
         
-        # Execute tool
         result = agent.execute("multiply", a=3.0, b=4.0)
         
         assert isinstance(result, ToolExecutionResult), "Should return ToolExecutionResult"
@@ -161,13 +159,11 @@ async def test_tool_execution_request():
         
         agent.register_tool("concat", "Concatenate strings", concat)
         
-        # Create request
         request = ToolExecutionRequest(
             tool_name="concat",
             arguments={"a": "Hello, ", "b": "World!"}
         )
         
-        # Execute
         result = agent.execute_request(request)
         
         assert result.status == ExecutionStatus.SUCCESS
@@ -185,9 +181,9 @@ async def test_tool_execution_request():
         return False
 
 
-async def test_simple_agent_compatible_execution():
-    """Test Simple Agent compatible execution style"""
-    print("Testing Simple Agent compatible execution")
+async def test_raw_execution():
+    """Test raw execution style (raises exceptions)"""
+    print("Testing raw execution style")
     
     try:
         agent = create_pydantic_agent("CompatAgent")
@@ -197,11 +193,9 @@ async def test_simple_agent_compatible_execution():
         
         agent.register_tool("subtract", "Subtract b from a", subtract)
         
-        # Use execute_tool (Simple Agent style)
         result = agent.execute_tool("subtract", a=10, b=3)
         assert result == 7, f"Expected 7, got {result}"
         
-        # Test add_function_as_tool alias
         def divide(a: float, b: float) -> float:
             return a / b
         
@@ -210,11 +204,11 @@ async def test_simple_agent_compatible_execution():
         assert result2 == 5.0, f"Expected 5.0, got {result2}"
         
         await agent.cleanup()
-        print("Simple Agent compatible execution test passed")
+        print("Raw execution style test passed")
         return True
         
     except Exception as e:
-        print(f"Simple Agent compatible execution test failed: {e}")
+        print(f"Raw execution style test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -232,7 +226,6 @@ async def test_error_handling_pydantic_style():
         
         agent.register_tool("fail", "Always fails", failing_tool)
         
-        # Pydantic-style: should not raise, returns error in result
         result = agent.execute("fail")
         
         assert result.status == ExecutionStatus.ERROR, f"Expected ERROR, got {result.status}"
@@ -240,7 +233,6 @@ async def test_error_handling_pydantic_style():
         assert "This tool always fails" in result.error, "Error message should contain original error"
         assert result.result is None, "Result should be None on error"
         
-        # Test nonexistent tool
         result2 = agent.execute("nonexistent")
         assert result2.status == ExecutionStatus.ERROR
         assert "not found" in result2.error.lower()
@@ -257,7 +249,7 @@ async def test_error_handling_pydantic_style():
 
 
 async def test_error_handling_compatible_style():
-    """Test error handling with Simple Agent compatible style"""
+    """Test error handling with raw execution style"""
     print("Testing compatible-style error handling")
     
     try:
@@ -268,7 +260,6 @@ async def test_error_handling_compatible_style():
         
         agent.register_tool("fail", "Always fails", failing_tool)
         
-        # Compatible-style: should raise exceptions
         try:
             agent.execute_tool("fail")
             assert False, "Should have raised RuntimeError"
@@ -305,7 +296,6 @@ async def test_tool_schema_json():
         
         agent.register_tool("search", "Search for items matching query", search)
         
-        # Get schemas
         schemas = agent.get_tools_schema()
         
         assert len(schemas) == 1, f"Expected 1 schema, got {len(schemas)}"
@@ -404,12 +394,10 @@ async def test_tool_unregistration():
         agent.register_tool("temp", "Temporary tool", temp_tool)
         assert "temp" in agent.list_tools()
         
-        # Unregister
         result = agent.unregister_tool("temp")
         assert result == True, "Should return True for successful unregistration"
         assert "temp" not in agent.list_tools()
         
-        # Unregister nonexistent
         result2 = agent.unregister_tool("nonexistent")
         assert result2 == False, "Should return False for nonexistent tool"
         
@@ -481,7 +469,6 @@ async def test_agent_state():
         assert state1.has_memory == False
         assert state1.connected_servers == []
         
-        # Add tools
         agent.register_tool("tool1", "Tool 1", lambda: 1)
         agent.register_tool("tool2", "Tool 2", lambda: 2)
         
@@ -513,7 +500,7 @@ async def test_execution_timing():
         agent = create_pydantic_agent("TimingAgent")
         
         def slow_tool() -> str:
-            time.sleep(0.05)  # 50ms sleep
+            time.sleep(0.05) 
             return "done"
         
         agent.register_tool("slow", "A slow tool", slow_tool)
@@ -544,7 +531,7 @@ async def main():
         test_tool_registration,
         test_tool_execution_pydantic_style,
         test_tool_execution_request,
-        test_simple_agent_compatible_execution,
+        test_raw_execution,
         test_error_handling_pydantic_style,
         test_error_handling_compatible_style,
         test_tool_schema_json,

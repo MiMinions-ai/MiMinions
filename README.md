@@ -5,7 +5,7 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 ## Features
 
 - **Generic Tool System**: Create tools once, use with multiple AI frameworks
-- **Agent Support**: Simple agent class for managing tools
+- **Pydantic Agent**: Structured results with validation and type safety
 - **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
 - **Web Search**: Exploratory search using Google and DuckDuckGo
 - **Custom Tools**: Easy integration of custom tools and functions
@@ -45,27 +45,24 @@ pip install aiohttp
 ### Basic Agent with Custom Tools
 
 ```python
-from miminions.agent.simple_agent import Agent
+from miminions.agent import create_pydantic_agent
 
-# Create an agent
-agent = Agent(name="MyAgent")
+agent = create_pydantic_agent(name="MyAgent")
 
-# Add a custom tool
 def calculator(operation, a, b):
     if operation == "add":
         return a + b
     elif operation == "multiply":
         return a * b
-    else:
-        return "Unknown operation"
+    return "Unknown operation"
 
-agent.add_tool("calculator", calculator)
+agent.register_tool("calculator", "Perform arithmetic", calculator)
 
-# Use the tool
-result = agent.execute_tool("calculator", "add", 5, 3)
-print(f"Result: {result}")  # Result: 8
+result = agent.execute("calculator", operation="add", a=5, b=3)
+print(f"Status: {result.status}")  # ExecutionStatus.SUCCESS
+print(f"Result: {result.result}")  # 8
 
-agent.close()
+await agent.cleanup()
 ```
 
 ### Agent with Database Operations

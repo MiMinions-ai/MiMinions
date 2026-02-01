@@ -155,7 +155,7 @@ async def memory_with_tools_demo():
 
 
 async def compare_execution_styles():
-    """Compare Pydantic-style vs Simple Agent-style execution with memory"""
+    """Compare structured vs raw execution styles with memory"""
     print("\nComparing Execution Styles")
     
     memory = FAISSMemory(dim=384)
@@ -163,18 +163,18 @@ async def compare_execution_styles():
     
     # Store some knowledge
     agent.store_knowledge("The Pydantic Agent provides strong typing")
-    agent.store_knowledge("The Simple Agent is lightweight and flexible")
+    agent.store_knowledge("The agent is lightweight and flexible")
     
-    # Pydantic-style: Returns ToolExecutionResult
-    print("Pydantic-style execution:")
+    # Structured: Returns ToolExecutionResult
+    print("Structured execution (execute):")
     result = agent.execute("memory_recall", query="agent typing", top_k=1)
     print(f"  Type: {type(result).__name__}")
     print(f"  Status: {result.status}")
     print(f"  Has timing: {result.execution_time_ms is not None}")
     print(f"  Result type: {type(result.result).__name__}")
     
-    # Simple Agent-style: Returns raw value
-    print("Simple Agent-style execution:")
+    # Raw: Returns raw value
+    print("Raw execution (execute_tool):")
     raw_result = agent.execute_tool("memory_recall", query="agent typing", top_k=1)
     print(f"  Type: {type(raw_result).__name__}")
     print(f"  Value: {raw_result[0]['text'][:40]}")

@@ -1,4 +1,4 @@
-"""Pydantic Agent - strongly-typed agent with validation."""
+"""Pydantic Agent Implementation"""
 
 import asyncio
 import inspect
@@ -64,14 +64,7 @@ class RegisteredTool:
 
 
 class PydanticAgent:
-    """Pydantic-based agent with strong typing and validation.
-    
-    Example:
-        agent = PydanticAgent(name="MyAgent")
-        agent.register_tool("add", "Add numbers", lambda a, b: a + b)
-        result = agent.execute("add", a=1, b=2)
-        print(result.result)  # 3
-    """
+    """Pydantic-based agent implementation."""
 
     def __init__(
         self,
@@ -109,9 +102,8 @@ class PydanticAgent:
             has_memory=self._memory is not None,
             connected_servers=list(self._connected_servers.keys()),
         )
-
-    # --- Tool Registration ---
-
+    
+    # tool management
     def register_tool(self, name: str, description: str, func: Callable, schema: Optional[ToolSchema] = None) -> ToolDefinition:
         """Register a tool with the agent."""
         schema = schema or _extract_schema(func)
@@ -122,11 +114,11 @@ class PydanticAgent:
         return definition
 
     def add_function_as_tool(self, name: str, description: str, func: Callable) -> ToolDefinition:
-        """Alias for register_tool (Simple Agent compatible)."""
+        """Alias for register_tool."""
         return self.register_tool(name, description, func)
 
     def add_tool(self, tool: GenericTool) -> ToolDefinition:
-        """Add a GenericTool (Simple Agent compatible)."""
+        """Add a GenericTool."""
         params = []
         if hasattr(tool, 'schema') and tool.schema:
             type_map = {
@@ -179,8 +171,7 @@ class PydanticAgent:
         q = query.lower()
         return [n for n, t in self._tools.items() if q in n.lower() or q in t.definition.description.lower()]
 
-    # --- Tool Execution ---
-
+    # execution
     def execute(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool and return structured result."""
         args = {**(arguments or {}), **kwargs}
@@ -212,7 +203,7 @@ class PydanticAgent:
             return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
 
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
-        """Execute tool and return raw result (Simple Agent compatible)."""
+        """Execute tool and return raw result (raises exceptions on error)."""
         if tool_name not in self._tools:
             raise ValueError(f"Tool '{tool_name}' not found")
         try:
@@ -236,8 +227,7 @@ class PydanticAgent:
         """Execute from a ToolExecutionRequest (for LLM integration)."""
         return self.execute(request.tool_name, request.arguments)
 
-    # --- Memory Operations ---
-
+    # memory
     def _register_memory_tools(self) -> None:
         """Register memory CRUD tools."""
         self.register_tool("memory_store", "Store knowledge", self._memory_store)
@@ -348,8 +338,7 @@ class PydanticAgent:
     def recall_knowledge(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         return self._memory_recall(query, top_k)
 
-    # --- MCP Server Integration ---
-
+    # mcp inqtegration
     async def connect_mcp_server(self, server_name: str, server_params: StdioServerParameters) -> None:
         await self._mcp_adapter.connect_to_server(server_name, server_params)
         self._connected_servers[server_name] = server_params
@@ -369,8 +358,7 @@ class PydanticAgent:
             defs.extend(await self.load_tools_from_mcp_server(name))
         return defs
 
-    # --- Lifecycle ---
-
+    # cleanup
     async def cleanup(self) -> None:
         await self._mcp_adapter.close_all_connections()
 

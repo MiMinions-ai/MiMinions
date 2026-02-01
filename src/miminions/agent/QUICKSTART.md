@@ -6,7 +6,7 @@ Strongly-typed agent with Pydantic validation and structured results.
 
 ```python
 import asyncio
-from miminions.agent.pydantic_agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 
 async def main():
     agent = create_pydantic_agent("MyAgent", "Optional description")
@@ -33,15 +33,11 @@ async def main():
 asyncio.run(main())
 ```
 
-## Key Differences from Simple Agent
+## Execution Styles
 
-**Returns structured `ToolExecutionResult`** instead of raw values:
-- `status`: SUCCESS, ERROR, or VALIDATION_ERROR
-- `result`: The actual result value
-- `error`: Error message if failed
-- `execution_time_ms`: Execution duration
-
-**No exceptions thrown** - errors returned in result object:
+**Structured results with `execute()`:**
+- Returns `ToolExecutionResult` with status, result, error, execution_time_ms
+- No exceptions - errors returned in result object
 
 ```python
 result = agent.execute("add", a=5, b=3)
@@ -50,8 +46,13 @@ if result.status == ExecutionStatus.SUCCESS:
     print(f"Success: {result.result}")
 else:
     print(f"Failed: {result.error}")
+```
 
-# Simple Agent compatible mode (raises exceptions)
+**Raw results with `execute_tool()`:**
+- Returns raw value directly
+- Raises exceptions on error
+
+```python
 raw_result = agent.execute_tool("add", a=5, b=3)  # Returns 8 or raises
 ```
 

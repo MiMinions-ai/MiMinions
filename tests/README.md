@@ -1,22 +1,14 @@
 # MiMinions Tests
 
-Comprehensive test suites for all agent implementations.
+Comprehensive test suites for the Pydantic Agent.
 
-## Directory Structure
+## Test Files
 
-- **simple_agent/** - Simple Agent tests
-  - `test_simple_agent.py` - Core agent functionality
-  - `test_memory.py` - FAISS memory integration
-  - `test_sqlite_memory.py` - SQLite CRUD operations
-  - `test_sqlite_memory_search.py` - Vector and keyword search
-  - `test_document_ingestion.py` - Document processing
-
-- **pydantic_agent/** - Pydantic Agent tests (mirrors simple_agent)
-  - `test_pydantic_agent.py` - Core functionality with Pydantic models
-  - `test_pydantic_memory.py` - Memory with structured results
-  - `test_sqlite_memory.py` - SQLite with ToolExecutionResult
-  - `test_sqlite_memory_search.py` - Search with result models
-  - `test_document_ingestion.py` - Document processing with validation
+- `test_pydantic_agent.py` - Core agent functionality with Pydantic models
+- `test_pydantic_memory.py` - Memory with structured results
+- `test_sqlite_memory.py` - SQLite CRUD operations
+- `test_sqlite_memory_search.py` - Vector and keyword search
+- `test_document_ingestion.py` - Document processing
 
 - **cli/** - CLI interface tests
 - **data/** - Data management system tests
@@ -24,28 +16,19 @@ Comprehensive test suites for all agent implementations.
 ## Running Tests
 
 ```bash
-# Simple Agent tests
-python tests/simple_agent/test_simple_agent.py
-python tests/simple_agent/test_memory.py
-python tests/simple_agent/test_sqlite_memory.py
-python tests/simple_agent/test_sqlite_memory_search.py
-python tests/simple_agent/test_document_ingestion.py
-
-# Pydantic Agent tests (same test names)
-python tests/pydantic_agent/test_pydantic_agent.py
-python tests/pydantic_agent/test_pydantic_memory.py
-python tests/pydantic_agent/test_sqlite_memory.py
-python tests/pydantic_agent/test_sqlite_memory_search.py
-python tests/pydantic_agent/test_document_ingestion.py
+python tests/test_pydantic_agent.py
+python tests/test_pydantic_memory.py
+python tests/test_sqlite_memory.py
+python tests/test_sqlite_memory_search.py
+python tests/test_document_ingestion.py
 ```
 
 ## Test Coverage
 
-Both agent test suites cover identical functionality:
-
 ### Agent Core
 - Tool registration and execution
-- Error handling (exceptions vs result objects)
+- Structured result validation (ToolExecutionResult)
+- Error handling with status codes
 - Tool discovery and search
 - MCP server integration
 - Async operations
@@ -62,8 +45,3 @@ Both agent test suites cover identical functionality:
 - Text file processing
 - Automatic chunking
 - Memory storage and retrieval
-
-## Key Differences
-
-**Simple Agent tests**: Check for exceptions and raw return values
-**Pydantic Agent tests**: Validate result models and status codes

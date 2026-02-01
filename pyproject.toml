@@ -1,7 +1,7 @@
 [project]
 name = "miminions"
 version = "0.1.0"
-description = "A simple agent framework with MCP server support and vector memory"
+description = "An agentic framework with MCP server support and vector memory"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

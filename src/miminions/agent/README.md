@@ -1,36 +1,27 @@
-# MiMinions Agents
+# MiMinions Agent
 
-Two agent implementations with identical functionality:
+Pydantic-based agent with strong typing, validation, and structured schemas.
 
-## Simple Agent
-- Returns raw values from tool execution
-- Raises exceptions on errors
-- Best for: Quick prototyping, simple scripts, legacy code compatibility
-
-## Pydantic Agent
-- Returns structured `ToolExecutionResult` models with validation
-- No exceptions - errors in result object
-- Includes execution timing
-- JSON-serializable tool schemas for LLM integration
-- Best for: Production code, LLM integration, type-safe applications
-
-## Features (Both Agents)
-- **Tool Registration**: Convert Python functions to agent tools with auto-generated schemas
+## Features
+- **Structured Results**: Returns `ToolExecutionResult` models with status, result, error, and timing
+- **Type Safety**: Full Pydantic validation for inputs, outputs, and tool schemas
+- **Tool Registration**: Convert Python functions to tools with auto-generated JSON schemas
 - **MCP Integration**: Load tools from Model Context Protocol servers
 - **Memory Systems**: FAISS (in-memory vectors) or SQLite (persistent with keyword search)
-- **Tool Discovery**: List, search, and inspect tools programmatically
+- **LLM Ready**: JSON-serializable schemas for OpenAI, Anthropic, etc.
 
 ## Quick Start
 
 ```python
-from miminions.agent import create_simple_agent, create_pydantic_agent
+from miminions.agent import create_pydantic_agent, ExecutionStatus
 
-# Simple Agent - direct results or exceptions
-agent = create_simple_agent("MyAgent")
-result = agent.execute_tool("add", a=5, b=3)  # Returns: 8
-
-# Pydantic Agent - structured results
 agent = create_pydantic_agent("MyAgent")
+
+def add(a: int, b: int) -> int:
+    return a + b
+
+agent.register_tool("add", "Add two numbers", add)
+
 result = agent.execute("add", a=5, b=3)
 print(result.status)  # ExecutionStatus.SUCCESS
 print(result.result)  # 8
@@ -38,18 +29,6 @@ print(result.execution_time_ms)  # 0.15
 ```
 
 ## Documentation
-- **simple_agent/QUICKSTART.md** - Simple Agent usage guide
-- **pydantic_agent/QUICKSTART.md** - Pydantic Agent usage guide  
-- **examples/** - Complete working examples for both agents
-- **tests/** - Test suites showing usage patterns
-
-## Choosing an Agent
-
-| Scenario | Recommended |
-|----------|-------------|
-| Quick prototype | Simple Agent |
-| Production application | Pydantic Agent |
-| LLM integration | Pydantic Agent |
-| Type safety required | Pydantic Agent |
-| Legacy compatibility | Simple Agent |
-| Need execution metrics | Pydantic Agent |
+- **QUICKSTART.md** - Usage guide
+- **examples/** - Working examples
+- **tests/** - Test suites

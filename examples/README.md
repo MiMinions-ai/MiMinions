@@ -1,49 +1,32 @@
 # MiMinions Examples
 
-Complete working examples for both agent implementations.
+Working examples for the Pydantic Agent.
 
-## Directory Structure
+## Examples
 
-- **simple_agent/** - Simple Agent examples (raw results, exceptions)
-  - `simple_agent_example.py` - Basic usage and MCP integration
-  - `agent_memory_example.py` - FAISS memory integration
-  - `sqlite_memory_example.py` - SQLite CRUD operations
-  - `sqlite_memory_search_example.py` - Vector and keyword search
-  - `document_ingestion_example.py` - PDF/text file processing
-  - `document_server_example.py` - MCP document server usage
+- `pydantic_agent_example.py` - Basic usage with structured results
+- `pydantic_memory_example.py` - FAISS memory integration
+- `sqlite_memory_example.py` - SQLite CRUD operations
+- `sqlite_memory_search_example.py` - Vector and keyword search
+- `document_ingestion_example.py` - PDF/text file processing
 
-- **pydantic_agent/** - Pydantic Agent examples (structured results, validation)
-  - `pydantic_agent_example.py` - Basic usage with structured results
-  - `pydantic_memory_example.py` - Memory with Pydantic models
-  - `sqlite_memory_example.py` - SQLite with structured responses
-  - `sqlite_memory_search_example.py` - Search with result models
-  - `document_ingestion_example.py` - Document processing with validation
-
-- **servers/** - Sample MCP servers
-  - `math_server.py` - Basic arithmetic operations
-  - `document_server.py` - Document processing tools
+## Servers
+- `servers/math_server.py` - Basic arithmetic MCP server
+- `servers/document_server.py` - Document processing MCP server
 
 ## Running Examples
 
 ```bash
-# Simple Agent examples
-python examples/simple_agent/simple_agent_example.py
-python examples/simple_agent/agent_memory_example.py
-python examples/simple_agent/sqlite_memory_example.py
-
-# Pydantic Agent examples
-python examples/pydantic_agent/pydantic_agent_example.py
-python examples/pydantic_agent/pydantic_memory_example.py
-
-# Test MCP servers
-python examples/servers/math_server.py  # Run as standalone server
+python examples/pydantic_agent_example.py
+python examples/pydantic_memory_example.py
+python examples/sqlite_memory_example.py
 ```
 
 ## What Each Example Demonstrates
 
 ### Basic Usage
 - Tool registration from Python functions
-- Tool execution and error handling
+- Structured result handling with ToolExecutionResult
 - Tool discovery and inspection
 
 ### Memory Integration
