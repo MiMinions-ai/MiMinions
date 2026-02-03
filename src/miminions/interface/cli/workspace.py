@@ -41,6 +41,12 @@ def workspace_cli():
     """Workspace management commands."""
     pass
 
+def _resolve_workspace(workspaces: dict, workspace_id_or_name: str):
+    """Return (workspace_key, workspace) using prefix ID or exact name match."""
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id_or_name) or ws.name == workspace_id_or_name:
+            return ws_id, ws
+    return None, None
 
 @workspace_cli.command("list")
 @require_auth()
@@ -340,6 +346,47 @@ def add_node(workspace_id, name, node_type, properties):
     
     click.echo(f"Node '{name}' added to workspace '{workspace.name}' with ID: {node.id}")
 
+@workspace_cli.command("remove-node")
+@click.argument("workspace_id")
+@click.argument("node_id_or_name")
+@require_auth()
+def remove_node(workspace_id, node_id_or_name):
+    """Remove a node from a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Find node with partial ID or name match
+    remove_id = None
+    for node_id, node in workspace.nodes.items():
+        if node_id.startswith(node_id_or_name) or node.name == node_id_or_name:
+            remove_id = node_id
+            break
+    
+    if not remove_id:
+        click.echo(f"Node '{node_id_or_name}' not found in workspace.")
+        return
+    
+    ok = workspace.remove_node(remove_id)
+    if not ok:
+        click.echo(f"Failed to remove node '{node_id_or_name}'.", err=True)
+        return
+    
+    manager.save_workspaces(workspaces)
+    
+    click.echo(f"Node '{node_id_or_name}' removed from workspace '{workspace.name}'.")
 
 @workspace_cli.command("connect-nodes")
 @click.argument("workspace_id")
@@ -388,7 +435,54 @@ def connect_nodes(workspace_id, node1_id, node2_id):
     else:
         click.echo("Failed to connect nodes.")
 
-
+@workspace_cli.command("disconnect-nodes")
+@click.argument("workspace_id")
+@click.argument("node1_id")
+@click.argument("node2_id")
+@require_auth()
+def disconnect_nodes(workspace_id, node1_id, node2_id):
+    """Disconnect two nodes in a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Find nodes (support partial ID matching)
+    node1 = None
+    node2 = None
+    
+    for node_id, node in workspace.nodes.items():
+        if node_id.startswith(node1_id) or node.name == node1_id:
+            node1 = node
+        if node_id.startswith(node2_id) or node.name == node2_id:
+            node2 = node
+    
+    if not node1:
+        click.echo(f"Node '{node1_id}' not found in workspace.")
+        return
+    
+    if not node2:
+        click.echo(f"Node '{node2_id}' not found in workspace.")
+        return
+    
+    if workspace.disconnect_nodes(node1.id, node2.id):
+        manager.save_workspaces(workspaces)
+        click.echo(f"Disconnected nodes '{node1.name}' and '{node2.name}'.")
+    else:
+        click.echo("Nodes were not connected (no changes).")    
+    
+    
 @workspace_cli.command("set-state")
 @click.argument("workspace_id")
 @click.option("--key", required=True, help="State key")
@@ -425,3 +519,102 @@ def set_state(workspace_id, key, value):
     
     manager.save_workspaces(workspaces)
     click.echo(f"Set state '{key}' = '{parsed_value}' in workspace '{workspace.name}'.")
+    
+@workspace_cli.command("add-rule")
+@click.argument("workspace_id")
+@click.option("--name", required=True, help="Rule name")
+@click.option("--description", default="", help="Rule description")
+@click.option("--priority", type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]), default="MEDIUM")
+@click.option("--enabled/--disabled", default=True, show_default=True)
+@click.option("--condition", help='Condition JSON. Example: {"type":"state_equals","key":"x","value":1}')
+@click.option("--action", help='Action JSON. Example: {"type":"assign_task","message":"..."}')
+@require_auth()
+def add_rule(workspace_id, name, description, priority, enabled, condition, action):
+    """Add a rule to a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Parse condition and action
+    rule_condition = {}
+    rule_action = {}
+    if condition:
+        try:
+            rule_condition = json.loads(condition)
+        except json.JSONDecodeError:
+            click.echo("Invalid JSON format for condition.")
+            return
+    if action:
+        try:
+            rule_action = json.loads(action)
+        except json.JSONDecodeError:
+            click.echo("Invalid JSON format for action.")
+            return
+    
+    rule = Rule(
+        name=name,
+        description=description,
+        priority=RulePriority[priority],
+        enabled=enabled,
+        condition=rule_condition,
+        action=rule_action
+    )
+    
+    workspace.add_rule(rule)
+    manager.save_workspaces(workspaces)
+    
+    click.echo(f"Rule '{name}' added to workspace '{workspace.name}' with ID: {rule.id}")
+    
+@workspace_cli.command("remove-rule")
+@click.argument("workspace_id")
+@click.argument("rule_id_or_name")
+@require_auth()
+def remove_rule(workspace_id, rule_id_or_name):
+    """Remove a rule from a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Find rule with partial ID or name match
+    remove_id = None
+    for rule_id, rule in workspace.rules.items():
+        if rule_id.startswith(rule_id_or_name) or rule.name == rule_id_or_name:
+            remove_id = rule_id
+            break
+    
+    if not remove_id:
+        click.echo(f"Rule '{rule_id_or_name}' not found in workspace.")
+        return
+    
+    ok = workspace.remove_rule(remove_id)
+    if not ok:
+        click.echo(f"Failed to remove rule '{rule_id_or_name}'.", err=True)
+        return
+    
+    manager.save_workspaces(workspaces)
+    
+    click.echo(f"Rule '{rule_id_or_name}' removed from workspace '{workspace.name}'.")
