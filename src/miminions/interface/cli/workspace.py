@@ -520,6 +520,25 @@ def set_state(workspace_id, key, value):
     manager.save_workspaces(workspaces)
     click.echo(f"Set state '{key}' = '{parsed_value}' in workspace '{workspace.name}'.")
     
+def _parse_json_or_shorthand(value: str | None, label: str) -> dict:
+    if not value:
+        return {}
+
+    v = value.strip()
+
+    # Parse if it looks like JSON
+    if v.startswith("{"):
+        try:
+            obj = json.loads(v)
+        except json.JSONDecodeError as e:
+            raise click.ClickException(f"Invalid JSON for {label}: {e}")
+        if not isinstance(obj, dict):
+            raise click.ClickException(f"{label} must be a JSON object like {{...}}.")
+        return obj
+
+    # Otherwise treat it as shorthand
+    return {"type": v}
+    
 @workspace_cli.command("add-rule")
 @click.argument("workspace_id")
 @click.option("--name", required=True, help="Rule name")
@@ -546,22 +565,14 @@ def add_rule(workspace_id, name, description, priority, enabled, condition, acti
     if not workspace:
         click.echo(f"Workspace '{workspace_id}' not found.")
         return
-    
+
     # Parse condition and action
-    rule_condition = {}
-    rule_action = {}
-    if condition:
-        try:
-            rule_condition = json.loads(condition)
-        except json.JSONDecodeError:
-            click.echo("Invalid JSON format for condition.")
-            return
-    if action:
-        try:
-            rule_action = json.loads(action)
-        except json.JSONDecodeError:
-            click.echo("Invalid JSON format for action.")
-            return
+    try:
+        rule_condition = _parse_json_or_shorthand(condition, "condition")
+        rule_action = _parse_json_or_shorthand(action, "action")
+    except click.ClickException as e:
+        click.echo(str(e))
+        return
     
     rule = Rule(
         name=name,
@@ -618,3 +629,42 @@ def remove_rule(workspace_id, rule_id_or_name):
     manager.save_workspaces(workspaces)
     
     click.echo(f"Rule '{rule_id_or_name}' removed from workspace '{workspace.name}'.")
+    
+@workspace_cli.command("inherit")
+@click.argument("workspace_id")
+@click.argument("parent_workspace_id_or_name")
+@require_auth()
+def inherit_rules(workspace_id, parent_workspace_id_or_name):
+    """Set a parent workspace to inherit rules from."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Find parent workspace
+    parent_workspace = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(parent_workspace_id_or_name) or ws.name == parent_workspace_id_or_name:
+            parent_workspace = ws
+            break
+    
+    if not parent_workspace:
+        click.echo(f"Parent workspace '{parent_workspace_id_or_name}' not found.")
+        return
+    
+    workspace.inherit_rules_from(parent_workspace)
+    manager.save_workspaces(workspaces)
+
+    click.echo(f"Workspace '{workspace.name}' now inherits rules from '{parent_workspace.name}'.")
+    click.echo(f"Inherited rules count: {len(workspace.inherited_rules)}")
