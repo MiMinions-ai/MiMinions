@@ -11,7 +11,7 @@ from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule, NodeType, RulePriority
+from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
 
 
 def require_auth():
@@ -40,13 +40,6 @@ def get_workspace_manager():
 def workspace_cli():
     """Workspace management commands."""
     pass
-
-def _resolve_workspace(workspaces: dict, workspace_id_or_name: str):
-    """Return (workspace_key, workspace) using prefix ID or exact name match."""
-    for ws_id, ws in workspaces.items():
-        if ws_id.startswith(workspace_id_or_name) or ws.name == workspace_id_or_name:
-            return ws_id, ws
-    return None, None
 
 @workspace_cli.command("list")
 @require_auth()
