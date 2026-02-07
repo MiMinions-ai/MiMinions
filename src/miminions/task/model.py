@@ -2,7 +2,7 @@
 from uuid import uuid1
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from dataclasses import field
+from dataclasses import field,dataclass
 from datetime import datetime
 
 from pydantic_ai import Agent, AgentRunResult
@@ -14,12 +14,25 @@ from miminions.utils import (
 
 # Task models
 class TaskStatus(Enum):
-    INITIALIZED = "initialized"
-    IDLE = "idle"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    """Enumeration of possible task status values."""
+    PENDING = "pending"  # Task created, waiting to be initialized
+    INITIALIZED = "initialized"  # Task initialized and ready
+    IDLE = "idle"  # Task ready to execute
+    RUNNING = "running"  # Task currently executing
+    IN_PROGRESS = "in_progress"  # Task in progress (alias for CLI compatibility)
+    PAUSED = "paused"  # Task execution paused
+    COMPLETED = "completed"  # Task completed successfully
+    FAILED = "failed"  # Task failed with error
+    CANCELLED = "cancelled"  # Task cancelled by user
 
+class TaskPriority(Enum):
+    """Enumeration of task priority levels."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+@dataclass
 class Task:
     """Model representing a task in the runtime environment."""
     id: str = field(
@@ -34,12 +47,12 @@ class Task:
         default_factory=generate_random_description, 
         metadata={"description":"Detailed description of the task"}
     )
-    status: str = field(
-        default=None, 
+    status: TaskStatus = field(
+        default=TaskStatus.PENDING, 
         metadata={"description":"Current status of the task"}
     )
-    priority: int = field(
-        default=None, 
+    priority: TaskPriority = field(
+        default=TaskPriority.MEDIUM, 
         metadata={"description":"Priority level of the task"}
     )
     start_time: Optional[datetime] = field(
@@ -51,6 +64,7 @@ class Task:
         metadata={"description":"End time of the task"}
     )
 
+@dataclass
 class AgentTask(Task):
     """Model representing a task assigned to an agent."""
     agent: Agent = field(
@@ -77,6 +91,8 @@ class AgentTask(Task):
         default=None, 
         metadata={"description":"Result of the task execution"}
     )
+
+@dataclass
 class TaskInput:
     """Model representing input parameters for a task."""
     params: Dict[str, Any] = field(
@@ -84,6 +100,7 @@ class TaskInput:
         metadata={"description":"Input parameters for the task"}
     )
 
+@dataclass
 class TaskOutput:
     """Model representing output results of a task."""
     results: Dict[str, Any] = field(

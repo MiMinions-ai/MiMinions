@@ -29,7 +29,7 @@ class TaskRuntime:
 
     def filter_tasks(self, attribute: str, value: Any):
         """Filter tasks based on a specific attribute and value."""
-        return [task for task in self.tasks if getattr(task, attribute) == value]
+        return [task for task in self.tasks.values() if getattr(task, attribute) == value]
 
     def update_task(self, task_id: str, **task_attributes):
         """Update the status of a specific task."""
