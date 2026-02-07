@@ -39,3 +39,6 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[project.scripts]
+miminions = "miminions.interface.cli.main:cli"
