@@ -86,24 +86,26 @@ class MCPToolAdapter:
     
     async def close_all_connections(self):
         """Close all server connections"""
-        for server_name in list(self.sessions.keys()):
-            session = self.sessions[server_name]
-            stdio_ctx = self.stdio_contexts.get(server_name)
-            
-            try:
-                await session.__aexit__(None, None, None)
-            except Exception as e:
-                print(f"Error closing session for {server_name}: {e}")
-            
-            try:
+        try:
+            for server_name in list(self.sessions.keys()):
+                session = self.sessions[server_name]
+                stdio_ctx = self.stdio_contexts.get(server_name)
+                
+                try:
+                    await session.__aexit__(None, None, None)
+                except BaseException:
+                    pass
+                
+                # Close stdio context, use try/except to handle asyncio cancellation issues
                 if stdio_ctx:
-                    await stdio_ctx.__aexit__(None, None, None)
-            except Exception as e:
-                print(f"Error closing stdio context for {server_name}: {e}")
-        
-        self.sessions.clear()
-        self.stdio_contexts.clear()
-        self.session_contexts.clear()
+                    try:
+                        await stdio_ctx.__aexit__(None, None, None)
+                    except BaseException:
+                        pass
+        finally:
+            self.sessions.clear()
+            self.stdio_contexts.clear()
+            self.session_contexts.clear()
 
 
 class MCPTool(GenericTool):

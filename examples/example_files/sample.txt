@@ -1,0 +1,2 @@
+This is a sample document for ingestion.
+It contains multiple lines of text.
