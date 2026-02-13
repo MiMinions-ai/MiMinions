@@ -1,15 +1,15 @@
-"""Document Ingestion Example for Pydantic Agent."""
+"""Document Ingestion Example for Minion Agent."""
 
 import asyncio
 from pathlib import Path
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_minion, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
 async def main():
-    print("Pydantic Agent Document Ingestion Example")
+    print("Minion Agent Document Ingestion Example")
     
-    agent = create_pydantic_agent(name="DocumentAgent", memory=FAISSMemory())
+    agent = create_minion(name="DocumentAgent", memory=FAISSMemory())
     print(f"Created: {agent}")
     
     pdf_path = Path(__file__).parent.parent / "example_files" / "resume.pdf"

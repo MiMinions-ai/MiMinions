@@ -116,7 +116,7 @@ Base class for all generic tools.
 - `to_dict()`: Get tool schema as dictionary
 - `schema`: Get tool schema object
 
-### PydanticAgent
+### Minion
 
 Agent class for managing and executing tools with structured results.
 

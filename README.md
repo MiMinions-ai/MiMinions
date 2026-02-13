@@ -5,7 +5,7 @@ A Python package for MiMinions - an agentic framework for multi-agent systems wi
 ## Features
 
 - **Generic Tool System**: Create tools once, use with multiple AI frameworks
-- **Pydantic Agent**: Structured results with validation and type safety
+- **Minion Agent**: Structured results with validation and type safety
 - **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
 - **Web Search**: Exploratory search using Google and DuckDuckGo
 - **Custom Tools**: Easy integration of custom tools and functions
@@ -45,9 +45,9 @@ pip install aiohttp
 ### Basic Agent with Custom Tools
 
 ```python
-from miminions.agent import create_pydantic_agent
+from miminions.agent import create_minion
 
-agent = create_pydantic_agent(name="MyAgent")
+agent = create_minion(name="MyAgent")
 
 def calculator(operation, a, b):
     if operation == "add":

@@ -1,13 +1,8 @@
-"""Memory-Enabled Pydantic AI Agent Example"""
+"""Memory-Enabled Minion Agent Example"""
 
 import asyncio
-import sys
-from pathlib import Path
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
-
-from miminions.agent import create_pydantic_agent, MemoryQueryResult
+from miminions.agent import create_minion, MemoryQueryResult
 from miminions.memory.faiss import FAISSMemory
 
 
@@ -16,7 +11,7 @@ async def basic_memory_demo():
     print("Basic Memory Demo (Pydantic)")
     
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("MemoryAgent", "Agent with long-term memory", memory=memory)
+    agent = create_minion("MemoryAgent", "Agent with long-term memory", memory=memory)
     
     print(f"Agent: {agent}")
     print(f"Agent state: {agent.get_state()}")
@@ -55,7 +50,7 @@ async def structured_context_demo():
     print("\nStructured Context Demo")
     
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("ContextAgent", memory=memory)
+    agent = create_minion("ContextAgent", memory=memory)
     
     # Build knowledge base
     knowledge = [
@@ -101,7 +96,7 @@ async def memory_with_tools_demo():
     print("\nMemory with Tools Demo")
     
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("HybridAgent", memory=memory)
+    agent = create_minion("HybridAgent", memory=memory)
     
     # Add custom tools
     def calculate_area(width: float, height: float) -> float:
@@ -147,9 +142,9 @@ async def compare_execution_styles():
     print("\nComparing Execution Styles")
     
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("CompareAgent", memory=memory)
+    agent = create_minion("CompareAgent", memory=memory)
     
-    agent.store_knowledge("The Pydantic Agent provides strong typing")
+    agent.store_knowledge("The Minion Agent provides strong typing")
     agent.store_knowledge("The agent is lightweight and flexible")
     
     # Structured: Returns ToolExecutionResult
@@ -179,7 +174,7 @@ async def compare_execution_styles():
 
 async def main():
     """Run all memory demonstrations"""
-    print("Pydantic Agent Memory System Demonstration")
+    print("Minion Agent Memory System Demonstration")
     
     await basic_memory_demo()
     await structured_context_demo()

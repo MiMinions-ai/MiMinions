@@ -1,12 +1,12 @@
 """SQLite Memory Test Suite."""
 
 from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_minion, ExecutionStatus
 
 
 def setup_agent():
     memory = SQLiteMemory(db_path=":memory:")
-    agent = create_pydantic_agent("TestAgent", memory=memory)
+    agent = create_minion("TestAgent", memory=memory)
     return agent, memory
 
 

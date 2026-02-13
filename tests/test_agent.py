@@ -4,12 +4,9 @@ import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
 from miminions.agent import (
-    PydanticAgent,
-    create_pydantic_agent,
+    Minion,
+    create_minion,
     ToolDefinition,
     ToolExecutionRequest,
     ToolExecutionResult,
@@ -21,7 +18,7 @@ from miminions.agent import (
 async def test_agent_creation():
     """Test basic agent creation."""
     print("test_agent_creation")
-    agent = create_pydantic_agent("TestAgent", "A test agent")
+    agent = create_minion("TestAgent", "A test agent")
     
     assert agent.name == "TestAgent"
     assert agent.description == "A test agent"
@@ -38,7 +35,7 @@ async def test_agent_creation():
 async def test_tool_registration():
     """Test tool registration and schema extraction."""
     print("test_tool_registration")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     
     def add(a: int, b: int) -> int:
         return a + b
@@ -70,7 +67,7 @@ async def test_tool_registration():
 async def test_tool_execution():
     """Test tool execution styles."""
     print("test_tool_execution")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     
     def multiply(a: float, b: float) -> float:
         return a * b
@@ -93,7 +90,7 @@ async def test_tool_execution():
     
     # Via ToolExecutionRequest
     request = ToolExecutionRequest(tool_name="multiply", arguments={"a": 7.0, "b": 2.0})
-    result3 = agent.execute_request(request)
+    result3 = agent.handle_tool_execution_request(request)
     assert result3.result == 14.0
     
     await agent.cleanup()
@@ -104,7 +101,7 @@ async def test_tool_execution():
 async def test_error_handling():
     """Test error handling."""
     print("test_error_handling")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     
     def failing_tool():
         raise ValueError("This tool always fails")
@@ -136,7 +133,7 @@ async def test_error_handling():
 async def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     
     def search(query: str, max_results: int = 10) -> list:
         return []
@@ -161,7 +158,7 @@ async def test_tool_schema_json():
 async def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     
     agent.register_tool("math_add", "Add numbers", lambda a, b: a + b)
     agent.register_tool("math_sub", "Subtract numbers", lambda a, b: a - b)

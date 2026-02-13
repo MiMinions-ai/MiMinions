@@ -4,17 +4,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-from miminions.agent import create_pydantic_agent, MemoryQueryResult, MemoryEntry, ExecutionStatus
+from miminions.agent import create_minion, MemoryQueryResult, MemoryEntry, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
 async def test_memory_attachment():
     """Test attaching memory to agent."""
     print("test_memory_attachment")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
     assert agent.get_state().has_memory == False
     
     memory = FAISSMemory(dim=384)
@@ -31,7 +28,7 @@ async def test_memory_crud():
     """Test full CRUD operations."""
     print("test_memory_crud")
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("TestAgent", memory=memory)
+    agent = create_minion("TestAgent", memory=memory)
 
     result = agent.execute("memory_store", text="Test knowledge", metadata={"tag": "test"})
     assert result.status == ExecutionStatus.SUCCESS
@@ -66,7 +63,7 @@ async def test_convenience_methods():
     """Test store_knowledge and recall_knowledge."""
     print("test_convenience_methods")
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("TestAgent", memory=memory)
+    agent = create_minion("TestAgent", memory=memory)
 
     entry_id = agent.store_knowledge("Python is a programming language", metadata={"topic": "coding"})
     assert entry_id is not None
@@ -84,7 +81,7 @@ async def test_memory_context():
     """Test structured memory context retrieval."""
     print("test_memory_context")
     memory = FAISSMemory(dim=384)
-    agent = create_pydantic_agent("TestAgent", memory=memory)
+    agent = create_minion("TestAgent", memory=memory)
 
     agent.store_knowledge("Fact about topic X")
     agent.store_knowledge("Another fact about topic X")
@@ -104,7 +101,7 @@ async def test_memory_context():
 async def test_no_memory_handling():
     """Test graceful handling when no memory attached."""
     print("test_no_memory_handling")
-    agent = create_pydantic_agent("TestAgent")
+    agent = create_minion("TestAgent")
 
     # get_memory_context returns empty result
     context = agent.get_memory_context("query")

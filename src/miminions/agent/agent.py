@@ -1,4 +1,4 @@
-"""Pydantic AI Agent Implementation"""
+"""Minion Agent Implementation"""
 
 import asyncio
 import inspect
@@ -62,9 +62,9 @@ class RegisteredTool:
         return await result if asyncio.iscoroutine(result) else result
 
 
-class PydanticAgent:
+class Minion:
     """
-    Pydantic AI-based agent implementation.
+    Minion agent implementation.
     
     Uses pydantic_ai infrastructure for LLM-ready tool management.
     Currently operates in direct execution mode (no LLM) but structured
@@ -202,10 +202,10 @@ class PydanticAgent:
     # execution
     def execute(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool and return structured result."""
-        args = {**(arguments or {}), **kwargs}
         if tool_name not in self._tools:
             return ToolExecutionResult.from_error(tool_name, f"Tool '{tool_name}' not found")
-
+        
+        args = {**(arguments or {}), **kwargs}
         tool = self._tools[tool_name]
         start = time.time()
         try:
@@ -218,10 +218,10 @@ class PydanticAgent:
 
     async def execute_async(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool asynchronously."""
-        args = {**(arguments or {}), **kwargs}
         if tool_name not in self._tools:
             return ToolExecutionResult.from_error(tool_name, f"Tool '{tool_name}' not found")
-
+        
+        args = {**(arguments or {}), **kwargs}
         tool = self._tools[tool_name]
         start = time.time()
         try:
@@ -251,7 +251,7 @@ class PydanticAgent:
         except Exception as e:
             raise RuntimeError(f"Error executing '{tool_name}': {e}")
 
-    def execute_request(self, request: ToolExecutionRequest) -> ToolExecutionResult:
+    def handle_tool_execution_request(self, request: ToolExecutionRequest) -> ToolExecutionResult:
         """Execute from a ToolExecutionRequest (for LLM integration)."""
         return self.execute(request.tool_name, request.arguments)
 
@@ -387,8 +387,11 @@ class PydanticAgent:
         return defs
 
     # cleanup
-    async def cleanup(self) -> None:
+    async def cleanup(self, rebuild: bool = True) -> None:
+        """Clean up MCP connections and optionally rebuild the agent."""
         await self._mcp_adapter.close_all_connections()
+        if rebuild:
+            self._rebuild_pydantic_ai_agent()
 
     def get_pydantic_ai_agent(self) -> Agent:
         """Get the underlying pydantic_ai Agent for LLM operations. Use for when integrating with an LLM."""
@@ -402,20 +405,20 @@ class PydanticAgent:
     def __str__(self) -> str:
         mem = "with memory" if self._memory else "no memory"
         model_name = getattr(self._model, 'model_name', 'test') if self._model else 'none'
-        return f"PydanticAgent({self.name}, tools={len(self._tools)}, model={model_name}, {mem})"
+        return f"Minion({self.name}, tools={len(self._tools)}, model={model_name}, {mem})"
 
     def __repr__(self) -> str:
         return self.__str__()
 
 
-def create_pydantic_agent(
+def create_minion(
     name: str,
     description: str = "",
     memory: Optional[BaseMemory] = None,
     model: Optional[Any] = None,
-) -> PydanticAgent:
+) -> Minion:
     """
-    Create a new PydanticAgent instance.
+    Create a new Minion instance.
     
     Args:
         name: Agent name
@@ -425,6 +428,6 @@ def create_pydantic_agent(
                Pass a real model like 'openai:gpt-4' for LLM support.
     
     Returns:
-        PydanticAgent instance ready for tool registration and execution
+        Minion instance ready for tool registration and execution
     """
-    return PydanticAgent(name=name, description=description, memory=memory, model=model)
+    return Minion(name=name, description=description, memory=memory, model=model)

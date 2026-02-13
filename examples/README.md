@@ -1,10 +1,10 @@
 # MiMinions Examples
 
-Working examples for the Pydantic Agent.
+Working examples for the Minion Agent.
 
 ## Examples
 
-- `pydantic_agent_example.py` - Basic usage with structured results
+- `minion_agent_example.py` - Basic usage with structured results
 - `pydantic_memory_example.py` - FAISS memory integration
 - `sqlite_memory_example.py` - SQLite CRUD operations
 - `sqlite_memory_search_example.py` - Vector and keyword search
@@ -17,7 +17,7 @@ Working examples for the Pydantic Agent.
 ## Running Examples
 
 ```bash
-python examples/pydantic_agent_example.py
+python examples/minion_agent_example.py
 python examples/pydantic_memory_example.py
 python examples/sqlite_memory_example.py
 ```

@@ -1,6 +1,6 @@
 # MiMinions Agent
 
-Pydantic-based agent with strong typing, validation, and structured schemas.
+Minion agent with strong typing, validation, and structured schemas.
 
 ## Features
 - **Structured Results**: Returns `ToolExecutionResult` models with status, result, error, and timing
@@ -13,9 +13,9 @@ Pydantic-based agent with strong typing, validation, and structured schemas.
 ## Quick Start
 
 ```python
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_minion, ExecutionStatus
 
-agent = create_pydantic_agent("MyAgent")
+agent = create_minion("MyAgent")
 
 def add(a: int, b: int) -> int:
     return a + b

@@ -1,14 +1,14 @@
 """SQLite Memory Example - CRUD and Search operations."""
 
 from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_pydantic_agent
+from miminions.agent import create_minion
 
 
 def main():
     print("SQLite Memory Demo")
     
     memory = SQLiteMemory(db_path=":memory:")
-    agent = create_pydantic_agent("DemoAgent", memory=memory)
+    agent = create_minion("DemoAgent", memory=memory)
     
     print("\n1. Storing entries")
     facts = [

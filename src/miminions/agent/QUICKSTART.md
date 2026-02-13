@@ -1,4 +1,4 @@
-# Pydantic Agent Quick Start
+# Minion Agent Quick Start
 
 Strongly-typed agent with Pydantic validation and structured results.
 
@@ -6,10 +6,10 @@ Strongly-typed agent with Pydantic validation and structured results.
 
 ```python
 import asyncio
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_minion, ExecutionStatus
 
 async def main():
-    agent = create_pydantic_agent("MyAgent", "Optional description")
+    agent = create_minion("MyAgent", "Optional description")
     
     # Register tools (auto-generates JSON schema from type hints)
     def add(a: int, b: int) -> int:
@@ -62,7 +62,7 @@ raw_result = agent.execute_tool("add", a=5, b=3)  # Returns 8 or raises
 from miminions.memory.faiss import FAISSMemory
 
 memory = FAISSMemory(dim=384)
-agent = create_pydantic_agent("MemoryAgent", memory=memory)
+agent = create_minion("MemoryAgent", memory=memory)
 
 # Store knowledge
 entry_id = agent.store_knowledge("Python is a programming language")
@@ -105,4 +105,4 @@ request = ToolExecutionRequest(
 result = agent.execute_request(request)
 ```
 
-See `examples/pydantic_agent/` for complete examples and `tests/pydantic_agent/` for usage patterns.
+See `examples/minion_agent_example.py` for complete examples and `tests/` for usage patterns.

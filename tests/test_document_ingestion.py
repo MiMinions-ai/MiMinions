@@ -1,14 +1,14 @@
-"""Document ingestion tests for Pydantic Agent."""
+"""Document ingestion tests for Minion Agent."""
 
 import asyncio
 from pathlib import Path
-from miminions.agent import create_pydantic_agent, ExecutionStatus
+from miminions.agent import create_minion, ExecutionStatus
 from miminions.memory.faiss import FAISSMemory
 
 
 async def test_ingest_text():
     print("test_ingest_text")
-    agent = create_pydantic_agent("ChunkAgent", memory=FAISSMemory())
+    agent = create_minion("ChunkAgent", memory=FAISSMemory())
     
     test_file = Path("test_chunked.txt")
     test_file.write_text("""Machine learning is a subset of artificial intelligence.
@@ -41,7 +41,7 @@ async def test_ingest_pdf():
         print("SKIPPED (no PDF)")
         return True
     
-    agent = create_pydantic_agent("PDFAgent", memory=FAISSMemory())
+    agent = create_minion("PDFAgent", memory=FAISSMemory())
     
     try:
         result = agent.execute("ingest_document", filepath=str(pdf_path))
@@ -57,7 +57,7 @@ async def test_ingest_pdf():
 
 async def test_ingest_error():
     print("test_ingest_error")
-    agent = create_pydantic_agent("ErrorAgent", memory=FAISSMemory())
+    agent = create_minion("ErrorAgent", memory=FAISSMemory())
     
     result = agent.execute("ingest_document", filepath="nonexistent.pdf")
     

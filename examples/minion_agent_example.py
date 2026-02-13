@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pydantic AI Agent Demo
+"""Minion Agent Demo
 
 Demonstrates the pydantic_ai-based agent with tool registration and execution.
 Uses TestModel by default (no LLM required). Pass a real model for LLM support.
@@ -9,11 +9,8 @@ import asyncio
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
-
 from miminions.agent import (
-    create_pydantic_agent,
+    create_minion,
     ToolExecutionRequest,
     ExecutionStatus,
 )
@@ -22,7 +19,7 @@ from mcp import StdioServerParameters
 
 async def basic_usage_example():
     print("Basic Usage")
-    agent = create_pydantic_agent("PydanticAgent", "A strongly-typed agent")
+    agent = create_minion("MinionAgent", "A strongly-typed agent")
     
     def add_numbers(a: int, b: int) -> int:
         return a + b
@@ -49,7 +46,7 @@ async def basic_usage_example():
     print(f"multiply(3.14, 2.0): {result.status} -> {result.result} ({result.execution_time_ms:.2f}ms)")
     
     request = ToolExecutionRequest(tool_name="greet", arguments={"name": "Alice", "formal": True})
-    result = agent.execute_request(request)
+    result = agent.handle_tool_execution_request(request)
     print(f"Request execution: {result.status} -> {result.result}")
     
     raw_result = agent.execute_tool("add", a=7, b=3)
@@ -62,7 +59,7 @@ async def basic_usage_example():
 async def tool_schema_example():
     print("\nTool Schema")
     
-    agent = create_pydantic_agent("SchemaAgent")
+    agent = create_minion("SchemaAgent")
     
     def search(query: str, max_results: int = 10, include_metadata: bool = False) -> list:
         return [f"Result for: {query}"]
@@ -90,7 +87,7 @@ async def tool_schema_example():
 async def error_handling_example():
     print("\nError Handling")
     
-    agent = create_pydantic_agent("ErrorAgent")
+    agent = create_minion("ErrorAgent")
     
     def safe_divide(a: float, b: float) -> float:
         if b == 0:
@@ -120,7 +117,7 @@ async def error_handling_example():
 async def mcp_integration_example():
     print("\nMCP Integration")
     
-    agent = create_pydantic_agent("MCPAgent")
+    agent = create_minion("MCPAgent")
     
     try:
         # Math Server Integration
@@ -170,7 +167,7 @@ async def mcp_integration_example():
 
 
 async def main():
-    print("Pydantic Agent Demonstration")
+    print("Minion Agent Demonstration")
     
     await basic_usage_example()
     await tool_schema_example()

@@ -1,5 +1,5 @@
 """
-Pydantic AI Agent Module
+Minion Agent Module
 
 This module provides an agent implementation using pydantic_ai with strong typing,
 validation, and structured schemas for tools, inputs, and outputs.
@@ -15,10 +15,10 @@ By default, the agent uses TestModel (no LLM required). Pass a real model
 like 'openai:gpt-4' to enable LLM-driven tool execution.
 
 Example:
-    from miminions.agent import create_pydantic_agent, ExecutionStatus
+    from miminions.agent import create_minion, ExecutionStatus
     
     # Create agent (uses TestModel by default, no LLM required)
-    agent = create_pydantic_agent(name="MyAgent")
+    agent = create_minion(name="MyAgent")
     
     def add(a: int, b: int) -> int:
         return a + b
@@ -35,7 +35,7 @@ Example:
     # result = llm_agent.run_sync("Add 1 and 2")
 """
 
-from .agent import PydanticAgent, create_pydantic_agent
+from .agent import Minion, create_minion
 from .models import (
     ToolDefinition,
     ToolParameter,
@@ -55,8 +55,8 @@ from pydantic_ai.models.test import TestModel
 
 __all__ = [
     # MiMinions Agent
-    "PydanticAgent",
-    "create_pydantic_agent",
+    "Minion",
+    "create_minion",
     # Models
     "ToolDefinition",
     "ToolParameter",

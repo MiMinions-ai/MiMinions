@@ -1,10 +1,10 @@
 # MiMinions Tests
 
-Comprehensive test suites for the Pydantic Agent.
+Comprehensive test suites for the Minion Agent.
 
 ## Test Files
 
-- `test_pydantic_agent.py` - Core agent functionality with Pydantic models
+- `test_agent.py` - Core agent functionality with Pydantic models
 - `test_pydantic_memory.py` - Memory with structured results
 - `test_sqlite_memory.py` - SQLite CRUD operations
 - `test_sqlite_memory_search.py` - Vector and keyword search
@@ -16,7 +16,7 @@ Comprehensive test suites for the Pydantic Agent.
 ## Running Tests
 
 ```bash
-python tests/test_pydantic_agent.py
+python tests/test_agent.py
 python tests/test_pydantic_memory.py
 python tests/test_sqlite_memory.py
 python tests/test_sqlite_memory_search.py
