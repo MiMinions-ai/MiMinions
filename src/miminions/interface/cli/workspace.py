@@ -12,6 +12,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
+from miminions.workspace_fs import init_workspace
 
 
 def require_auth():
@@ -67,8 +68,14 @@ def list_workspaces():
 @click.option("--name", required=True, help="Workspace name")
 @click.option("--description", default="", help="Workspace description")
 @click.option("--sample", is_flag=True, help="Create a sample workspace with example nodes and rules")
+@click.option("--init-files", is_flag=True, help="Create workspace folder (prompt/memory/skills/sessions/data) with template files")
+@click.option(
+    "--root-path",
+    default=None,
+    help="Optional custom root path for this workspace folder. If not set, uses ~/.miminions/workspaces/ws_<id>"
+)
 @require_auth()
-def add_workspace(name, description, sample):
+def add_workspace(name, description, sample, init_files, root_path):
     """Add a new workspace."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
@@ -86,6 +93,21 @@ def add_workspace(name, description, sample):
             workspace.description = description
     else:
         workspace = manager.create_workspace(name, description)
+    
+    if init_files:
+        if root_path:
+            rp = Path(root_path).expanduser()
+        else:
+            rp = Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}"
+
+        result = init_workspace(rp)
+        workspace.root_path = result["root"]
+
+        click.echo(f"Initialized workspace files at: {workspace.root_path}")
+        if result["created"]:
+            click.echo(f"Created {len(result['created'])} file(s).")
+        if result["skipped"]:
+            click.echo(f"Skipped {len(result['skipped'])} existing file(s).")
     
     workspaces[workspace.id] = workspace
     manager.save_workspaces(workspaces)
