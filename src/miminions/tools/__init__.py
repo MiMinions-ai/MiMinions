@@ -5,7 +5,6 @@ This module provides a unified interface for tools that can be used across
 different AI frameworks including LangChain, AutoGen, and AGNO.
 """
 
-from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 import inspect
@@ -14,7 +13,6 @@ import inspect
 __all__ = [
     "ToolSchema",
     "GenericTool",
-    "SimpleTool",
     "create_tool",
     "tool",
 ]
@@ -29,7 +27,7 @@ class ToolSchema:
     required: list[str]
 
 
-class GenericTool(ABC):
+class GenericTool:
     """Base class for generic tools that can be adapted to different frameworks"""
 
     def __init__(self, name: str, description: str, func: Callable):
@@ -83,10 +81,9 @@ class GenericTool(ABC):
         """Get the tool schema"""
         return self._schema
 
-    @abstractmethod
     def run(self, **kwargs) -> Any:
-        """Execute the tool with given arguments (sync)"""
-        raise NotImplementedError
+        """Execute the tool with given arguments (sync)."""
+        return self.func(**kwargs)
 
     async def arun(self, **kwargs) -> Any:
         """
@@ -112,17 +109,9 @@ class GenericTool(ABC):
         }
 
 
-class SimpleTool(GenericTool):
-    """Simple implementation of GenericTool"""
-
-    def run(self, **kwargs) -> Any:
-        """Execute the tool function with provided arguments (sync)"""
-        return self.func(**kwargs)
-
-
 def create_tool(name: str, description: str, func: Callable) -> GenericTool:
     """Factory function to create a generic tool"""
-    return SimpleTool(name=name, description=description, func=func)
+    return GenericTool(name=name, description=description, func=func)
 
 
 def tool(name: Optional[str] = None, description: Optional[str] = None):
