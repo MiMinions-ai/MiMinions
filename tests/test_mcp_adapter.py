@@ -8,6 +8,7 @@ Run:
 """
 
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from miminions.tools.mcp_adapter import MCPToolAdapter, MCPTool
@@ -17,18 +18,14 @@ from miminions.tools.mcp_adapter import MCPToolAdapter, MCPTool
 # Helpers (fake MCP-like objects)
 # -----------------------------
 
-class FakeTextItem:
-    def __init__(self, text: str):
-        self.text = text
-
 
 class FakeResult:
     """Mimics an MCP call_tool result that has a .content list."""
     def __init__(self, texts):
-        self.content = [FakeTextItem(t) for t in texts]
+        self.content = [SimpleNamespace(text=t) for t in texts]
 
 
-class FakeMCPTool:
+class MCPToolStub:
     """Mimics a tool object returned by MCP list_tools()."""
     def __init__(self, name: str, description: str = ""):
         self.name = name
@@ -105,7 +102,7 @@ async def test_convert_mcp_tool_to_generic_success_returns_ok_true_and_result():
     session.call_tool = AsyncMock(return_value=FakeResult(["ok!"]))
     adapter.sessions["serverA"] = session
 
-    mcp_tool = FakeMCPTool(name="my_tool", description="does stuff")
+    mcp_tool = MCPToolStub(name="my_tool", description="does stuff")
     tool = await adapter.convert_mcp_tool_to_generic(mcp_tool, "serverA")
 
     out = await tool.arun(query="hi")
@@ -122,7 +119,7 @@ async def test_convert_mcp_tool_to_generic_error_returns_ok_false_and_error_info
     session.call_tool = AsyncMock(side_effect=RuntimeError("boom"))
     adapter.sessions["serverA"] = session
 
-    mcp_tool = FakeMCPTool(name="explode", description="fails")
+    mcp_tool = MCPToolStub(name="explode", description="fails")
     tool = await adapter.convert_mcp_tool_to_generic(mcp_tool, "serverA")
 
     out = await tool.arun(query="hi")
@@ -139,7 +136,7 @@ async def test_load_all_tools_from_server_converts_all_tools():
     session = MagicMock()
     session.list_tools = AsyncMock(
         return_value=MagicMock(
-            tools=[FakeMCPTool("t1", "one"), FakeMCPTool("t2", "two")]
+            tools=[MCPToolStub("t1", "one"), MCPToolStub("t2", "two")]
         )
     )
     adapter.sessions["serverA"] = session
