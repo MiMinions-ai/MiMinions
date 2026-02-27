@@ -21,6 +21,12 @@ You can install MiMinions using pip:
 pip install miminions
 ```
 
+Or using `uv`:
+
+```bash
+uv add miminions
+```
+
 For full functionality, install optional dependencies:
 
 ```bash
@@ -38,6 +44,42 @@ pip install googlesearch-python duckduckgo-search
 
 # For async support
 pip install aiohttp
+```
+
+## CLI Usage
+
+After install, the CLI command is available as:
+
+```bash
+miminions --help
+```
+
+You can also run the package directly:
+
+```bash
+python -m miminions --help
+```
+
+## UV Deploy
+
+Build and publish with `uv`:
+
+```bash
+uv build
+uv publish
+```
+
+For TestPyPI:
+
+```bash
+uv build
+uv publish --publish-url https://test.pypi.org/legacy/
+```
+
+Build a standalone CLI binary:
+
+```bash
+bash deploy/build_cli.sh
 ```
 
 ## Quick Start
