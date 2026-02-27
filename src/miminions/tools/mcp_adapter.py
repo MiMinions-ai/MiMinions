@@ -9,10 +9,10 @@ from typing import Any, Dict, List
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from . import GenericTool, SimpleTool
+from . import GenericTool
 
 
-class MCPTool(SimpleTool):
+class MCPTool(GenericTool):
     """
     GenericTool wrapper for MCP tools (async-only).
 
@@ -116,7 +116,6 @@ class MCPToolAdapter:
 
             session = self.sessions[server_name]
             try:
-                # Prefer MCP signature that accepts named arguments dict
                 result = await session.call_tool(tool_name, arguments=kwargs)
                 extracted = self._extract_result(result)
                 return {"ok": True, "result": extracted, "raw": result}
