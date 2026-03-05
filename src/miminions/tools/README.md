@@ -6,7 +6,7 @@ The MiMinions Generic Tool Module provides a unified interface for creating tool
 
 - **Unified Tool Interface**: Create tools once, use with multiple frameworks
 - **Framework Adapters**: Convert between LangChain, AutoGen, and AGNO tool formats
-- **Agent Support**: Simple agent class that can manage and execute tools
+- **Agent Support**: Pydantic agent with structured results and validation
 - **Schema Generation**: Automatic schema extraction from function signatures
 - **Type Safety**: Full type annotation support
 
@@ -116,19 +116,18 @@ Base class for all generic tools.
 - `to_dict()`: Get tool schema as dictionary
 - `schema`: Get tool schema object
 
-### Agent
+### Minion
 
-Simple agent class for managing and executing tools.
+Agent class for managing and executing tools with structured results.
 
 #### Methods
 
-- `add_tool(tool)`: Add a tool to the agent
+- `register_tool(name, desc, func)`: Register a tool
 - `get_tool(name)`: Get a tool by name
 - `list_tools()`: List all tool names
-- `execute_tool(name, **kwargs)`: Execute a tool by name
-- `to_langchain_tools()`: Convert all tools to LangChain format
-- `to_autogen_tools()`: Convert all tools to AutoGen format
-- `to_agno_tools()`: Convert all tools to AGNO format
+- `execute(name, **kwargs)`: Execute and return ToolExecutionResult
+- `execute_tool(name, **kwargs)`: Execute and return raw result
+- `get_tools_schema()`: Get JSON schemas for LLM integration
 
 ### Decorators
 

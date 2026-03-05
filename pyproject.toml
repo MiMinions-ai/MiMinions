@@ -1,10 +1,12 @@
 [project]
 name = "miminions"
 version = "0.1.0"
-description = "A simple agent framework with MCP server support and vector memory"
+description = "An agentic framework with pydantic_ai, MCP server support and vector memory"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-ai>=0.1.0",
     "fastmcp>=2.13.0", 
     "openai-agents>=0.3.3",
     "mcp>=1.23.0",
