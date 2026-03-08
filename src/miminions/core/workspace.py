@@ -95,6 +95,7 @@ class Workspace:
     parent_workspace: Optional[str] = None  # For rule inheritance
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    root_path: str | None = None
     
     def add_node(self, node: Node) -> None:
         """Add a node to the workspace."""
@@ -278,7 +279,8 @@ class Workspace:
             'state': self.state,
             'parent_workspace': self.parent_workspace,
             'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'updated_at': self.updated_at,
+            'root_path': self.root_path
         }
     
     @classmethod
@@ -292,6 +294,7 @@ class Workspace:
         workspace.parent_workspace = data.get('parent_workspace')
         workspace.created_at = data.get('created_at', workspace.created_at)
         workspace.updated_at = data.get('updated_at', workspace.updated_at)
+        workspace.root_path = data.get('root_path')
         
         # Load nodes
         workspace.nodes = {}
