@@ -38,6 +38,12 @@ class BaseChannel(ABC):
         self.config = config
         self.bus = bus
         self._running = False
+        self._allow_from_warned = False
+
+        allow_list: list[str] = getattr(self.config, "allow_from", [])
+        if not allow_list:
+            logger.warning("%s: allow_from is empty — all access will be denied", self.name)
+            self._allow_from_warned = True
 
     @abstractmethod
     async def start(self) -> None:
@@ -66,7 +72,6 @@ class BaseChannel(ABC):
         """
         allow_list: list[str] = getattr(self.config, "allow_from", [])
         if not allow_list:
-            logger.warning("%s: allow_from is empty — all access denied", self.name)
             return False
         if "*" in allow_list:
             return True

@@ -27,9 +27,11 @@ class MessageBus:
     arbitrary events without direct coupling.
     """
 
-    def __init__(self) -> None:
-        self.inbound: asyncio.Queue[InboundMessage] = asyncio.Queue()
-        self.outbound: asyncio.Queue[OutboundMessage] = asyncio.Queue()
+    _DEFAULT_MAXSIZE = 1000
+
+    def __init__(self, maxsize: int = _DEFAULT_MAXSIZE) -> None:
+        self.inbound: asyncio.Queue[InboundMessage] = asyncio.Queue(maxsize=maxsize)
+        self.outbound: asyncio.Queue[OutboundMessage] = asyncio.Queue(maxsize=maxsize)
         self._subscribers: dict[str, list[Subscriber]] = {}
 
     # ── Inbound (channel → agent) ────────────────────────────────────

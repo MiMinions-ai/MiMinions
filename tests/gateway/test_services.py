@@ -204,7 +204,7 @@ class TestCronServiceLifecycle:
             assert svc._store is not None
             assert path.exists()
 
-            svc.stop()
+            await svc.stop()
             assert svc._running is False
             assert svc._timer_task is None
 
@@ -234,7 +234,7 @@ class TestCronServiceLifecycle:
 
             assert len(svc.list_jobs()) == 1
             assert svc.list_jobs()[0].name == "preloaded"
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceAddJob:
@@ -255,7 +255,7 @@ class TestCronServiceAddJob:
             assert job.enabled is True
             assert job.payload.message == "ping"
             assert job.state.next_run_at_ms is not None
-            svc.stop()
+            await svc.stop()
 
     async def test_add_job_with_options(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -277,7 +277,7 @@ class TestCronServiceAddJob:
             assert job.payload.channel == "telegram"
             assert job.payload.to == "user1"
             assert job.delete_after_run is True
-            svc.stop()
+            await svc.stop()
 
     async def test_add_job_persisted(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -290,7 +290,7 @@ class TestCronServiceAddJob:
                 schedule=CronSchedule(kind="every", every_ms=5000),
                 message="data",
             )
-            svc.stop()
+            await svc.stop()
 
             # Reload and verify
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -309,7 +309,7 @@ class TestCronServiceAddJob:
                     schedule=CronSchedule(kind="every", every_ms=1000, tz="UTC"),
                     message="x",
                 )
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceRemoveJob:
@@ -327,7 +327,7 @@ class TestCronServiceRemoveJob:
 
             assert svc.remove_job(job.id) is True
             assert len(svc.list_jobs()) == 0
-            svc.stop()
+            await svc.stop()
 
     async def test_remove_nonexistent(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -336,7 +336,7 @@ class TestCronServiceRemoveJob:
             await svc.start()
 
             assert svc.remove_job("nonexistent") is False
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceEnableJob:
@@ -360,7 +360,7 @@ class TestCronServiceEnableJob:
             # Should not appear in default listing
             assert len(svc.list_jobs()) == 0
             assert len(svc.list_jobs(include_disabled=True)) == 1
-            svc.stop()
+            await svc.stop()
 
     async def test_re_enable_job(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -379,7 +379,7 @@ class TestCronServiceEnableJob:
             assert result is not None
             assert result.enabled is True
             assert result.state.next_run_at_ms is not None
-            svc.stop()
+            await svc.stop()
 
     async def test_enable_nonexistent(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -388,7 +388,7 @@ class TestCronServiceEnableJob:
             await svc.start()
 
             assert svc.enable_job("nope") is None
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceRunJob:
@@ -412,7 +412,7 @@ class TestCronServiceRunJob:
             ok = await svc.run_job(job.id, force=True)
             assert ok is True
             assert results == ["manual"]
-            svc.stop()
+            await svc.stop()
 
     async def test_run_disabled_job_without_force(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -429,7 +429,7 @@ class TestCronServiceRunJob:
 
             ok = await svc.run_job(job.id, force=False)
             assert ok is False
-            svc.stop()
+            await svc.stop()
 
     async def test_run_disabled_job_with_force(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -452,7 +452,7 @@ class TestCronServiceRunJob:
             ok = await svc.run_job(job.id, force=True)
             assert ok is True
             assert ran == [job.id]
-            svc.stop()
+            await svc.stop()
 
     async def test_run_nonexistent_job(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -462,7 +462,7 @@ class TestCronServiceRunJob:
 
             ok = await svc.run_job("nope")
             assert ok is False
-            svc.stop()
+            await svc.stop()
 
     async def test_run_job_on_job_error(self):
         """Job callback errors should be captured, not crash the service."""
@@ -489,7 +489,7 @@ class TestCronServiceRunJob:
             executed = [j for j in store.jobs if j.id == job.id][0]
             assert executed.state.last_status == "error"
             assert "handler error" in executed.state.last_error
-            svc.stop()
+            await svc.stop()
 
     async def test_run_job_no_callback(self):
         """Running with no on_job callback should be ok."""
@@ -510,7 +510,7 @@ class TestCronServiceRunJob:
             store = svc._load_store()
             executed = [j for j in store.jobs if j.id == job.id][0]
             assert executed.state.last_status == "ok"
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceExecuteJob:
@@ -531,7 +531,7 @@ class TestCronServiceExecuteJob:
             ok = await svc.run_job(job.id, force=True)
             assert ok is True
             assert len(svc.list_jobs(include_disabled=True)) == 0
-            svc.stop()
+            await svc.stop()
 
     async def test_at_job_disabled_after_run(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -554,7 +554,7 @@ class TestCronServiceExecuteJob:
             assert len(jobs) == 1
             assert jobs[0].enabled is False
             assert jobs[0].state.next_run_at_ms is None
-            svc.stop()
+            await svc.stop()
 
     async def test_every_job_recomputes_next_run(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -578,7 +578,7 @@ class TestCronServiceExecuteJob:
             assert updated.state.next_run_at_ms >= original_next
             assert updated.state.last_run_at_ms is not None
             assert updated.state.last_status == "ok"
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceListJobs:
@@ -594,7 +594,7 @@ class TestCronServiceListJobs:
             jobs = svc.list_jobs()
             assert jobs[0].name == "near"
             assert jobs[1].name == "far"
-            svc.stop()
+            await svc.stop()
 
     async def test_list_jobs_excludes_disabled(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -608,7 +608,7 @@ class TestCronServiceListJobs:
 
             assert len(svc.list_jobs()) == 1
             assert len(svc.list_jobs(include_disabled=True)) == 2
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceStatus:
@@ -626,7 +626,7 @@ class TestCronServiceStatus:
             status = svc.status()
             assert status["jobs"] == 1
             assert status["next_wake_at_ms"] is not None
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceStoreIO:
@@ -640,7 +640,7 @@ class TestCronServiceStoreIO:
             await svc.start()
             assert svc._store is not None
             assert len(svc._store.jobs) == 0
-            svc.stop()
+            await svc.stop()
 
     async def test_save_store_no_store(self):
         """_save_store with no store loaded should be no-op."""
@@ -669,7 +669,7 @@ class TestCronServiceStoreIO:
             svc._store = None
             jobs = svc.list_jobs()
             assert len(jobs) == 0
-            svc.stop()
+            await svc.stop()
 
 
 class TestCronServiceTimer:
@@ -681,7 +681,7 @@ class TestCronServiceTimer:
             await svc.start()
             # No jobs, so no timer
             assert svc._timer_task is None
-            svc.stop()
+            await svc.stop()
 
     async def test_arm_timer_not_running(self):
         """_arm_timer when not running should not create a task."""
@@ -712,4 +712,4 @@ class TestCronServiceTimer:
             svc = CronService(store_path=path)
             await svc.start()
             assert svc._get_next_wake_ms() is None
-            svc.stop()
+            await svc.stop()

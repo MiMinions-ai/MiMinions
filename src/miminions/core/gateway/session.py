@@ -7,6 +7,7 @@ location.
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -121,25 +122,43 @@ class SessionManager:
     line followed by one JSON object per message.
     """
 
-    def __init__(self, storage_path: Path | str) -> None:
+    def __init__(
+        self,
+        storage_path: Path | str,
+        ttl_seconds: float = 3600,
+    ) -> None:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
-        self._cache: dict[str, Session] = {}
+        self._cache: dict[str, tuple[Session, float]] = {}
+        self._ttl_seconds = ttl_seconds
 
     def _get_session_path(self, key: str) -> Path:
         """Get the file path for a session."""
         return self.storage_path / f"{_safe_filename(key)}.jsonl"
 
+    def _evict_expired(self) -> None:
+        """Remove cache entries that have exceeded the TTL."""
+        now = time.monotonic()
+        expired = [
+            k for k, (_, ts) in self._cache.items()
+            if now - ts > self._ttl_seconds
+        ]
+        for k in expired:
+            del self._cache[k]
+
     def get_or_create(self, key: str) -> Session:
         """Get an existing session or create a new one."""
+        self._evict_expired()
         if key in self._cache:
-            return self._cache[key]
+            session, _ = self._cache[key]
+            self._cache[key] = (session, time.monotonic())
+            return session
 
         session = self._load(key)
         if session is None:
             session = Session(key=key)
 
-        self._cache[key] = session
+        self._cache[key] = (session, time.monotonic())
         return session
 
     def _load(self, key: str) -> Session | None:
@@ -194,7 +213,7 @@ class SessionManager:
             for msg in session.messages:
                 f.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
-        self._cache[session.key] = session
+        self._cache[session.key] = (session, time.monotonic())
 
     def invalidate(self, key: str) -> None:
         """Remove a session from the in-memory cache."""
