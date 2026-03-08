@@ -279,11 +279,15 @@ class CronService:
         job_count = len(self._store.jobs) if self._store else 0
         logger.info("Cron service started with %d jobs", job_count)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Stop the cron service."""
         self._running = False
         if self._timer_task:
             self._timer_task.cancel()
+            try:
+                await self._timer_task
+            except asyncio.CancelledError:
+                pass
             self._timer_task = None
 
     # ── Timer internals ──────────────────────────────────────────────
@@ -353,7 +357,9 @@ class CronService:
 
         try:
             if self.on_job:
-                await self.on_job(job)
+                result = await self.on_job(job)
+                if result:
+                    logger.info("Cron: job '%s' returned: %s", job.name, result)
             job.state.last_status = "ok"
             job.state.last_error = None
         except Exception as e:

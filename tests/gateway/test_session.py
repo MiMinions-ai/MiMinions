@@ -297,7 +297,8 @@ class TestSessionManagerSave:
             mgr = SessionManager(tmpdir)
             s = mgr.get_or_create("k")
             mgr.save(s)
-            assert mgr._cache["k"] is s
+            cached, _ts = mgr._cache["k"]
+            assert cached is s
 
 
 class TestSessionManagerLoad:
