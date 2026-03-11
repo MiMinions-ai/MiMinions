@@ -35,7 +35,7 @@ Example:
     # result = llm_agent.run_sync("Add 1 and 2")
 """
 
-from .agent import Minion, create_minion
+#from .agent import Minion, create_minion
 from .models import (
     ToolDefinition,
     ToolParameter,
@@ -49,9 +49,25 @@ from .models import (
     MemoryEntry,
     MemoryQueryResult,
 )
+from .context_builder import ContextBuilder
 
-from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
-from pydantic_ai.models.test import TestModel
+#from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
+#from pydantic_ai.models.test import TestModel
+
+try:
+    from .agent import Minion, create_minion
+except ImportError:  # pragma: no cover
+    Minion = None
+    create_minion = None
+
+try:
+    from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
+    from pydantic_ai.models.test import TestModel
+except ImportError:  # pragma: no cover
+    PydanticAIAgent = None
+    Tool = None
+    RunContext = None
+    TestModel = None
 
 __all__ = [
     # MiMinions Agent
@@ -74,4 +90,5 @@ __all__ = [
     "Tool",
     "RunContext",
     "TestModel",
+    "ContextBuilder"
 ]
