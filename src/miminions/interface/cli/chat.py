@@ -9,49 +9,29 @@ import click
 from miminions.agent.context_builder import ContextBuilder
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager
-
-
-def _workspace_matches(workspace: Any, value: str) -> bool:
-    """Return True if the workspace matches by id or name."""
-    workspace_id = getattr(workspace, "id", None)
-    workspace_name = getattr(workspace, "name", None)
-
-    if workspace_id is not None and str(workspace_id) == value:
-        return True
-
-    if workspace_name is not None and str(workspace_name) == value:
-        return True
-
-    return False
+from miminions.interface.cli.auth import get_config_dir
 
 
 def _resolve_workspace(manager: Any, workspace_ref: str) -> Any:
-    """Resolve a workspace by id or name from a manager-like object."""
-    candidates = []
+    """Resolve a workspace by id or name using WorkspaceManager.load_workspaces()."""
+    workspaces = manager.load_workspaces()
 
-    if hasattr(manager, "list_workspaces"):
-        candidates = manager.list_workspaces()
-    elif hasattr(manager, "get_all_workspaces"):
-        candidates = manager.get_all_workspaces()
-    elif hasattr(manager, "workspaces"):
-        raw = getattr(manager, "workspaces")
-        if isinstance(raw, dict):
-            candidates = list(raw.values())
-        elif isinstance(raw, list):
-            candidates = raw
+    if not workspaces:
+        return None
 
-    for workspace in candidates:
-        if _workspace_matches(workspace, workspace_ref):
+    # Ttry exact dict key match
+    if workspace_ref in workspaces:
+        return workspaces[workspace_ref]
+
+    # Try matching against workspace.id or workspace.name
+    for workspace_id, workspace in workspaces.items():
+        if str(workspace_id) == workspace_ref:
             return workspace
 
-    if hasattr(manager, "get_workspace"):
-        workspace = manager.get_workspace(workspace_ref)
-        if workspace is not None:
+        if getattr(workspace, "id", None) is not None and str(workspace.id) == workspace_ref:
             return workspace
 
-    if hasattr(manager, "get_by_id"):
-        workspace = manager.get_by_id(workspace_ref)
-        if workspace is not None:
+        if getattr(workspace, "name", None) is not None and str(workspace.name) == workspace_ref:
             return workspace
 
     return None
@@ -110,8 +90,12 @@ def _run_agent(
 
     return _default_agent_reply(user_text, context, workspace, session_id)  
 
+@click.group()
+def chat_cli():
+    """Chat commands."""
+    pass
 
-@click.command("chat")
+@chat_cli.command("start")
 @click.option(
     "--workspace",
     "workspace_ref",
@@ -126,7 +110,7 @@ def _run_agent(
 )
 def chat_command(workspace_ref: str, session_id: str | None) -> None:
     """Start an interactive chat session for a workspace."""
-    manager = WorkspaceManager()
+    manager = WorkspaceManager(get_config_dir())
     workspace = _resolve_workspace(manager, workspace_ref)
 
     if workspace is None:
