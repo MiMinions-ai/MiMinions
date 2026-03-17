@@ -11,8 +11,8 @@ class DummyManager:
     def __init__(self, workspace):
         self._workspace = workspace
 
-    def list_workspaces(self):
-        return [self._workspace]
+    def load_workspaces(self):
+        return {self._workspace.id: self._workspace}
 
 
 def test_chat_cli_requires_root_path(monkeypatch):
@@ -21,7 +21,7 @@ def test_chat_cli_requires_root_path(monkeypatch):
 
     monkeypatch.setattr(
         "miminions.interface.cli.chat.WorkspaceManager",
-        lambda: manager,
+        lambda config_dir: manager,
     )
 
     runner = CliRunner()
@@ -46,7 +46,7 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
 
     monkeypatch.setattr(
         "miminions.interface.cli.chat.WorkspaceManager",
-        lambda: manager,
+        lambda config_dir: manager,
     )
     monkeypatch.setattr(
         "miminions.interface.cli.chat._run_agent",
