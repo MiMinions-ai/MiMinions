@@ -7,12 +7,12 @@ import json
 from pathlib import Path
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 
-# Import workspace module - handle path correctly
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
 from miminions.workspace_fs import init_workspace
+from miminions.workspace_fs.bootstrap import init_workspace
 
 
 def require_auth():
@@ -96,12 +96,12 @@ def add_workspace(name, description, sample, init_files, root_path):
     
     if init_files:
         if root_path:
-            rp = Path(root_path).expanduser()
+            rp = Path(root_path).expanduser().resolve()
         else:
-            rp = Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}"
+            rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
 
         result = init_workspace(rp)
-        workspace.root_path = result["root"]
+        workspace.root_path = str(rp)
 
         click.echo(f"Initialized workspace files at: {workspace.root_path}")
         if result["created"]:
@@ -683,3 +683,47 @@ def inherit_rules(workspace_id, parent_workspace_id_or_name):
 
     click.echo(f"Workspace '{workspace.name}' now inherits rules from '{parent_workspace.name}'.")
     click.echo(f"Inherited rules count: {len(workspace.inherited_rules)}")
+    
+
+@workspace_cli.command("init-files")
+@click.argument("workspace_id")
+@click.option(
+    "--path",
+    "custom_path",
+    default=None,
+    help="Optional custom root path for this workspace folder."
+)
+@require_auth()
+def init_files_workspace(workspace_id, custom_path):
+    """Initialize prompt/memory/skills/sessions/data files for an existing workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+
+    # Find workspace by ID or name
+    workspace = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    if custom_path:
+        rp = Path(custom_path).expanduser().resolve()
+    else:
+        rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+
+    result = init_workspace(rp)
+    workspace.root_path = str(rp)
+
+    manager.save_workspaces(workspaces)
+
+    click.echo(f"Initialized workspace files for '{workspace.name}'")
+    click.echo(f"Root path: {workspace.root_path}")
+
+    if result["created"]:
+        click.echo(f"Created {len(result['created'])} file(s).")
+    if result["skipped"]:
+        click.echo(f"Skipped {len(result['skipped'])} existing file(s).")
