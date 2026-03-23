@@ -130,13 +130,14 @@ def _state_keys(state: Any) -> list[str]:
 
 
 class ContextBuilder:
-    """Build a composed agent context from markdown files and workspace summary."""
+    """Build a composed agent context from markdown files, workspace summary, and global memory."""
 
     def build(
         self,
         workspace_obj: Any,
         root_path: str | Path,
         skills_index_only: bool = True,
+        global_memory: Any = None,
     ) -> str:
         root = Path(root_path)
         prompt_files = read_prompt_files(root)
@@ -185,6 +186,20 @@ class ContextBuilder:
         else:
             lines.append("No prompt files found.")
             lines.append("")
+
+        if global_memory is not None:
+            # Query the global vector db for cross-workspace facts, using the workspace name/id as a natural cluster key, and local MEMORY.md if available.
+            query_str = f"Workspace: {workspace_name}. {memory_text[:300]}"
+            try:
+                results = global_memory.read(query=query_str, top_k=3)
+                if results:
+                    lines.append("## Global Knowledge")
+                    lines.append("These are universal traits implicitly inherited across all workspaces:")
+                    for res in results:
+                        lines.append(f"- {res.get('text', '')}")
+                    lines.append("")
+            except Exception:
+                pass  
 
         lines.append("## Memory")
         lines.append(memory_text.rstrip())

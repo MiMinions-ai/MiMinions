@@ -10,6 +10,7 @@ from miminions.agent.context_builder import ContextBuilder
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager
 from miminions.interface.cli.auth import get_config_dir
+from miminions.memory.sqlite import SQLiteMemory
 
 
 def _resolve_workspace(manager: Any, workspace_ref: str) -> Any:
@@ -110,7 +111,8 @@ def chat_cli():
 )
 def chat_command(workspace_ref: str, session_id: str | None) -> None:
     """Start an interactive chat session for a workspace."""
-    manager = WorkspaceManager(get_config_dir())
+    config_dir = get_config_dir()
+    manager = WorkspaceManager(config_dir)
     workspace = _resolve_workspace(manager, workspace_ref)
 
     if workspace is None:
@@ -126,7 +128,11 @@ def chat_command(workspace_ref: str, session_id: str | None) -> None:
     if not root.exists():
         raise click.ClickException(f"Workspace root_path does not exist: {root}")
 
-    context = ContextBuilder().build(workspace, root)
+    # Initialize Global Memory
+    global_memory_path = config_dir / "global_memory.db"
+    global_memory = SQLiteMemory(db_path=str(global_memory_path))
+    
+    context = ContextBuilder().build(workspace, root, global_memory=global_memory)
     store = JsonlSessionStore(root)
 
     if not session_id:
