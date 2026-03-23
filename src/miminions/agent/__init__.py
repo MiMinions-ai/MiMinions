@@ -35,6 +35,9 @@ Example:
     # result = llm_agent.run_sync("Add 1 and 2")
 """
 
+from __future__ import annotations
+
+from .context_builder import ContextBuilder
 from .models import (
     ToolDefinition,
     ToolParameter,
@@ -48,11 +51,6 @@ from .models import (
     MemoryEntry,
     MemoryQueryResult,
 )
-from .context_builder import ContextBuilder
-
-#from .agent import Minion, create_minion
-# from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
-# from pydantic_ai.models.test import TestModel
 
 __all__ = [
     # MiMinions Agent
@@ -75,5 +73,34 @@ __all__ = [
     "Tool",
     "RunContext",
     "TestModel",
-    "ContextBuilder"
+    # Context
+    "ContextBuilder",
 ]
+
+
+def __getattr__(name: str):
+    """Lazily expose heavier agent/runtime imports.
+
+    This keeps lightweight imports such as ContextBuilder usable in tests
+    without forcing the full agent stack to load at package import time.
+    """
+    if name in {"Minion", "create_minion"}:
+        from .agent import Minion, create_minion
+
+        if name == "Minion":
+            return Minion
+        return create_minion
+
+    if name in {"PydanticAIAgent", "Tool", "RunContext", "TestModel"}:
+        from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
+        from pydantic_ai.models.test import TestModel
+
+        exports = {
+            "PydanticAIAgent": PydanticAIAgent,
+            "Tool": Tool,
+            "RunContext": RunContext,
+            "TestModel": TestModel,
+        }
+        return exports[name]
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

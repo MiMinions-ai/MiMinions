@@ -12,7 +12,6 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
 from miminions.workspace_fs import init_workspace
-from miminions.workspace_fs.bootstrap import init_workspace
 
 
 def require_auth():
@@ -478,6 +477,11 @@ def disconnect_nodes(workspace_id, node1_id, node2_id):
     node2 = None
     
     for node_id, node in workspace.nodes.items():
+        if len(node_id) < 2:
+            click.echo("Node ID too short.")
+            return
+        if node1 and node2:
+            break
         if node_id.startswith(node1_id) or node.name == node1_id:
             node1 = node
         if node_id.startswith(node2_id) or node.name == node2_id:

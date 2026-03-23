@@ -53,7 +53,21 @@ def write_memory(root_path: str | Path, content: str) -> Path:
 
 
 def append_history(root_path: str | Path, line: str) -> Path:
-    """Append a single history entry to HISTORY.md."""
+    """Append a single history entry to HISTORY.md.
+    
+    NOTE:
+    This function currently reads and writes the markdown file without enforcing
+    any maximum file size. As HISTORY.md grows, this may become a performance
+    bottleneck due to repeated full-file operations.
+
+    Future improvement ideas:
+    - Add a maximum size limit for HISTORY.md
+    - Implement truncation or rotation (keep last N entries)
+    - Use an append-only streaming approach instead of full reads
+    - Periodically consolidate history into summaries
+
+    For now, this is acceptable given expected small file sizes.
+    """
     if line is None:
         raise ValueError("line cannot be None")
 
