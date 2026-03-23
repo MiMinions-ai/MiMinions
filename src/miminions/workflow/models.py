@@ -24,6 +24,8 @@ class ToolCallRecord:
     # What happened
     result: Any = None
     error: Optional[str] = None
+    status: Optional[str] = None
+    execution_time_ms: Optional[float] = None
 
     # Ordering + timestamp for traceability
     order: int = 0
@@ -38,6 +40,8 @@ class ToolCallRecord:
             "error": self.error,
             "order": self.order,
             "timestamp": self.timestamp,
+            "status": self.status, 
+            "execution_time_ms": self.execution_time_ms, 
         }
 
     @staticmethod
@@ -50,6 +54,8 @@ class ToolCallRecord:
             error=data.get("error"),
             order=int(data.get("order", 0)),
             timestamp=data.get("timestamp") or _now_iso(),
+            status = data.get("status"),
+            execution_time_ms= data.get("execution_time_ms"),
         )
 
 
@@ -73,6 +79,9 @@ class AgentRunRecord:
         kwargs: Optional[Dict[str, Any]] = None,
         result: Any = None,
         error: Optional[str] = None,
+        status: Optional[str] = None, 
+        execution_time_ms: Optional[float] = None,
+
     ) -> ToolCallRecord:
         """
         Append a tool call record in order. Returns the created record.
@@ -84,6 +93,8 @@ class AgentRunRecord:
             result=result,
             error=error,
             order=len(self.tool_calls),
+            status=status, 
+            execution_time_ms=execution_time_ms,
         )
         self.tool_calls.append(rec)
         return rec
