@@ -54,24 +54,24 @@ def test_context_builder_includes_prompt_memory_and_summary(tmp_path: Path):
 
     context = builder.build(workspace, tmp_path)
 
-    assert "# MiMinions Agent Context" in context
-    assert "workspace_name: Test Workspace" in context
-    assert "workspace_id: ws_123" in context
-    assert "## Prompt Files" in context
-    assert "### AGENTS.md" in context
-    assert "Use the agent carefully." in context
-    assert "## Memory" in context
-    assert "Stable fact: user prefers inspectable systems." in context
-    assert "## Workspace Graph Summary" in context
-    assert "- agent: 2" in context
-    assert "- tool: 1" in context
-    assert "high-priority-rule" in context
-    assert "low-priority-rule" in context
-    assert "- active_session_id" in context
-    assert "- mode" in context
-    assert "## Skills Index" in context
-    assert "- core:" in context
-    assert "Instruction: read a skill file before using it." in context
+    assert "# MiMinions Agent Context" in context, f"#Expected 'MiMinions Agent Context' in context, but got: {context}"
+    assert "workspace_name: Test Workspace" in context, f"Expected 'workspace_name: Test Workspace' in context, but got: {context}"
+    assert "workspace_id: ws_123" in context, f"Expected 'workspace_id: ws_123' in context, but got: {context}"
+    assert "## Prompt Files" in context, f"Expected '## Prompt Files' in context, but got: {context}"
+    assert "### AGENTS.md" in context, f"Expected '### AGENTS.md' in context, but got: {context}"
+    assert "Use the agent carefully." in context, f"Expected 'Use the agent carefully.' in context, but got: {context}"
+    assert "## Memory" in context, f"Expected '## Memory' in context, but got: {context}"
+    assert "Stable fact: user prefers inspectable systems." in context, f"Expected 'Stable fact: user prefers inspectable systems.' in context, but got: {context}"
+    assert "## Workspace Graph Summary" in context, f"Expected '## Workspace Graph Summary' in context, but got: {context}"
+    assert "- agent: 2" in context, f"Expected '- agent: 2' in context, but got: {context}"
+    assert "- tool: 1" in context, f"Expected '- tool: 1' in context, but got: {context}"
+    assert "high-priority-rule" in context, f"Expected 'high-priority-rule' in context, but got: {context}"
+    assert "low-priority-rule" in context, f"Expected 'low-priority-rule' in context, but got: {context}"
+    assert "- active_session_id" in context, f"Expected '- active_session_id' in context, but got: {context}"
+    assert "- mode" in context, f"Expected '- mode' in context, but got: {context}"
+    assert "## Skills Index" in context, f"Expected '## Skills Index' in context, but got: {context}"
+    assert "- core:" in context, f"Expected '- core:' in context, but got: {context}"
+    assert "Instruction: read a skill file before using it." in context, f"Expected 'Instruction: read a skill file before using it.' in context, but got: {context}"
 
 
 def test_context_builder_handles_empty_workspace_sections(tmp_path: Path):
@@ -89,7 +89,7 @@ def test_context_builder_handles_empty_workspace_sections(tmp_path: Path):
     builder = ContextBuilder()
     context = builder.build(workspace, tmp_path)
 
-    assert "workspace_name: Empty Workspace" in context
-    assert "- No nodes found." in context
-    assert "- No rules found." in context
-    assert "- No state keys found." in context
+    assert "workspace_name: Empty Workspace" in context, f"Expected 'workspace_name: Empty Workspace' in context, but got: {context}"
+    assert "- No nodes found." in context, f"Expected '- No nodes found.' in context, but got: {context}"
+    assert "- No rules found." in context, f"Expected '- No rules found.' in context, but got: {context}"
+    assert "- No state keys found." in context, f"Expected '- No state keys found.' in context, but got: {context}"
