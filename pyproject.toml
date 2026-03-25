@@ -52,6 +52,5 @@ cli-build = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
-[project.scripts]
-miminions = "miminions.interface.cli.main:cli"
