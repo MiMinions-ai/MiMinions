@@ -1,0 +1,32 @@
+# MkDocs Documentation Deployment Plan
+
+## 1. Initialize MkDocs
+- Install MkDocs (and optionally a theme like Material): `pip install mkdocs mkdocs-material`
+- Initialize the configuration (if not already done): `mkdocs new .` or manually create `mkdocs.yml`.
+- Configure `mkdocs.yml` with site name, theme, and basic navigation parameters.
+
+## 2. Optimize Repository
+- Restructure or reference existing markdown files (e.g., `README.md`, `STRUCTURE.md`, `CHANGELOG.md`) in the `mkdocs.yml` nav list.
+- Add `site/` to `.gitignore` to avoid committing the built HTML files to the repository.
+
+## 3. Create & Preview Docs
+- Write and populate the `docs/` folder with documentation pages.
+- Run `mkdocs serve` locally to build the initial site and preview changes on `localhost:8000`.
+
+## 4. Host on AWS Amplify
+- Open AWS Amplify in the AWS Console and select "Host web app".
+- Connect this backend Agent repository and select the production branch (e.g., `main`).
+- Configure Build Settings:
+  - Pre-build/Build commands: `pip install mkdocs-material` and `mkdocs build`
+  - Base directory limit: point to the output folder natively (default is `site`).
+- Save and deploy to get the initial Amplify URL.
+
+## 5. Domain Management
+- In the AWS Amplify console for the app, go to "Domain management".
+- Add your desired custom subdomain (e.g., `docs.yourwebsite.com`).
+- Update your DNS provider (e.g., Route 53) by adding the CNAME records provided by Amplify so traffic routes correctly, and wait for SSL validation.
+
+## 6. Link from Main Website (Elastic Beanstalk)
+- In your main website's codebase, update the primary navigation or footer.
+- Add a new "Documentation" link with the `href` pointing to `https://docs.yourwebsite.com`.
+- Deploy the updated main website repo to Elastic Beanstalk.
