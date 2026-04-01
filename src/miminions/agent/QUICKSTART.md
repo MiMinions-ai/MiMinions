@@ -1,201 +1,108 @@
-# Quick Start Guide: Simple Agent with MCP Support
+# Minion Agent Quick Start
 
-## Overview
+Strongly-typed agent with Pydantic validation and structured results.
 
-This simple agent system provides a unified interface for working with tools from multiple sources:
-- Regular Python functions
-- MCP (Model Context Protocol) servers
-- Framework-specific tools (LangChain, AutoGen, etc.)
-
-## Installation
-
-1. **Install dependencies:**
-   ```bash
-   pip install mcp[cli]>=1.15.0
-   ```
-
-2. **Optional framework dependencies:**
-   ```bash
-   # For LangChain integration
-   pip install langchain-core
-   
-   # For other frameworks as needed
-   ```
-
-## Basic Usage
-
-### 1. Create an Agent
+## Create an Agent
 
 ```python
 import asyncio
-from miminions.agent.simple_agent import create_simple_agent
+from miminions.agent import create_minion, ExecutionStatus
 
 async def main():
-    # Create agent
-    agent = create_simple_agent("MyAgent", "Description of my agent")
+    agent = create_minion("MyAgent", "Optional description")
     
-    # Always remember to cleanup
+    # Register tools (auto-generates JSON schema from type hints)
+    def add(a: int, b: int) -> int:
+        return a + b
+    
+    agent.register_tool("add", "Add two numbers", add)
+    
+    # Execute - returns ToolExecutionResult model
+    result = agent.execute("add", a=5, b=3)
+    print(f"Status: {result.status}")  # ExecutionStatus.SUCCESS
+    print(f"Result: {result.result}")  # 8
+    print(f"Time: {result.execution_time_ms}ms")
+    print(f"Error: {result.error}")  # None on success
+    
+    # Tool schemas (JSON-serializable for LLMs)
+    schemas = agent.get_tools_schema()
+    print(schemas)  # [{'name': 'add', 'parameters': {...}}]
+    
     await agent.cleanup()
 
 asyncio.run(main())
 ```
 
-### 2. Add Python Functions as Tools
+## Execution Styles
+
+**Structured results with `execute()`:**
+- Returns `ToolExecutionResult` with status, result, error, execution_time_ms
+- No exceptions - errors returned in result object
 
 ```python
-def calculate_area(width: float, height: float) -> float:
-    """Calculate the area of a rectangle"""
-    return width * height
+result = agent.execute("add", a=5, b=3)
 
-# Add to agent
-agent.add_function_as_tool("area", "Calculate rectangle area", calculate_area)
-
-# Use the tool
-result = agent.execute_tool("area", width=5.0, height=3.0)
-print(f"Area: {result}")  # Area: 15.0
+if result.status == ExecutionStatus.SUCCESS:
+    print(f"Success: {result.result}")
+else:
+    print(f"Failed: {result.error}")
 ```
 
-### 3. Working with MCP Servers
+**Raw results with `execute_tool()`:**
+- Returns raw value directly
+- Raises exceptions on error
 
 ```python
-from mcp import StdioServerParameters
-
-async def mcp_example():
-    agent = create_simple_agent("MCPAgent")
-    
-    # Connect to MCP server
-    server_params = StdioServerParameters(
-        command="python3",
-        args=["your_mcp_server.py"]
-    )
-    
-    await agent.connect_mcp_server("my_server", server_params)
-    await agent.load_tools_from_mcp_server("my_server")
-    
-    # Use MCP tools just like regular tools
-    # result = agent.execute_tool("mcp_tool_name", param=value)
-    
-    await agent.cleanup()
+raw_result = agent.execute_tool("add", a=5, b=3)  # Returns 8 or raises
 ```
 
-## Example: Complete Agent Setup
+## With Memory
 
 ```python
-import asyncio
-from miminions.agent.simple_agent import create_simple_agent
+from miminions.memory.faiss import FAISSMemory
 
-async def complete_example():
-    # Create agent
-    agent = create_simple_agent("CompleteAgent", "Agent with multiple tool types")
-    
-    # Add local Python function tools
-    def add_numbers(a: int, b: int) -> int:
-        """Add two numbers"""
-        return a + b
-    
-    def greet_user(name: str, formal: bool = False) -> str:
-        """Greet a user"""
-        greeting = "Good day" if formal else "Hello"
-        return f"{greeting}, {name}!"
-    
-    agent.add_function_as_tool("add", "Add two numbers", add_numbers)
-    agent.add_function_as_tool("greet", "Greet someone", greet_user)
-    
-    # List available tools
-    print(f"Available tools: {agent.list_tools()}")
-    
-    # Execute tools
-    sum_result = agent.execute_tool("add", a=10, b=5)
-    greet_result = agent.execute_tool("greet", name="Alice", formal=True)
-    
-    print(f"10 + 5 = {sum_result}")
-    print(f"Greeting: {greet_result}")
-    
-    # Search for tools
-    math_tools = agent.search_tools("add")
-    print(f"Math tools: {math_tools}")
-    
-    # Get tool information
-    tool_info = agent.get_tool_info("greet")
-    print(f"Greet tool info: {tool_info}")
-    
-    await agent.cleanup()
+memory = FAISSMemory(dim=384)
+agent = create_minion("MemoryAgent", memory=memory)
 
-# Run the example
-asyncio.run(complete_example())
+# Store knowledge
+entry_id = agent.store_knowledge("Python is a programming language")
+
+# Recall - returns MemoryQueryResult model
+results = agent.get_memory_context("programming", top_k=5)
+print(f"Query: {results.query}")
+print(f"Count: {results.count}")
+for entry in results.results:  # List[MemoryEntry]
+    print(f"- {entry.text} (id: {entry.id})")
 ```
 
-## Tool Discovery
+## Tool Schemas for LLM Integration
 
 ```python
-# List all tools
-all_tools = agent.list_tools()
+# Get JSON schemas for all tools (ready for OpenAI, Anthropic, etc.)
+schemas = agent.get_tools_schema()
+# [
+#   {
+#     "name": "add",
+#     "description": "Add two numbers",
+#     "parameters": {
+#       "type": "object",
+#       "properties": {
+#         "a": {"type": "integer"},
+#         "b": {"type": "integer"}
+#       },
+#       "required": ["a", "b"]
+#     }
+#   }
+# ]
 
-# Search for specific tools
-math_tools = agent.search_tools("math")
-string_tools = agent.search_tools("string")
+# Execute from LLM tool call
+from miminions.agent import ToolExecutionRequest
 
-# Get detailed tool information
-tool_info = agent.get_tool_info("tool_name")
+request = ToolExecutionRequest(
+    tool_name="add",
+    arguments={"a": 5, "b": 3}
+)
+result = agent.execute_request(request)
 ```
 
-## Framework Integration
-
-### LangChain
-
-```python
-from tools.langchain_adapter import to_langchain_tool
-
-# Convert agent tool to LangChain format
-langchain_tool = to_langchain_tool(agent.get_tool("add"))
-
-# Use with LangChain agents
-from langchain.agents import initialize_agent
-langchain_agent = initialize_agent([langchain_tool], llm)
-```
-
-## Error Handling
-
-```python
-try:
-    result = agent.execute_tool("add", a=5, b=3)
-except ValueError as e:
-    print(f"Tool not found: {e}")
-except RuntimeError as e:
-    print(f"Execution error: {e}")
-```
-
-## Best Practices
-
-1. **Always call `cleanup()`** to properly close MCP connections
-2. **Use descriptive names** for tools and clear descriptions
-3. **Handle errors appropriately** when calling tools
-4. **Use type hints** in your tool functions for better schema generation
-5. **Test tools individually** before adding to complex workflows
-
-## Testing Your Setup
-
-Run the included test suite:
-```bash
-python3 tests/test_simple_agent.py
-```
-
-Run the demonstration:
-```bash
-python3 examples/simple_agent_example.py
-```
-
-## Troubleshooting
-
-**Import Errors:** Make sure you're running from the project root directory
-
-**MCP Connection Errors:** Verify your MCP server is correctly implemented and the command path is correct
-
-**Tool Execution Errors:** Check that you're providing all required parameters with correct types
-
-## Next Steps
-
-- Explore the framework adapters in the `tools/` directory
-- Create your own MCP servers for custom functionality
-- Integrate with your preferred AI framework (LangChain, AutoGen, etc.)
-- Build more complex multi-agent systems
+See `examples/minion_agent_example.py` for complete examples and `tests/` for usage patterns.

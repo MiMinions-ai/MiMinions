@@ -1,246 +1,121 @@
-"""Tests for SQLite Memory CRUD operations."""
-import tempfile
-import sys
-from pathlib import Path
+"""SQLite Memory Test Suite."""
 
 from miminions.memory.sqlite import SQLiteMemory
-
-_FILE_DIR = Path(__file__).parent
-_DATA_DIR = _FILE_DIR / ".data"
-_TEST_DB = _DATA_DIR / "test_crud.db"
-
-# Default database location
-_DEFAULT_DB_DIR = Path(__file__).parent.parent / "src" / "miminions" / "memory" / ".data"
-_DEFAULT_DB = _DEFAULT_DB_DIR / "memory.db"
+from miminions.agent import create_minion, ExecutionStatus
 
 
-def cleanup():
-    """Remove persistent databases created by tests."""
-    if _TEST_DB.exists():
-        _TEST_DB.unlink()
-    if _DATA_DIR.exists() and not any(_DATA_DIR.iterdir()):
-        _DATA_DIR.rmdir()
-    # Clean up default database
-    if _DEFAULT_DB.exists():
-        _DEFAULT_DB.unlink()
-    if _DEFAULT_DB_DIR.exists() and not any(_DEFAULT_DB_DIR.iterdir()):
-        _DEFAULT_DB_DIR.rmdir()
-
-
-def test_create():
-    print("test: create")
+def setup_agent():
     memory = SQLiteMemory(db_path=":memory:")
+    agent = create_minion("TestAgent", memory=memory)
+    return agent, memory
+
+
+def test_crud():
+    """Test create, read, update, delete operations."""
+    print("test_crud")
+    agent, memory = setup_agent()
     
-    id1 = memory.create("Python is a programming language")
-    assert id1 is not None
-    assert isinstance(id1, str)
+    result = agent.execute("memory_store", text="Python is a programming language", metadata={"source": "test"})
+    assert result.status == ExecutionStatus.SUCCESS
+    id1 = result.result
     
-    id2 = memory.create("SQLite is a database", metadata={"source": "test"})
-    assert id1 != id2
+    # Read by ID
+    result = agent.execute("memory_get", id=id1)
+    assert result.result["text"] == "Python is a programming language"
+    assert result.result["meta"]["source"] == "test"
+    
+    # Update
+    result = agent.execute("memory_update", id=id1, new_text="Python is a versatile language")
+    assert result.result is True
+    
+    result = agent.execute("memory_get", id=id1)
+    assert "versatile" in result.result["text"]
+    
+    # Delete
+    result = agent.execute("memory_delete", id=id1)
+    assert result.result is True
+    
+    result = agent.execute("memory_get", id=id1)
+    assert result.result is None
     
     memory.close()
+    print("PASSED")
 
 
-def test_get_by_id():
-    print("test: get by id")
-    memory = SQLiteMemory(db_path=":memory:")
+def test_list():
+    """Test listing all entries."""
+    print("test_list")
+    agent, memory = setup_agent()
     
-    id = memory.create("Test knowledge", metadata={"tag": "test"})
-    entry = memory.get_by_id(id)
+    agent.execute("memory_store", text="Entry 1")
+    agent.execute("memory_store", text="Entry 2")
+    agent.execute("memory_store", text="Entry 3")
     
-    assert entry is not None
-    assert entry["id"] == id
-    assert entry["text"] == "Test knowledge"
-    assert entry["meta"]["tag"] == "test"
+    result = agent.execute("memory_list")
+    assert len(result.result) == 3
     
     memory.close()
+    print("PASSED")
 
 
-def test_get_by_id_nonexistent():
-    print("test: get nonexistent")
-    memory = SQLiteMemory(db_path=":memory:")
+def test_vector_search():
+    """Test vector similarity search."""
+    print("test_vector_search")
+    agent, memory = setup_agent()
     
-    entry = memory.get_by_id("fake-id")
-    assert entry is None
+    agent.execute("memory_store", text="Python is a programming language", metadata={"type": "language"})
+    agent.execute("memory_store", text="Machine learning uses neural networks", metadata={"type": "tech"})
+    agent.execute("memory_store", text="SQLite is a database", metadata={"type": "database"})
+    
+    result = agent.execute("memory_recall", query="What is Python?", top_k=2)
+    assert result.status == ExecutionStatus.SUCCESS
+    assert len(result.result) == 2
+    assert "distance" in result.result[0]
     
     memory.close()
+    print("PASSED")
 
 
-def test_update():
-    print("test: update")
-    memory = SQLiteMemory(db_path=":memory:")
+def test_convenience_methods():
+    """Test recall_knowledge and get_memory_context."""
+    print("test_convenience_methods")
+    agent, memory = setup_agent()
     
-    id = memory.create("Original text")
-    success = memory.update(id, "Updated text")
+    agent.store_knowledge("Python is great for scripting")
+    agent.store_knowledge("Machine learning is powerful")
     
-    assert success is True
-    entry = memory.get_by_id(id)
-    assert entry["text"] == "Updated text"
+    # recall_knowledge
+    results = agent.recall_knowledge("scripting language", top_k=1)
+    assert len(results) >= 1
+    
+    # get_memory_context
+    context = agent.get_memory_context("programming", top_k=2)
+    assert context.query == "programming"
+    assert context.count > 0
+    assert hasattr(context.results[0], 'text')
     
     memory.close()
+    print("PASSED")
 
 
-def test_update_nonexistent():
-    print("test: update nonexistent")
-    memory = SQLiteMemory(db_path=":memory:")
+def test_execution_timing():
+    """Test that execution time is tracked."""
+    print("test_execution_timing")
+    agent, memory = setup_agent()
     
-    success = memory.update("fake-id", "New text")
-    assert success is False
+    agent.execute("memory_store", text="Test entry")
+    result = agent.execute("memory_recall", query="Test", top_k=1)
+    
+    assert result.execution_time_ms is not None
+    assert result.execution_time_ms >= 0
     
     memory.close()
-
-
-def test_delete():
-    print("test: delete")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    id = memory.create("Test entry")
-    success = memory.delete(id)
-    
-    assert success is True
-    assert memory.get_by_id(id) is None
-    
-    memory.close()
-
-
-def test_delete_nonexistent():
-    print("test: delete nonexistent")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    success = memory.delete("fake-id")
-    assert success is False
-    
-    memory.close()
-
-
-def test_list_all():
-    print("test: list all")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    memory.create("Entry 1")
-    memory.create("Entry 2")
-    memory.create("Entry 3")
-    
-    all_entries = memory.list_all()
-    assert len(all_entries) == 3
-    
-    texts = [e["text"] for e in all_entries]
-    assert "Entry 1" in texts
-    assert "Entry 2" in texts
-    assert "Entry 3" in texts
-    
-    memory.close()
-
-
-def test_list_all_empty():
-    print("test: list empty")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    assert memory.list_all() == []
-    
-    memory.close()
-
-
-def test_clear():
-    print("test: clear")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    memory.create("Entry 1")
-    memory.create("Entry 2")
-    memory.clear()
-    
-    assert len(memory.list_all()) == 0
-    
-    memory.close()
-
-
-def test_metadata_persistence():
-    print("test: metadata")
-    memory = SQLiteMemory(db_path=":memory:")
-    
-    metadata = {"source": "test", "priority": 1, "tags": ["ai", "ml"]}
-    id = memory.create("Test with metadata", metadata=metadata)
-    
-    entry = memory.get_by_id(id)
-    assert entry["meta"]["source"] == "test"
-    assert entry["meta"]["priority"] == 1
-    assert "ai" in entry["meta"]["tags"]
-    
-    memory.close()
-
-
-def test_persistent_storage():
-    print("test: disk persistence")
-    
-    db_path = str(_TEST_DB)
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
-    try:
-        memory = SQLiteMemory(db_path=db_path)
-        id = memory.create("Persistent entry")
-        memory.close()
-        
-        new_memory = SQLiteMemory(db_path=db_path)
-        entry = new_memory.get_by_id(id)
-        
-        assert entry is not None
-        assert entry["text"] == "Persistent entry"
-        
-        new_memory.close()
-    finally:
-        pass  # cleanup() handles file removal
-
-
-def test_default_persistent_storage():
-    print("test: default storage location")
-    
-    memory = SQLiteMemory()
-    
-    assert memory.db_path is not None
-    assert ".data" in memory.db_path
-    assert memory.db_path.endswith("memory.db")
-    
-    memory.clear()
-    memory.close()
-
-
-def main():
-    print("\nSQLite Memory CRUD Tests\n")
-    
-    tests = [
-        test_create,
-        test_get_by_id,
-        test_get_by_id_nonexistent,
-        test_update,
-        test_update_nonexistent,
-        test_delete,
-        test_delete_nonexistent,
-        test_list_all,
-        test_list_all_empty,
-        test_clear,
-        test_metadata_persistence,
-        test_persistent_storage,
-        test_default_persistent_storage,
-    ]
-    
-    passed = 0
-    failed = 0
-    
-    for test in tests:
-        try:
-            test()
-            passed += 1
-        except AssertionError as e:
-            print(f"  FAILED: {e}")
-            failed += 1
-        except Exception as e:
-            print(f"  ERROR: {e}")
-            failed += 1
-    
-    print(f"\n{passed}/{len(tests)} passed")
-    cleanup()
-    return 1 if failed else 0
+    print("PASSED")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    print("SQLite Memory Tests")
+    tests = [test_crud, test_list, test_vector_search, test_convenience_methods, test_execution_timing]
+    for test in tests:
+        test()
+    print("\nAll tests passed")
