@@ -482,3 +482,49 @@ class TestAgentCLI:
 
             assert result.exit_code == 0
             assert "Invalid JSON for --arguments." in result.output
+
+    def test_ask_agent_uses_tool_fallback_for_addition(self):
+        """Ask should use cli_add fallback when prompt requests arithmetic."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            mock_load.return_value = existing_agents
+
+            result = self.runner.invoke(
+                agent_cli,
+                ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
+            )
+
+            assert result.exit_code == 0
+            assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output
+            assert "Agent response: Used tool cli_add -> 13" in result.output
+
+    def test_run_agent_uses_tool_fallback_for_addition_goal(self):
+        """Run should use cli_add fallback for arithmetic goals."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+                "goal": "Add 10 and 5",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            with patch('miminions.interface.cli.agent.save_agents') as mock_save:
+                mock_load.return_value = existing_agents
+
+                result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
+
+                assert result.exit_code == 0
+                assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output
+                assert "Agent response: Used tool cli_add -> 15" in result.output
+                mock_save.assert_called_once()
