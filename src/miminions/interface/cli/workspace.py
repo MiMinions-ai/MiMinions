@@ -6,6 +6,7 @@ import click
 import json
 from pathlib import Path
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from datetime import datetime, timezone
 
 import sys
 import os
@@ -238,8 +239,7 @@ def update_workspace(workspace_id, name, description):
     if description is not None:
         workspace.description = description
     
-    from datetime import datetime
-    workspace.updated_at = datetime.now(datetime.UTC).isoformat()
+    workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Workspace updated successfully.")
@@ -307,8 +307,7 @@ def set_state(workspace_id, key, value):
     
     workspace.state[key] = parsed_value
     
-    from datetime import datetime
-    workspace.updated_at = datetime.now(datetime.UTC).isoformat()
+    workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Set state '{key}' = '{parsed_value}' in workspace '{workspace.name}'.")

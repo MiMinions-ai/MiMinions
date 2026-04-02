@@ -34,7 +34,6 @@ python tests/test_document_ingestion.py
 - Async operations
 
 ### Memory Systems
-- FAISS: Create, read, update, delete operations
 - SQLite: CRUD with persistence
 - Vector similarity search
 - Keyword search and filtering

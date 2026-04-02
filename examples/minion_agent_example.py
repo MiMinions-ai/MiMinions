@@ -6,15 +6,12 @@ Uses TestModel by default (no LLM required). Pass a real model for LLM support.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
 from miminions.agent import (
     create_minion,
     ToolExecutionRequest,
     ExecutionStatus,
 )
-from mcp import StdioServerParameters
 
 
 async def basic_usage_example():
@@ -114,65 +111,12 @@ async def error_handling_example():
     print("Done")
 
 
-async def mcp_integration_example():
-    print("\nMCP Integration")
-    
-    agent = create_minion("MCPAgent")
-    
-    try:
-        # Math Server Integration
-        print("\nMath Server")
-        server_params = StdioServerParameters(command="python3", args=["examples/servers/math_server.py"])
-        
-        print("Connecting to Math MCP server")
-        await agent.connect_mcp_server("math_server", server_params)
-        
-        tool_definitions = await agent.load_tools_from_mcp_server("math_server")
-        
-        print(f"Loaded {len(tool_definitions)} tools: {[t.name for t in tool_definitions]}")
-        print(f"All tools: {agent.list_tools()}")
-        print(f"State: {agent.get_state()}")
-        
-        result = await agent.execute_async("add", a=100, b=200)
-        print(f"add(100, 200): {result.status} -> {result.result}")
-        
-        result = await agent.execute_async("multiply", a=7, b=8)
-        print(f"multiply(7, 8): {result.status} -> {result.result}")
-        
-        # Document Server Integration
-        print("\nDocument Server")
-
-        sample_file = Path("examples/example_files/sample.txt")
-        
-        doc_server_params = StdioServerParameters(command="python3", args=["examples/servers/document_server.py"])
-        
-        print("Connecting to Document MCP server")
-        await agent.connect_mcp_server("document_server", doc_server_params)
-        
-        doc_tool_definitions = await agent.load_tools_from_mcp_server("document_server")
-        
-        print(f"Loaded {len(doc_tool_definitions)} tools: {[t.name for t in doc_tool_definitions]}")
-        print(f"All tools: {agent.list_tools()}")
-        
-        result = await agent.execute_async("ingest_document", filepath=str(sample_file))
-        print(f"ingest_document(sample.txt): {result.status}")
-        print(f"Content: {result.result}")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-    
-    finally:
-        await agent.cleanup()
-        print("Done")
-
-
 async def main():
     print("Minion Agent Demonstration")
     
     await basic_usage_example()
     await tool_schema_example()
     await error_handling_example()
-    await mcp_integration_example()
     
     print("\nAll demonstrations completed")
 

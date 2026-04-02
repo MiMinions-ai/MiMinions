@@ -3,13 +3,13 @@
 import asyncio
 from pathlib import Path
 from miminions.agent import create_minion, ExecutionStatus
-from miminions.memory.faiss import FAISSMemory
+from miminions.memory.sqlite import SQLiteMemory
 
 
 async def main():
     print("Minion Agent Document Ingestion Example")
     
-    agent = create_minion(name="DocumentAgent", memory=FAISSMemory())
+    agent = create_minion(name="DocumentAgent", memory=SQLiteMemory(db_path=":memory:"))
     print(f"Created: {agent}")
     
     pdf_path = Path(__file__).parent.parent / "example_files" / "resume.pdf"

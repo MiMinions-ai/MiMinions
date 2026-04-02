@@ -62,6 +62,8 @@ python -m miminions --help
 
 ## UV Deploy
 
+Dev note: refresh your local lockfile with `uv lock` after dependency changes (`uv.lock` is gitignored).
+
 Build and publish with `uv`:
 
 ```bash

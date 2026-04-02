@@ -8,7 +8,7 @@ The Agent is designed to:
 - Use pydantic_ai for LLM-ready agent infrastructure
 - Use Pydantic models for all inputs, outputs, and tool schemas
 - Support flexible tool registration from Python functions
-- Support memory integration (FAISS, SQLite)
+- Support memory integration (SQLite)
 - Execute tools directly or via LLM when model is configured
 
 By default, the agent uses TestModel (no LLM required). Pass a real model
