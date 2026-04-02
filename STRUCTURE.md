@@ -59,7 +59,7 @@ MiMinions/
 │       ├── 📁 memory/              # ✅ Vector memory backends
 │       │   ├── 📄 base_memory.py       # Abstract base class
 │       │   ├── 📄 sqlite.py            # SQLite + sqlite-vec
-│       │   └── 📄 faiss.py             # FAISS in-memory
+│       │   └── 📄 md_store.py          # Markdown-backed storage helpers
 │       │
 │       ├── 📁 tools/               # ✅ Generic tool system
 │       │   ├── 📄 __init__.py          # GenericTool, SimpleTool, decorators
@@ -133,7 +133,6 @@ MiMinions/
 - **MCP Adapter** (`src/miminions/tools/mcp_adapter.py`) - Full MCP server integration - connect, load tools, execute, and convert to generic format
 - **Simple Agent** (`src/miminions/agent/simple_agent.py`) - Enhanced agent with MCP support, memory integration, document ingestion, and auto-registered CRUD tools
 - **SQLite Memory** (`src/miminions/memory/sqlite.py`) - Vector-based memory using `sqlite-vec` with CRUD, keyword search, regex, and full-text search
-- **FAISS Memory** (`src/miminions/memory/faiss.py`) - In-memory FAISS-based vector memory with complete CRUD operations
 - **Base Memory** (`src/miminions/memory/base_memory.py`) - Abstract base class defining memory interface
 - **Text Chunker** (`src/miminions/utils/chunker.py`) - Document chunking utility with configurable overlap
 - **Local Data Manager** (`src/miminions/data/local/`) - Full file management with master index, transaction logs, hash-based storage, and file handlers
@@ -183,7 +182,7 @@ MiMinions/
 │  │ Tool      │  │  │  │ Memory   │   │  │  │ Backend  │   │
 │  └───────────┘  │  │  └──────────┘   │  │  └──────────┘   │
 │  ┌───────────┐  │  │  ┌──────────┐   │  │  ┌──────────┐   │
-│  │ MCP       │  │  │  │ FAISS    │   │  │  │ Index    │   │
+│  │ MCP       │  │  │  │ SQLite   │   │  │  │ Index    │   │
 │  │ Adapter   │  │  │  │ Memory   │   │  │  └──────────┘   │
 │  └───────────┘  │  │  └──────────┘   │  │  ┌──────────┐   │
 └─────────────────┘  └─────────────────┘  │  │ Tx Log   │   │
@@ -206,7 +205,6 @@ MiMinions/
 - **fastmcp** - Fast MCP utilities
 - **sentence-transformers** - Text embeddings
 - **sqlite-vec** - SQLite vector extension
-- **faiss-cpu** - Vector similarity search
 - **pdfplumber** - PDF text extraction
 - **click** - CLI framework
 - **pydantic-ai** - AI agent framework

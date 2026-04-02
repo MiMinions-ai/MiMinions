@@ -5,7 +5,7 @@ Working examples for the Minion Agent.
 ## Examples
 
 - `minion_agent_example.py` - Basic usage with structured results
-- `pydantic_memory_example.py` - FAISS memory integration
+- `sqlite_memory_example.py` - SQLite memory integration
 - `sqlite_memory_example.py` - SQLite CRUD operations
 - `sqlite_memory_search_example.py` - Vector and keyword search
 - `document_ingestion_example.py` - PDF/text file processing
@@ -26,7 +26,6 @@ python examples/sqlite_memory_example.py
 - Tool discovery and inspection
 
 ### Memory Integration
-- FAISS for in-memory vector search
 - SQLite for persistent storage
 - CRUD operations and search queries
 - Metadata filtering

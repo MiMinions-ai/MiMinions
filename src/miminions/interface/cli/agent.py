@@ -357,7 +357,7 @@ def run_agent_tool(agent_id, tool_name, arguments):
 
 
 # TODO(cli-agent): Add commands for memory backends and memory tools:
-# - memory-attach --backend {sqlite,faiss,md}
+# - memory-attach --backend {sqlite,md}
 # - memory-store / memory-recall / memory-update / memory-delete
 # - ingest-document
 #

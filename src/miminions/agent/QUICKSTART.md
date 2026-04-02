@@ -59,9 +59,9 @@ raw_result = agent.execute_tool("add", a=5, b=3)  # Returns 8 or raises
 ## With Memory
 
 ```python
-from miminions.memory.faiss import FAISSMemory
+from miminions.memory.sqlite import SQLiteMemory
 
-memory = FAISSMemory(dim=384)
+memory = SQLiteMemory(db_path=":memory:", dim=384)
 agent = create_minion("MemoryAgent", memory=memory)
 
 # Store knowledge

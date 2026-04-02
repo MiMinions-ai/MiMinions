@@ -7,7 +7,7 @@ Minion agent with strong typing, validation, and structured schemas.
 - **Type Safety**: Full Pydantic validation for inputs, outputs, and tool schemas
 - **Tool Registration**: Convert Python functions to tools with auto-generated JSON schemas
 - **MCP Integration**: Load tools from Model Context Protocol servers
-- **Memory Systems**: FAISS (in-memory vectors) or SQLite (persistent with keyword search)
+- **Memory Systems**: SQLite (persistent with vector and keyword search)
 - **LLM Ready**: JSON-serializable schemas for OpenAI, Anthropic, etc.
 
 ## Quick Start

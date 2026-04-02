@@ -10,7 +10,6 @@ pdfplumber>=0.9.0
 
 # Memory backends
 sqlite-vec>=0.1.0
-faiss-cpu>=1.7.0
 
 # Development dependencies
 pytest>=7.0.0
