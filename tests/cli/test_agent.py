@@ -394,3 +394,91 @@ class TestAgentCLI:
                     assert result.exit_code == 0
                     assert 'Agent \'test_agent\' started asynchronously' in result.output
                     mock_save.assert_called_once()
+
+    def test_tool_list_success(self):
+        """Test listing tools for an agent."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            mock_load.return_value = existing_agents
+
+            result = self.runner.invoke(agent_cli, ['tool-list', 'test_agent'])
+
+            assert result.exit_code == 0
+            assert "Tools for 'test_agent':" in result.output
+            assert "cli_echo" in result.output
+            assert "cli_add" in result.output
+
+    def test_tool_info_success(self):
+        """Test showing tool info for a known tool."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            mock_load.return_value = existing_agents
+
+            result = self.runner.invoke(agent_cli, ['tool-info', 'test_agent', 'cli_add'])
+
+            assert result.exit_code == 0
+            assert "Tool: cli_add" in result.output
+            assert "Description: Add two integers" in result.output
+            assert "Schema:" in result.output
+
+    def test_tool_run_success(self):
+        """Test running a tool with valid JSON arguments."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            mock_load.return_value = existing_agents
+
+            result = self.runner.invoke(
+                agent_cli,
+                ['tool-run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
+            )
+
+            assert result.exit_code == 0
+            assert "Tool: cli_add" in result.output
+            assert "Status: success" in result.output
+            assert "Result: 5" in result.output
+
+    def test_tool_run_invalid_json(self):
+        """Test running a tool with invalid JSON input."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.interface.cli.agent.load_agents') as mock_load:
+            mock_load.return_value = existing_agents
+
+            result = self.runner.invoke(
+                agent_cli,
+                ['tool-run', 'test_agent', 'cli_add', '--arguments', 'not-json']
+            )
+
+            assert result.exit_code == 0
+            assert "Invalid JSON for --arguments." in result.output

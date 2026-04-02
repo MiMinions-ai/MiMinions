@@ -4,6 +4,7 @@ Agent management commands for MiMinions CLI.
 
 import click
 import json
+from datetime import datetime, UTC
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 from miminions.agent import create_minion
 
@@ -39,7 +40,35 @@ def _build_cli_extension_agent(agent_data):
         "Inherit default runtime behavior first; CLI-specific behavior is additive."
     )
     description = f"{base_description}\n\n{cli_description}" if base_description else cli_description
-    return create_minion(name=name, description=description)
+    runtime_agent = create_minion(name=name, description=description)
+    _register_default_cli_tools(runtime_agent)
+    return runtime_agent
+
+
+def _register_default_cli_tools(runtime_agent):
+    """Register a minimal default CLI toolset on top of the core runtime."""
+
+    def cli_echo(text: str) -> str:
+        return text
+
+    def cli_add(a: int, b: int) -> int:
+        return a + b
+
+    def cli_now_utc() -> str:
+        return datetime.now(UTC).isoformat()
+
+    runtime_agent.register_tool("cli_echo", "Echo input text", cli_echo)
+    runtime_agent.register_tool("cli_add", "Add two integers", cli_add)
+    runtime_agent.register_tool("cli_now_utc", "Get current UTC timestamp", cli_now_utc)
+
+
+def _get_agent_record_or_error(agent_id):
+    """Load one persisted CLI agent record by id with user-facing errors."""
+    agents = load_agents()
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return None
+    return agents[agent_id]
 
 
 # TODO: require_auth disabled until auth is fully implemented
@@ -225,12 +254,108 @@ def run_agent(agent_id, async_run):
         click.echo("Agent execution completed")
 
 
-# TODO(cli-agent): Add commands that expose core runtime tool management:
-# - tool-list
-# - tool-info
-# - tool-register-fn
-# - tool-unregister
-#
+@agent_cli.command("tool-list")
+@click.argument("agent_id")
+@require_auth()
+def list_agent_tools(agent_id):
+    """List available tools for an agent runtime."""
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        return
+
+    runtime_agent = _build_cli_extension_agent(agent_data)
+    tools = runtime_agent.list_tools()
+    if not tools:
+        click.echo(f"No tools available for agent '{agent_id}'.")
+        return
+
+    click.echo(f"Tools for '{agent_id}':")
+    for name in tools:
+        info = runtime_agent.get_tool_info(name)
+        description = (info or {}).get("description", "No description")
+        click.echo(f"  {name}: {description}")
+
+
+@agent_cli.command("tool-info")
+@click.argument("agent_id")
+@click.argument("tool_name")
+@require_auth()
+def show_agent_tool_info(agent_id, tool_name):
+    """Show detailed tool information for one tool."""
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        return
+
+    runtime_agent = _build_cli_extension_agent(agent_data)
+    info = runtime_agent.get_tool_info(tool_name)
+    if not info:
+        click.echo(f"Tool '{tool_name}' not found for agent '{agent_id}'.", err=True)
+        return
+
+    click.echo(f"Tool: {info['name']}")
+    click.echo(f"Description: {info['description']}")
+    click.echo("Schema:")
+    click.echo(json.dumps(info["parameters"], indent=2))
+
+
+@agent_cli.command("tool-search")
+@click.argument("agent_id")
+@click.argument("query")
+@require_auth()
+def search_agent_tools(agent_id, query):
+    """Search tools by name or description."""
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        return
+
+    runtime_agent = _build_cli_extension_agent(agent_data)
+    matches = runtime_agent.search_tools(query)
+    if not matches:
+        click.echo(f"No tools matched '{query}' for agent '{agent_id}'.")
+        return
+
+    click.echo(f"Tool matches for '{query}':")
+    for name in matches:
+        click.echo(f"  {name}")
+
+
+@agent_cli.command("tool-run")
+@click.argument("agent_id")
+@click.argument("tool_name")
+@click.option(
+    "--arguments",
+    default="{}",
+    help="JSON object with tool arguments, e.g. '{\"a\":2,\"b\":3}'.",
+)
+@require_auth()
+def run_agent_tool(agent_id, tool_name, arguments):
+    """Run one tool and print structured execution output."""
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        return
+
+    try:
+        parsed_arguments = json.loads(arguments)
+    except json.JSONDecodeError:
+        click.echo("Invalid JSON for --arguments.", err=True)
+        return
+
+    if not isinstance(parsed_arguments, dict):
+        click.echo("--arguments must be a JSON object.", err=True)
+        return
+
+    runtime_agent = _build_cli_extension_agent(agent_data)
+    result = runtime_agent.execute(tool_name, arguments=parsed_arguments)
+
+    click.echo(f"Tool: {result.tool_name}")
+    click.echo(f"Status: {result.status.value}")
+    if result.error:
+        click.echo(f"Error: {result.error}")
+    else:
+        click.echo(f"Result: {result.result}")
+    click.echo(f"Execution time (ms): {result.execution_time_ms:.2f}")
+
+
 # TODO(cli-agent): Add commands for memory backends and memory tools:
 # - memory-attach --backend {sqlite,faiss,md}
 # - memory-store / memory-recall / memory-update / memory-delete
