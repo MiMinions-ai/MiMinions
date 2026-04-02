@@ -4,8 +4,8 @@ Agent management commands for MiMinions CLI.
 
 import click
 import json
-from pathlib import Path
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from miminions.agent import create_minion
 
 
 def get_agents_file():
@@ -28,6 +28,18 @@ def save_agents(agents):
     agents_file = get_agents_file()
     with open(agents_file, "w") as f:
         json.dump(agents, f, indent=2)
+
+
+def _build_cli_extension_agent(agent_data):
+    """Create a CLI extension Minion from persisted CLI agent settings."""
+    name = agent_data.get("name", "Unnamed Agent")
+    base_description = agent_data.get("description", "")
+    cli_description = (
+        "CLI extension of the core Minion runtime. "
+        "Inherit default runtime behavior first; CLI-specific behavior is additive."
+    )
+    description = f"{base_description}\n\n{cli_description}" if base_description else cli_description
+    return create_minion(name=name, description=description)
 
 
 # TODO: require_auth disabled until auth is fully implemented
@@ -98,6 +110,8 @@ def add_agent(name, description, type):
         "name": name,
         "description": description,
         "type": type,
+        "base_agent": "miminions.agent.Minion",
+        "mode": "cli_extension",
         "status": "inactive",
         "goal": None,
         "created_at": click.get_current_context().meta.get("timestamp", "")
@@ -185,6 +199,8 @@ def run_agent(agent_id, async_run):
     if not agent.get("goal"):
         click.echo(f"Agent '{agent_id}' has no goal set. Use 'set-goal' command first.", err=True)
         return
+
+    runtime_agent = _build_cli_extension_agent(agent)
     
     # Update status
     agents[agent_id]["status"] = "running"
@@ -192,7 +208,35 @@ def run_agent(agent_id, async_run):
     
     if async_run:
         click.echo(f"Agent '{agent_id}' started asynchronously")
+        click.echo("TODO: Async CLI execution path should stream model output and session events.")
     else:
         click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
-        # In a real implementation, this would execute the agent
+        state = runtime_agent.get_state()
+        click.echo(
+            "Initialized core Minion runtime "
+            f"(tools={state.tool_count}, has_memory={state.has_memory}, servers={len(state.connected_servers)})"
+        )
+
+        # Keep execution simple for now while still using the core runtime directly.
+        pydantic_agent = runtime_agent.get_pydantic_ai_agent()
+        result = pydantic_agent.run_sync(agent["goal"])
+        output = getattr(result, "output", str(result))
+        click.echo(f"Agent response: {output}")
         click.echo("Agent execution completed")
+
+
+# TODO(cli-agent): Add commands that expose core runtime tool management:
+# - tool-list
+# - tool-info
+# - tool-register-fn
+# - tool-unregister
+#
+# TODO(cli-agent): Add commands for memory backends and memory tools:
+# - memory-attach --backend {sqlite,faiss,md}
+# - memory-store / memory-recall / memory-update / memory-delete
+# - ingest-document
+#
+# TODO(cli-agent): Add MCP server integration commands:
+# - mcp-connect
+# - mcp-load-tools
+# - mcp-disconnect

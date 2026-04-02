@@ -8,9 +8,15 @@ from .layout import WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
 
 _DEFAULT_TEMPLATES: Dict[str, str] = {
     "prompt/AGENTS.md": """# AGENTS
-- what this agent is for
-- style rules
-- task completion rules
+## Core Agent (Minion Runtime)
+- Owns the default runtime behavior.
+- Prefer built-in tool execution, memory workflows, and model orchestration.
+- Keep core behavior stable and reusable across interfaces.
+
+## CLI Agent (Extension Layer)
+- Extends the core agent instead of replacing it.
+- Add command-line conveniences without changing core decision logic.
+- CLI-specific behavior should remain additive and minimal.
 """,
     "prompt/USER.md": """# USER
 - user preferences
