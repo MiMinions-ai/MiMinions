@@ -4,8 +4,7 @@ Agent management commands for MiMinions CLI.
 
 import click
 import json
-import re
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 from miminions.agent import create_minion
 
@@ -56,7 +55,7 @@ def _register_default_cli_tools(runtime_agent):
         return a + b
 
     def cli_now_utc() -> str:
-        return datetime.now(UTC).isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     runtime_agent.register_tool("cli_echo", "Echo input text", cli_echo)
     runtime_agent.register_tool("cli_add", "Add two integers", cli_add)
