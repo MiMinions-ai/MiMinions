@@ -90,6 +90,11 @@ def _get_agent_record_or_error(agent_id):
 #     return decorator
 def require_auth():
     """Temporary no-op decorator while auth is being stabilized."""
+    # NOTE(auth-tests): When restoring real auth enforcement here,
+    # re-enable the commented assertions in:
+    # - tests/cli/test_agent.py::TestAgentCLI.test_list_agents_not_authenticated
+    # - tests/cli/test_agent.py::TestAgentCLI.test_add_agent_not_authenticated
+    # E2E updates are intentionally handled in a separate stream.
     def decorator(f):
         return f
     return decorator
