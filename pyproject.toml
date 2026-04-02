@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miminions"
-version = "0.1.1"
+version = "0.2.1"
 description = "An agentic framework with pydantic_ai, MCP server support and vector memory"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "click>=8.0.0",
     "pydantic>=2.0.0",
