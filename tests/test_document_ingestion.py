@@ -3,12 +3,12 @@
 import asyncio
 from pathlib import Path
 from miminions.agent import create_minion, ExecutionStatus
-from miminions.memory.faiss import FAISSMemory
+from miminions.memory.sqlite import SQLiteMemory
 
 
 async def test_ingest_text():
     print("test_ingest_text")
-    agent = create_minion("ChunkAgent", memory=FAISSMemory())
+    agent = create_minion("ChunkAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     test_file = Path("test_chunked.txt")
     test_file.write_text("""Machine learning is a subset of artificial intelligence.
@@ -41,7 +41,7 @@ async def test_ingest_pdf():
         print("SKIPPED (no PDF)")
         return True
     
-    agent = create_minion("PDFAgent", memory=FAISSMemory())
+    agent = create_minion("PDFAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     try:
         result = agent.execute("ingest_document", filepath=str(pdf_path))
@@ -57,7 +57,7 @@ async def test_ingest_pdf():
 
 async def test_ingest_error():
     print("test_ingest_error")
-    agent = create_minion("ErrorAgent", memory=FAISSMemory())
+    agent = create_minion("ErrorAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     result = agent.execute("ingest_document", filepath="nonexistent.pdf")
     

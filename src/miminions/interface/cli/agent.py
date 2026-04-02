@@ -131,6 +131,11 @@ def _execute_prompt_with_tool_fallback(runtime_agent, prompt):
 #     return decorator
 def require_auth():
     """Temporary no-op decorator while auth is being stabilized."""
+    # NOTE(auth-tests): When restoring real auth enforcement here,
+    # re-enable the commented assertions in:
+    # - tests/cli/test_agent.py::TestAgentCLI.test_list_agents_not_authenticated
+    # - tests/cli/test_agent.py::TestAgentCLI.test_add_agent_not_authenticated
+    # E2E updates are intentionally handled in a separate stream.
     def decorator(f):
         return f
     return decorator
@@ -411,7 +416,7 @@ def run_agent_tool(agent_id, tool_name, arguments):
 
 
 # TODO(cli-agent): Add commands for memory backends and memory tools:
-# - memory-attach --backend {sqlite,faiss,md}
+# - memory-attach --backend {sqlite,md}
 # - memory-store / memory-recall / memory-update / memory-delete
 # - ingest-document
 #

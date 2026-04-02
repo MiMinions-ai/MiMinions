@@ -423,7 +423,7 @@ def create_minion(
     Args:
         name: Agent name
         description: Agent description
-        memory: Optional memory backend (FAISSMemory, SQLiteMemory)
+        memory: Optional memory backend (for example SQLiteMemory)
         model: Optional pydantic_ai model. Defaults to TestModel (no LLM).
                Pass a real model like 'openai:gpt-4' for LLM support.
     
