@@ -10,10 +10,6 @@ Working examples for the Minion Agent.
 - `sqlite_memory_search_example.py` - Vector and keyword search
 - `document_ingestion_example.py` - PDF/text file processing
 
-## Servers
-- `servers/math_server.py` - Basic arithmetic MCP server
-- `servers/document_server.py` - Document processing MCP server
-
 ## Running Examples
 
 ```bash
@@ -40,7 +36,3 @@ python examples/sqlite_memory_example.py
 - Automatic text chunking
 - Vector storage for retrieval
 
-### MCP Servers
-- Connecting to MCP servers
-- Dynamic tool loading
-- Using remote tools
