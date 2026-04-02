@@ -30,3 +30,4 @@
 - In your main website's codebase, update the primary navigation or footer.
 - Add a new "Documentation" link with the `href` pointing to `https://docs.yourwebsite.com`.
 - Deploy the updated main website repo to Elastic Beanstalk.
+ 
