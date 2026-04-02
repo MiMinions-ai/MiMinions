@@ -7,27 +7,34 @@ import json
 from pathlib import Path
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 
-# Import workspace module - handle path correctly
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule, NodeType, RulePriority
+from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
+from miminions.workspace_fs import init_workspace
 
 
+# TODO: require_auth disabled until auth is fully implemented
+# and the public-access path is clear to users.
+# def require_auth():
+#     """Decorator to require authentication or allow public access."""
+#     def decorator(f):
+#         def wrapper(*args, **kwargs):
+#             if not is_authenticated():
+#                 if is_public_access_enabled():
+#                     # Show warning but allow access
+#                     click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
+#                 else:
+#                     # Require authentication
+#                     click.echo("Please sign in first using 'miminions auth signin'", err=True)
+#                     return
+#             return f(*args, **kwargs)
+#         return wrapper
+#     return decorator
 def require_auth():
-    """Decorator to require authentication or allow public access."""
+    """Temporary no-op decorator while auth is being stabilized."""
     def decorator(f):
-        def wrapper(*args, **kwargs):
-            if not is_authenticated():
-                if is_public_access_enabled():
-                    # Show warning but allow access
-                    click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-                else:
-                    # Require authentication
-                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                    return
-            return f(*args, **kwargs)
-        return wrapper
+        return f
     return decorator
 
 
@@ -40,7 +47,6 @@ def get_workspace_manager():
 def workspace_cli():
     """Workspace management commands."""
     pass
-
 
 @workspace_cli.command("list")
 @require_auth()
@@ -68,8 +74,14 @@ def list_workspaces():
 @click.option("--name", required=True, help="Workspace name")
 @click.option("--description", default="", help="Workspace description")
 @click.option("--sample", is_flag=True, help="Create a sample workspace with example nodes and rules")
+@click.option("--init-files", is_flag=True, help="Create workspace folder (prompt/memory/skills/sessions/data) with template files")
+@click.option(
+    "--root-path",
+    default=None,
+    help="Optional custom root path for this workspace folder. If not set, uses ~/.miminions/workspaces/ws_<id>"
+)
 @require_auth()
-def add_workspace(name, description, sample):
+def add_workspace(name, description, sample, init_files, root_path):
     """Add a new workspace."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
@@ -87,6 +99,21 @@ def add_workspace(name, description, sample):
             workspace.description = description
     else:
         workspace = manager.create_workspace(name, description)
+    
+    if init_files:
+        if root_path:
+            rp = Path(root_path).expanduser().resolve()
+        else:
+            rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+
+        result = init_workspace(rp)
+        workspace.root_path = str(rp)
+
+        click.echo(f"Initialized workspace files at: {workspace.root_path}")
+        if result["created"]:
+            click.echo(f"Created {len(result['created'])} file(s).")
+        if result["skipped"]:
+            click.echo(f"Skipped {len(result['skipped'])} existing file(s).")
     
     workspaces[workspace.id] = workspace
     manager.save_workspaces(workspaces)
@@ -212,7 +239,7 @@ def update_workspace(workspace_id, name, description):
         workspace.description = description
     
     from datetime import datetime
-    workspace.updated_at = datetime.utcnow().isoformat()
+    workspace.updated_at = datetime.now(datetime.UTC).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Workspace updated successfully.")
@@ -247,148 +274,8 @@ def remove_workspace(workspace_id, force):
     manager.save_workspaces(workspaces)
     
     click.echo(f"Workspace '{workspace.name}' removed successfully.")
-
-
-@workspace_cli.command("evaluate")
-@click.argument("workspace_id")
-@require_auth()
-def evaluate_workspace(workspace_id):
-    """Evaluate workspace state logic and show applicable actions."""
-    manager = get_workspace_manager()
-    workspaces = manager.load_workspaces()
     
-    # Find workspace by ID or name
-    workspace = None
-    for ws_id, ws in workspaces.items():
-        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
-            workspace = ws
-            break
     
-    if not workspace:
-        click.echo(f"Workspace '{workspace_id}' not found.")
-        return
-    
-    click.echo(f"Evaluating workspace: {workspace.name}")
-    click.echo()
-    
-    # Show current state
-    if workspace.state:
-        click.echo("Current State:")
-        for key, value in workspace.state.items():
-            click.echo(f"  {key}: {value}")
-        click.echo()
-    
-    # Evaluate state logic
-    actions = workspace.evaluate_state_logic()
-    
-    if not actions:
-        click.echo("No applicable actions based on current state and rules.")
-        return
-    
-    click.echo("Applicable Actions:")
-    for i, action in enumerate(actions, 1):
-        click.echo(f"{i}. {action['rule_name']} (Priority: {action['priority']})")
-        if action['inherited_from']:
-            click.echo(f"   Inherited from: {action['inherited_from']}")
-        click.echo(f"   Action: {json.dumps(action['action'], indent=4)}")
-        click.echo()
-
-
-@workspace_cli.command("add-node")
-@click.argument("workspace_id")
-@click.option("--name", required=True, help="Node name")
-@click.option("--type", "node_type", type=click.Choice(['agent', 'task', 'workflow', 'knowledge', 'custom']), 
-              default='custom', help="Node type")
-@click.option("--properties", help="Node properties as JSON string")
-@require_auth()
-def add_node(workspace_id, name, node_type, properties):
-    """Add a node to a workspace."""
-    manager = get_workspace_manager()
-    workspaces = manager.load_workspaces()
-    
-    # Find workspace
-    workspace = None
-    workspace_key = None
-    for ws_id, ws in workspaces.items():
-        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
-            workspace = ws
-            workspace_key = ws_id
-            break
-    
-    if not workspace:
-        click.echo(f"Workspace '{workspace_id}' not found.")
-        return
-    
-    # Parse properties
-    node_properties = {}
-    if properties:
-        try:
-            node_properties = json.loads(properties)
-        except json.JSONDecodeError:
-            click.echo("Invalid JSON format for properties.")
-            return
-    
-    # Create node
-    node = Node(
-        name=name,
-        type=NodeType(node_type),
-        properties=node_properties
-    )
-    
-    workspace.add_node(node)
-    manager.save_workspaces(workspaces)
-    
-    click.echo(f"Node '{name}' added to workspace '{workspace.name}' with ID: {node.id}")
-
-
-@workspace_cli.command("connect-nodes")
-@click.argument("workspace_id")
-@click.argument("node1_id")
-@click.argument("node2_id")
-@require_auth()
-def connect_nodes(workspace_id, node1_id, node2_id):
-    """Connect two nodes in a workspace."""
-    manager = get_workspace_manager()
-    workspaces = manager.load_workspaces()
-    
-    # Find workspace
-    workspace = None
-    workspace_key = None
-    for ws_id, ws in workspaces.items():
-        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
-            workspace = ws
-            workspace_key = ws_id
-            break
-    
-    if not workspace:
-        click.echo(f"Workspace '{workspace_id}' not found.")
-        return
-    
-    # Find nodes (support partial ID matching)
-    node1 = None
-    node2 = None
-    
-    for node_id, node in workspace.nodes.items():
-        if node_id.startswith(node1_id) or node.name == node1_id:
-            node1 = node
-        if node_id.startswith(node2_id) or node.name == node2_id:
-            node2 = node
-    
-    if not node1:
-        click.echo(f"Node '{node1_id}' not found in workspace.")
-        return
-    
-    if not node2:
-        click.echo(f"Node '{node2_id}' not found in workspace.")
-        return
-    
-    if workspace.connect_nodes(node1.id, node2.id):
-        manager.save_workspaces(workspaces)
-        click.echo(f"Connected nodes '{node1.name}' and '{node2.name}'.")
-    else:
-        click.echo("Failed to connect nodes.")
-
-
 @workspace_cli.command("set-state")
 @click.argument("workspace_id")
 @click.option("--key", required=True, help="State key")
@@ -421,7 +308,161 @@ def set_state(workspace_id, key, value):
     workspace.state[key] = parsed_value
     
     from datetime import datetime
-    workspace.updated_at = datetime.utcnow().isoformat()
+    workspace.updated_at = datetime.now(datetime.UTC).isoformat()
     
     manager.save_workspaces(workspaces)
     click.echo(f"Set state '{key}' = '{parsed_value}' in workspace '{workspace.name}'.")
+    
+def _parse_json_or_shorthand(value: str | None, label: str) -> dict:
+    if not value:
+        return {}
+
+    v = value.strip()
+
+    # Parse if it looks like JSON
+    if v.startswith("{"):
+        try:
+            obj = json.loads(v)
+        except json.JSONDecodeError as e:
+            raise click.ClickException(f"Invalid JSON for {label}: {e}")
+        if not isinstance(obj, dict):
+            raise click.ClickException(f"{label} must be a JSON object like {{...}}.")
+        return obj
+
+    # Otherwise treat it as shorthand
+    return {"type": v}
+    
+@workspace_cli.command("add-rule")
+@click.argument("workspace_id")
+@click.option("--name", required=True, help="Rule name")
+@click.option("--description", default="", help="Rule description")
+@click.option("--priority", type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]), default="MEDIUM")
+@click.option("--enabled/--disabled", default=True, show_default=True)
+@click.option("--condition", help='Condition JSON. Example: {"type":"state_equals","key":"x","value":1}')
+@click.option("--action", help='Action JSON. Example: {"type":"assign_task","message":"..."}')
+@require_auth()
+def add_rule(workspace_id, name, description, priority, enabled, condition, action):
+    """Add a rule to a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    # Parse condition and action
+    try:
+        rule_condition = _parse_json_or_shorthand(condition, "condition")
+        rule_action = _parse_json_or_shorthand(action, "action")
+    except click.ClickException as e:
+        click.echo(str(e))
+        return
+    
+    rule = Rule(
+        name=name,
+        description=description,
+        priority=RulePriority[priority],
+        enabled=enabled,
+        condition=rule_condition,
+        action=rule_action
+    )
+    
+    workspace.add_rule(rule)
+    manager.save_workspaces(workspaces)
+    
+    click.echo(f"Rule '{name}' added to workspace '{workspace.name}' with ID: {rule.id}")
+    
+@workspace_cli.command("remove-rule")
+@click.argument("workspace_id")
+@click.argument("rule_id_or_name")
+@require_auth()
+def remove_rule(workspace_id, rule_id_or_name):
+    """Remove a rule from a workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+    
+    # Find workspace
+    workspace = None
+    workspace_key = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            workspace_key = ws_id
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+    
+    # Find rule with partial ID or name match
+    remove_id = None
+    for rule_id, rule in workspace.rules.items():
+        if rule_id.startswith(rule_id_or_name) or rule.name == rule_id_or_name:
+            remove_id = rule_id
+            break
+    
+    if not remove_id:
+        click.echo(f"Rule '{rule_id_or_name}' not found in workspace.")
+        return
+    
+    ok = workspace.remove_rule(remove_id)
+    if not ok:
+        click.echo(f"Failed to remove rule '{rule_id_or_name}'.", err=True)
+        return
+    
+    manager.save_workspaces(workspaces)
+    
+    click.echo(f"Rule '{rule_id_or_name}' removed from workspace '{workspace.name}'.")
+        
+
+@workspace_cli.command("init-files")
+@click.argument("workspace_id")
+@click.option(
+    "--path",
+    "custom_path",
+    default=None,
+    help="Optional custom root path for this workspace folder."
+)
+@require_auth()
+def init_files_workspace(workspace_id, custom_path):
+    """Initialize prompt/memory/skills/sessions/data files for an existing workspace."""
+    manager = get_workspace_manager()
+    workspaces = manager.load_workspaces()
+
+    # Find workspace by ID or name
+    workspace = None
+    for ws_id, ws in workspaces.items():
+        if ws_id.startswith(workspace_id) or ws.name == workspace_id:
+            workspace = ws
+            break
+    
+    if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    if custom_path:
+        rp = Path(custom_path).expanduser().resolve()
+    else:
+        rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+
+    result = init_workspace(rp)
+    workspace.root_path = str(rp)
+
+    manager.save_workspaces(workspaces)
+
+    click.echo(f"Initialized workspace files for '{workspace.name}'")
+    click.echo(f"Root path: {workspace.root_path}")
+
+    if result["created"]:
+        click.echo(f"Created {len(result['created'])} file(s).")
+    if result["skipped"]:
+        click.echo(f"Skipped {len(result['skipped'])} existing file(s).")

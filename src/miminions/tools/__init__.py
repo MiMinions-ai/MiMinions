@@ -5,16 +5,16 @@ This module provides a unified interface for tools that can be used across
 different AI frameworks including LangChain, AutoGen, and AGNO.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Union, Callable, Type
+from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 import inspect
-import json
 
 # Export main classes
 __all__ = [
-    'ToolSchema', 'GenericTool', 'SimpleTool', 
-    'create_tool', 'tool'
+    "ToolSchema",
+    "GenericTool",
+    "create_tool",
+    "tool",
 ]
 
 
@@ -27,27 +27,26 @@ class ToolSchema:
     required: list[str]
 
 
-class GenericTool(ABC):
+class GenericTool:
     """Base class for generic tools that can be adapted to different frameworks"""
-    
+
     def __init__(self, name: str, description: str, func: Callable):
         self.name = name
         self.description = description
         self.func = func
         self._schema = self._extract_schema()
-    
+
     def _extract_schema(self) -> ToolSchema:
         """Extract schema from function signature"""
         sig = inspect.signature(self.func)
-        parameters = {}
-        required = []
-        
+        parameters: Dict[str, Any] = {}
+        required: list[str] = []
+
         for param_name, param in sig.parameters.items():
-            # Get type annotation
             param_type = param.annotation
             if param_type == inspect.Parameter.empty:
                 param_type = str  # Default to string if no annotation
-            
+
             # Convert Python types to JSON schema types
             if param_type == int:
                 schema_type = "integer"
@@ -58,36 +57,45 @@ class GenericTool(ABC):
             elif param_type == str:
                 schema_type = "string"
             else:
-                schema_type = "string"  # Default fallback
-            
+                schema_type = "string"
+
             parameters[param_name] = {
                 "type": schema_type,
-                "description": param_name  # Could be enhanced with docstring parsing
+                "description": param_name,
             }
-            
-            # Check if parameter has default value
+
             if param.default == inspect.Parameter.empty:
                 required.append(param_name)
             else:
                 parameters[param_name]["default"] = param.default
-        
+
         return ToolSchema(
             name=self.name,
             description=self.description,
             parameters=parameters,
-            required=required
+            required=required,
         )
-    
+
     @property
     def schema(self) -> ToolSchema:
         """Get the tool schema"""
         return self._schema
-    
-    @abstractmethod
+
     def run(self, **kwargs) -> Any:
-        """Execute the tool with given arguments"""
-        pass
-    
+        """Execute the tool with given arguments (sync)."""
+        return self.func(**kwargs)
+
+    async def arun(self, **kwargs) -> Any:
+        """
+        Execute the tool asynchronously.
+
+        - If the underlying function is async, it will be awaited.
+        - Otherwise it falls back to sync run().
+        """
+        if inspect.iscoroutinefunction(self.func):
+            return await self.func(**kwargs)
+        return self.run(**kwargs)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert tool to dictionary representation"""
         return {
@@ -96,36 +104,14 @@ class GenericTool(ABC):
             "parameters": {
                 "type": "object",
                 "properties": self.schema.parameters,
-                "required": self.schema.required
-            }
+                "required": self.schema.required,
+            },
         }
-
-
-class SimpleTool(GenericTool):
-    """Simple implementation of GenericTool"""
-    
-    def run(self, **kwargs) -> Any:
-        """Execute the tool function with provided arguments"""
-        return self.func(**kwargs)
-    
-    @classmethod
-    def from_mcp_tool(cls, mcp_tool: Dict[str, Any]) -> 'SimpleTool':
-        """Create a SimpleTool from MCP tool definition"""
-        # This is a placeholder - actual MCP tool calling would be handled
-        # by the MCP adapter with proper session management
-        def placeholder_func(**kwargs):
-            return f"MCP tool {mcp_tool.get('name', 'unknown')} would be called with {kwargs}"
-        
-        return cls(
-            name=mcp_tool.get("name", "unknown"),
-            description=mcp_tool.get("description", ""),
-            func=placeholder_func
-        )
 
 
 def create_tool(name: str, description: str, func: Callable) -> GenericTool:
     """Factory function to create a generic tool"""
-    return SimpleTool(name=name, description=description, func=func)
+    return GenericTool(name=name, description=description, func=func)
 
 
 def tool(name: Optional[str] = None, description: Optional[str] = None):

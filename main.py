@@ -1,5 +1,4 @@
-def main():
-    print("Hello from miminions!")
+from miminions.cli import main
 
 
 if __name__ == "__main__":

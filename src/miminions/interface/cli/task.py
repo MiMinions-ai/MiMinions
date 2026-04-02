@@ -31,20 +31,27 @@ def save_tasks(tasks):
         json.dump(tasks, f, indent=2)
 
 
+# TODO: require_auth disabled until auth is fully implemented
+# and the public-access path is clear to users.
+# def require_auth():
+#     """Decorator to require authentication or allow public access."""
+#     def decorator(f):
+#         def wrapper(*args, **kwargs):
+#             if not is_authenticated():
+#                 if is_public_access_enabled():
+#                     # Show warning but allow access
+#                     click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
+#                 else:
+#                     # Require authentication
+#                     click.echo("Please sign in first using 'miminions auth signin'", err=True)
+#                     return
+#             return f(*args, **kwargs)
+#         return wrapper
+#     return decorator
 def require_auth():
-    """Decorator to require authentication or allow public access."""
+    """Temporary no-op decorator while auth is being stabilized."""
     def decorator(f):
-        def wrapper(*args, **kwargs):
-            if not is_authenticated():
-                if is_public_access_enabled():
-                    # Show warning but allow access
-                    click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-                else:
-                    # Require authentication
-                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                    return
-            return f(*args, **kwargs)
-        return wrapper
+        return f
     return decorator
 
 
