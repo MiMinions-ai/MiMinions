@@ -31,6 +31,15 @@ from .services import (
 # Orchestration
 from .orchestrator import GatewayOrchestrator, Lifecycle, Phase
 
+# Configuration
+from .config import (
+    BusConfig,
+    ChannelConfig,
+    CronConfig,
+    GatewayConfig,
+    SessionConfig,
+)
+
 __all__ = [
     # Events
     "InboundMessage",
@@ -55,4 +64,10 @@ __all__ = [
     "GatewayOrchestrator",
     "Lifecycle",
     "Phase",
+    # Configuration
+    "BusConfig",
+    "ChannelConfig",
+    "CronConfig",
+    "GatewayConfig",
+    "SessionConfig",
 ]
