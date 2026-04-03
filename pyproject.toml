@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miminions"
-version = "0.2.1"
+version = "0.2.2"
 description = "An agentic framework with pydantic_ai, MCP server support and vector memory"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -35,6 +35,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+    "flake8>=7.0.0"
 ]
 cli-build = [
     "pyinstaller>=6.0.0",
