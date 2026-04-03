@@ -3,6 +3,7 @@ MiMinions CLI - Main command line interface for the MiMinions package.
 """
 
 import click
+from miminions import __version__
 from .auth import auth_cli
 from .agent import agent_cli
 from .task import task_cli
@@ -13,7 +14,7 @@ from .chat import chat_cli
 
 
 @click.group()
-@click.version_option()
+@click.version_option(version=__version__, prog_name="miminions")
 def cli():
     """MiMinions CLI - Manage AI agents, tasks, workflows and knowledge."""
     pass
