@@ -1,6 +1,9 @@
 """SQLite Memory Test Suite."""
 
+from pathlib import Path
+
 from miminions.memory.sqlite import SQLiteMemory
+from miminions.memory.sqlite import get_global_memory_db_path
 from miminions.agent import create_minion, ExecutionStatus
 
 
@@ -113,9 +116,32 @@ def test_execution_timing():
     print("PASSED")
 
 
+def test_get_global_memory_db_path_uses_home(monkeypatch, tmp_path):
+    """Global DB helper should resolve under ~/.miminions."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = Path(get_global_memory_db_path(create_dir=False))
+
+    assert path == tmp_path / ".miminions" / "global_memory.db"
+
+
+def test_get_global_memory_db_path_creates_parent(monkeypatch, tmp_path):
+    """Global DB helper should create parent directory by default."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = Path(get_global_memory_db_path())
+
+    assert path.parent.exists()
+    assert path.name == "global_memory.db"
+
+
 if __name__ == "__main__":
     print("SQLite Memory Tests")
-    tests = [test_crud, test_list, test_vector_search, test_convenience_methods, test_execution_timing]
+    tests = [
+        test_crud,
+        test_list,
+        test_vector_search,
+        test_convenience_methods,
+        test_execution_timing,
+    ]
     for test in tests:
         test()
     print("\nAll tests passed")

@@ -74,83 +74,134 @@ The design must preserve local markdown ownership while using SQLite as a global
 3. Global entries must keep provenance metadata (`workspace_id`, `workspace_name`, `session_id`, timestamps, category).
 4. Global-to-local sync is read-only context injection; never overwrite local markdown from global DB.
 
-## Proposed File and Module Changes
+## Phased Delivery Plan (One Commit Per Phase)
 
-```
-docs/
-  MEMORY_EVOLUTION_PLAN.md                     # new
+This section converts the design into four commits total, exactly one commit per phase.
 
-src/miminions/memory/
-  distiller.py                                # new
-  sqlite.py                                   # modified (global DB path helper + metadata helpers)
-  __init__.py                                 # modified (export Distiller API)
+## Phase 1: Foundations
 
-src/miminions/agent/
-  context_builder.py                          # modified (inject ## Global Knowledge before ## Memory)
+**Commit message**: `feat(memory): add global memory foundations`
 
-src/miminions/interface/cli/
-  chat.py                                     # modified (run distiller on session exit)
+**Files**:
 
-tests/
-  test_distiller.py                           # new
-  test_context_builder.py                     # modified
-  cli/test_chat.py                            # modified
-  test_sqlite_memory.py                       # modified or extended for global-tier metadata behavior
-```
+- `src/miminions/memory/sqlite.py`
+- `src/miminions/memory/distiller.py`
+- `src/miminions/memory/__init__.py`
+- `tests/test_sqlite_memory.py`
+- `tests/test_distiller.py`
 
-## Distiller Design (`memory/distiller.py`)
+**Scope**:
 
-## Public API
+1. Add canonical global DB path helper: `~/.miminions/global_memory.db`.
+2. Ensure parent directory creation is handled safely.
+3. Scaffold `MemoryDistiller` and `DistillationResult` API.
+4. Export distiller entry points from memory package.
+5. Add baseline tests for helper behavior and distiller schema/initialization.
+
+**Done when**:
+
+1. Global path helper and backward compatibility tests pass.
+2. Distiller module is importable from package root.
+3. Baseline memory and distiller tests are green.
+
+## Phase 2: Distillation Pipeline
+
+**Commit message**: `feat(memory): implement distillation pipeline and promotion gates`
+
+**Files**:
+
+- `src/miminions/memory/distiller.py`
+- `tests/test_distiller.py`
+
+**Scope**:
+
+1. Load transcript from `JsonlSessionStore.iter_messages(session_id)` and compact it.
+2. Validate strict LLM extraction schema (`history_summary`, `workspace_facts`, `global_insights`).
+3. Apply deterministic filters (confidence threshold, durability, actionability, dedupe).
+4. Promote accepted entries:
+   - Tier 1: `append_history(root_path, history_summary)`
+   - Tier 2: `upsert_memory_section(...)`
+   - Tier 3: `SQLiteMemory.create(text, metadata=...)`
+5. Return `DistillationResult` with promoted/dropped counts and reasons.
+
+**Done when**:
+
+1. Invalid/malformed LLM output is rejected with explicit reasons.
+2. Missing/empty sessions are handled gracefully.
+3. One-line history and workspace memory updates are written correctly.
+4. Only high-confidence reusable global insights are persisted.
+
+## Phase 3: Runtime Integration
+
+**Commit message**: `feat(runtime): wire chat distillation and global context injection`
+
+**Files**:
+
+- `src/miminions/interface/cli/chat.py`
+- `src/miminions/agent/context_builder.py`
+- `tests/cli/test_chat.py`
+- `tests/test_context_builder.py`
+
+**Scope**:
+
+1. Wrap chat REPL in `try/finally` and trigger distillation on exit paths.
+2. Ensure distiller failures are logged as warnings and do not break chat completion.
+3. Add global insight retrieval in context assembly with graceful fallback.
+4. Inject `## Global Knowledge` before `## Memory`.
+
+**Done when**:
+
+1. Distiller runs once per exiting session (`quit`, `exit`, EOF, Ctrl+C).
+2. Chat exit behavior remains stable for users.
+3. Context ordering test passes (`## Global Knowledge` before `## Memory`).
+4. Empty/unavailable global memory does not crash prompt assembly.
+
+## Phase 4: Hardening and Docs
+
+**Commit message**: `test+docs(memory): harden failure modes and document controls`
+
+**Files**:
+
+- `tests/test_distiller.py`
+- `tests/test_sqlite_memory.py`
+- `tests/cli/test_chat.py`
+- `tests/test_context_builder.py`
+- `README.md`
+- `src/miminions/memory/MEMORY_EVOLUTION_PLAN.md`
+
+**Scope**:
+
+1. Expand failure-mode coverage:
+   - missing/empty session file
+   - invalid LLM output schema
+   - SQLite unavailable
+2. Assert graceful degradation and non-fatal behavior across runtime flows.
+3. Document operator controls (confidence threshold, `top_k`, Tier 3 disable option).
+4. Document and reinforce source-of-truth contract for local markdown vs global index.
+
+**Done when**:
+
+1. Failure-mode tests are comprehensive and passing.
+2. No unhandled exceptions propagate to CLI user flow.
+3. Operators can configure memory behavior without reading implementation code.
+
+## Distiller Contract (Reference)
 
 ```python
 class MemoryDistiller:
-    def __init__(self, llm_filter, global_db_path: str | None = None): ...
+   def __init__(self, llm_filter, global_db_path: str | None = None): ...
 
-    def distill_session(
-        self,
-        workspace,
-        root_path,
-        session_id: str,
-    ) -> DistillationResult: ...
+   def distill_session(
+      self,
+      workspace,
+      root_path,
+      session_id: str,
+   ) -> DistillationResult: ...
 ```
 
-- `llm_filter` is a callable adapter (or service object) returning structured JSON output.
-- `global_db_path` defaults to `~/.miminions/global_memory.db`.
+`llm_filter` is a callable adapter (or service object) returning structured JSON output. `global_db_path` defaults to `~/.miminions/global_memory.db`.
 
-## Distillation Pipeline
-
-1. Load session records from `JsonlSessionStore.iter_messages(session_id)`.
-2. Build compact transcript for extraction (strip empty/system noise).
-3. Ask LLM for structured output with strict schema:
-   - `history_summary`: string (exactly one sentence)
-   - `workspace_facts`: list of stable project-specific bullets
-   - `global_insights`: list of universal insights with `category`, `confidence`, `evidence`
-4. Validate schema and apply deterministic gates:
-   - Drop `global_insights` where `confidence < threshold` (recommended `0.85`).
-   - Drop statements failing durability/actionability checks.
-   - Deduplicate against existing SQLite entries (text normalization + semantic similarity).
-5. Promote:
-   - Tier 1: `append_history(root_path, history_summary)`
-   - Tier 2: `upsert_memory_section(...)` with curated facts
-   - Tier 3: `SQLiteMemory.create(text, metadata=...)`
-6. Return `DistillationResult` with counts and dropped-item reasons for observability.
-
-## Zero-Fluff Gate (LLM + Rules)
-
-To enforce "zero fluff", use a two-stage filter:
-
-1. LLM extraction prompt that explicitly rejects vague statements.
-2. Deterministic post-filter requiring all of:
-   - Reusable beyond current workspace
-   - Specific and testable wording
-   - Durable over time (not tied to one transient task)
-   - Confidence score above threshold
-
-If no insight passes, write nothing to Tier 3.
-
-## Metadata for Tier 3 Entries
-
-Recommended metadata payload per global entry:
+## Tier 3 Metadata (Reference)
 
 ```json
 {
@@ -165,67 +216,9 @@ Recommended metadata payload per global entry:
 }
 ```
 
-## Context Injection Plan (`ContextBuilder`)
-
-Update `src/miminions/agent/context_builder.py` to:
-
-1. Initialize global memory client at build time (graceful fallback if unavailable).
-2. Construct a retrieval query from workspace signals (`workspace_name`, state keys, top rule names, recent prompt headings).
-3. Retrieve top global insights (`top_k` small, recommended 5-10).
-4. Inject new section before local memory:
-
-```markdown
-## Global Knowledge
-- [category=user_preference confidence=0.93] User prefers Pydantic for validation.
-- [category=coding_standard confidence=0.90] Favor explicit typing for public APIs.
-
-## Memory
-...existing MEMORY.md content...
-```
-
-5. If DB is empty/unavailable, include explicit placeholder line (`- No global knowledge found.`) or omit section based on config flag.
-
-## Session Exit Integration (`chat.py`)
-
-At `chat start` lifecycle end:
-
-1. Keep existing append behavior for each turn.
-2. Wrap REPL loop in `try/finally` so distillation runs on all normal exits (`quit`, `exit`, EOF, Ctrl+C).
-3. In `finally`, call `MemoryDistiller.distill_session(...)` with `workspace`, `root`, and `session_id`.
-4. Catch distiller exceptions and log a warning without breaking chat command completion.
-
-## Implementation Checklist
-
-1. Create `src/miminions/memory/distiller.py` with:
-   - `DistillationResult` model
-   - transcript loader
-   - LLM extraction call
-   - zero-fluff validator
-   - tier promotion functions
-2. Add global DB path helper in `src/miminions/memory/sqlite.py` targeting `~/.miminions/global_memory.db`.
-3. Extend `src/miminions/memory/__init__.py` exports for distiller entry points.
-4. Modify `src/miminions/interface/cli/chat.py` to run distillation on session exit in `finally`.
-5. Modify `src/miminions/agent/context_builder.py` to inject `## Global Knowledge` before `## Memory`.
-6. Add unit tests for distiller behavior:
-   - promotes one-line history summary
-   - updates workspace memory sections
-   - writes only high-confidence insights to Tier 3
-   - writes nothing when all candidates are fluff
-7. Update context builder tests to assert ordering:
-   - `## Global Knowledge` appears before `## Memory`
-8. Update CLI chat tests to assert distiller is invoked on `quit`/`exit` and interrupt paths.
-9. Add failure-mode tests:
-   - missing/empty session file
-   - invalid LLM output schema
-   - SQLite unavailable (degrade gracefully)
-10. Document operator controls in README/docs:
-    - confidence threshold
-    - top_k retrieval for global injection
-    - optional disable flag for Tier 3
-
 ## Rollout Notes
 
-- Start with conservative thresholds to minimize false positives in Tier 3.
-- Prefer under-writing global memory over storing noisy entries.
-- Add lightweight telemetry counters (promoted/dropped counts) for tuning.
-- Keep markdown-first workflow unchanged so existing users are not disrupted.
+1. Start with conservative thresholds to minimize false positives in Tier 3.
+2. Prefer under-writing global memory over storing noisy entries.
+3. Add lightweight telemetry counters (promoted/dropped counts) for tuning.
+4. Keep markdown-first workflow unchanged so existing users are not disrupted.
