@@ -13,9 +13,6 @@ from .md_store import append_history, upsert_memory_section
 from .sqlite import SQLiteMemory, get_global_memory_db_path
 
 
-ALLOWED_GLOBAL_CATEGORIES = {"user_preference", "coding_standard", "achievement"}
-
-
 @dataclass
 class DistillationResult:
     """Structured outcome for a single session distillation run."""
@@ -30,7 +27,7 @@ class DistillationResult:
 
 
 class MemoryDistiller:
-    """Extract durable memory from session transcripts and promote by tier."""
+    """Extract memory from session transcripts and promote by tier."""
 
     def __init__(
         self,
@@ -58,72 +55,22 @@ class MemoryDistiller:
             lines.append(f"{role}: {compact_content}")
         return "\n".join(lines)
 
-    def _validate_extraction(self, payload: Any) -> tuple[dict[str, Any] | None, list[str]]:
-        """Validate strict extraction schema required by distillation."""
-        reasons: list[str] = []
+    def _as_list(self, value: Any) -> list[Any]:
+        """Normalize optional list-like values from LLM output."""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            return [value]
+        return []
 
-        if not isinstance(payload, dict):
-            return None, ["invalid_schema: payload must be an object"]
-
-        required_keys = {"history_summary", "workspace_facts", "global_insights"}
-        payload_keys = set(payload.keys())
-        missing = sorted(required_keys - payload_keys)
-        extra = sorted(payload_keys - required_keys)
-        if missing:
-            reasons.append(f"invalid_schema: missing keys {missing}")
-        if extra:
-            reasons.append(f"invalid_schema: unexpected keys {extra}")
-
-        if "history_summary" in payload and not isinstance(payload.get("history_summary"), str):
-            reasons.append("invalid_schema: history_summary must be string")
-
-        workspace_facts = payload.get("workspace_facts")
-        if "workspace_facts" in payload and not isinstance(workspace_facts, list):
-            reasons.append("invalid_schema: workspace_facts must be list[str]")
-        elif isinstance(workspace_facts, list):
-            if any(not isinstance(item, str) for item in workspace_facts):
-                reasons.append("invalid_schema: workspace_facts must contain only strings")
-
-        global_insights = payload.get("global_insights")
-        if "global_insights" in payload and not isinstance(global_insights, list):
-            reasons.append("invalid_schema: global_insights must be list[object]")
-        elif isinstance(global_insights, list):
-            for idx, item in enumerate(global_insights):
-                if not isinstance(item, dict):
-                    reasons.append(f"invalid_schema: global_insights[{idx}] must be object")
-                    continue
-                expected_item_keys = {"text", "category", "confidence"}
-                item_keys = set(item.keys())
-                item_missing = sorted(expected_item_keys - item_keys)
-                item_extra = sorted(item_keys - expected_item_keys)
-                if item_missing:
-                    reasons.append(
-                        f"invalid_schema: global_insights[{idx}] missing keys {item_missing}"
-                    )
-                if item_extra:
-                    reasons.append(
-                        f"invalid_schema: global_insights[{idx}] unexpected keys {item_extra}"
-                    )
-                if "text" in item and not isinstance(item.get("text"), str):
-                    reasons.append(f"invalid_schema: global_insights[{idx}].text must be string")
-                if "category" in item and not isinstance(item.get("category"), str):
-                    reasons.append(f"invalid_schema: global_insights[{idx}].category must be string")
-                confidence = item.get("confidence")
-                if "confidence" in item and not isinstance(confidence, (int, float)):
-                    reasons.append(
-                        f"invalid_schema: global_insights[{idx}].confidence must be number"
-                    )
-
-        if reasons:
-            return None, reasons
-        return payload, []
-
-    def _normalize_lines(self, lines: list[str]) -> list[str]:
+    def _normalize_lines(self, lines: list[Any]) -> list[str]:
         """Normalize and dedupe text lines while preserving order."""
         seen: set[str] = set()
         normalized: list[str] = []
         for line in lines:
-            clean = " ".join(line.split()).strip()
+            clean = " ".join(str(line).split()).strip()
             if not clean:
                 continue
             key = clean.casefold()
@@ -132,30 +79,6 @@ class MemoryDistiller:
             seen.add(key)
             normalized.append(clean)
         return normalized
-
-    def _is_durable_insight(self, text: str) -> bool:
-        """Reject transient statements that should not be global memory."""
-        lowered = text.casefold()
-        transient_markers = (
-            "today",
-            "tomorrow",
-            "this session",
-            "for now",
-            "next step",
-            "todo",
-            "temporary",
-            "wip",
-        )
-        return not any(marker in lowered for marker in transient_markers)
-
-    def _is_actionable_insight(self, text: str) -> bool:
-        """Ensure insights are concrete enough to be useful later."""
-        clean = text.strip()
-        if len(clean) < 20:
-            return False
-        if clean.endswith("?"):
-            return False
-        return len(clean.split()) >= 4
 
     def _workspace_attr(self, workspace: Any, key: str, default: str = "") -> str:
         if isinstance(workspace, dict):
@@ -168,13 +91,9 @@ class MemoryDistiller:
         self,
         workspace: Any,
         session_id: str,
-        category: str,
-        confidence: float,
     ) -> dict[str, Any]:
         return {
             "tier": 3,
-            "category": category,
-            "confidence": confidence,
             "workspace_id": self._workspace_attr(workspace, "id"),
             "workspace_name": self._workspace_attr(workspace, "name"),
             "session_id": session_id,
@@ -199,22 +118,32 @@ class MemoryDistiller:
             result.dropped_reasons.append("empty_session: transcript had no usable content")
             return result
 
-        payload = self.llm_filter(
-            transcript=transcript,
-            workspace=workspace,
-            root_path=str(root),
-            session_id=session_id,
-        )
-
-        validated, reasons = self._validate_extraction(payload)
-        if reasons:
-            result.dropped_reasons.extend(reasons)
+        try:
+            payload = self.llm_filter(
+                transcript=transcript,
+                workspace=workspace,
+                root_path=str(root),
+                session_id=session_id,
+            )
+        except Exception as exc:
+            result.dropped_reasons.append(f"llm_filter_error: {exc}")
             return result
-        assert validated is not None
 
-        history_summary = validated["history_summary"].strip()
-        workspace_facts = self._normalize_lines(validated["workspace_facts"])
-        raw_global_insights: list[dict[str, Any]] = validated["global_insights"]
+        if not isinstance(payload, dict):
+            payload = {}
+
+        history_summary = str(payload.get("history_summary", "")).strip()
+        workspace_facts = self._normalize_lines(self._as_list(payload.get("workspace_facts")))
+
+        global_insights: list[str] = []
+        for insight in self._as_list(payload.get("global_insights")):
+            if isinstance(insight, dict):
+                text = str(insight.get("text", "")).strip()
+            else:
+                text = str(insight).strip()
+            if text:
+                global_insights.append(text)
+        global_insights = self._normalize_lines(global_insights)
 
         if history_summary:
             append_history(root, history_summary)
@@ -228,69 +157,26 @@ class MemoryDistiller:
             result.workspace_facts = workspace_facts
             result.promoted_counts["tier2"] += len(workspace_facts)
 
-        accepted: list[dict[str, Any]] = []
-        seen_insight_texts: set[str] = set()
-        for insight in raw_global_insights:
-            text = " ".join(insight["text"].split()).strip()
-            category = insight["category"].strip()
-            confidence = float(insight["confidence"])
-
-            if not text:
-                result.dropped_reasons.append("tier3_dropped: empty insight text")
-                continue
-
-            dedupe_key = text.casefold()
-            if dedupe_key in seen_insight_texts:
-                result.dropped_reasons.append(f"tier3_dropped: duplicate insight '{text}'")
-                continue
-            seen_insight_texts.add(dedupe_key)
-
-            if category not in ALLOWED_GLOBAL_CATEGORIES:
-                result.dropped_reasons.append(
-                    f"tier3_dropped: unsupported category '{category}'"
-                )
-                continue
-
-            if confidence < self.global_confidence_threshold:
-                result.dropped_reasons.append(
-                    f"tier3_dropped: confidence {confidence:.2f} below threshold"
-                )
-                continue
-
-            if not self._is_durable_insight(text):
-                result.dropped_reasons.append(
-                    f"tier3_dropped: non-durable insight '{text}'"
-                )
-                continue
-
-            if not self._is_actionable_insight(text):
-                result.dropped_reasons.append(
-                    f"tier3_dropped: non-actionable insight '{text}'"
-                )
-                continue
-
-            accepted.append(
-                {
-                    "text": text,
-                    "category": category,
-                    "confidence": confidence,
-                }
-            )
-
-        if accepted:
-            sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
+        if global_insights:
             try:
-                for insight in accepted:
-                    metadata = self._build_tier3_metadata(
-                        workspace=workspace,
-                        session_id=session_id,
-                        category=insight["category"],
-                        confidence=insight["confidence"],
-                    )
-                    sqlite_memory.create(insight["text"], metadata=metadata)
-                    result.promoted_counts["tier3"] += 1
-                    result.global_insights.append({**insight, "metadata": metadata})
-            finally:
-                sqlite_memory.close()
+                sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
+                try:
+                    for insight_text in global_insights:
+                        metadata = self._build_tier3_metadata(
+                            workspace=workspace,
+                            session_id=session_id,
+                        )
+                        sqlite_memory.create(insight_text, metadata=metadata)
+                        result.promoted_counts["tier3"] += 1
+                        result.global_insights.append(
+                            {
+                                "text": insight_text,
+                                "metadata": metadata,
+                            }
+                        )
+                finally:
+                    sqlite_memory.close()
+            except Exception as exc:
+                result.dropped_reasons.append(f"tier3_unavailable: {exc}")
 
         return result

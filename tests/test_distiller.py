@@ -66,20 +66,22 @@ def test_distill_session_handles_empty_session_gracefully(tmp_path):
     assert any("empty_session" in reason for reason in result.dropped_reasons)
 
 
-def test_distill_session_rejects_invalid_llm_schema(tmp_path):
+def test_distill_session_accepts_partial_llm_output_with_permissive_defaults(tmp_path):
     session_id = _append_transcript(tmp_path)
     distiller = MemoryDistiller(
         lambda **_: {
             "history_summary": "ok",
             "workspace_facts": "not-a-list",
-            "global_insights": [],
+            # global_insights intentionally omitted
         }
     )
 
     result = distiller.distill_session(workspace={}, root_path=str(tmp_path), session_id=session_id)
 
-    assert result.promoted_counts == {"tier1": 0, "tier2": 0, "tier3": 0}
-    assert any("invalid_schema" in reason for reason in result.dropped_reasons)
+    assert result.promoted_counts["tier1"] == 1
+    assert result.promoted_counts["tier2"] == 1
+    assert result.promoted_counts["tier3"] == 0
+    assert result.dropped_reasons == []
 
 
 def test_distill_session_promotes_history_and_workspace_memory(tmp_path, monkeypatch):
@@ -122,7 +124,7 @@ def test_distill_session_promotes_history_and_workspace_memory(tmp_path, monkeyp
     assert memory_text.count("- Tests run with pytest.") == 1
 
 
-def test_distill_session_filters_global_insights_and_persists_only_high_signal(tmp_path, monkeypatch):
+def test_distill_session_stores_global_insights_as_plain_text(tmp_path, monkeypatch):
     _FakeSQLiteMemory.created = []
     monkeypatch.setattr("miminions.memory.distiller.SQLiteMemory", _FakeSQLiteMemory)
 
@@ -130,34 +132,13 @@ def test_distill_session_filters_global_insights_and_persists_only_high_signal(t
 
     def llm_filter(**_kwargs):
         return {
-            "history_summary": "Captured durable preferences and coding standards.",
+            "history_summary": "Captured preferences and conventions.",
             "workspace_facts": [],
             "global_insights": [
-                {
-                    "text": "The user prefers concise commit messages with imperative mood.",
-                    "category": "user_preference",
-                    "confidence": 0.95,
-                },
-                {
-                    "text": "TODO fix this later",
-                    "category": "coding_standard",
-                    "confidence": 0.99,
-                },
-                {
-                    "text": "Always run tests before pushing code to remote branches.",
-                    "category": "coding_standard",
-                    "confidence": 0.60,
-                },
-                {
-                    "text": "The user prefers concise commit messages with imperative mood.",
-                    "category": "user_preference",
-                    "confidence": 0.98,
-                },
-                {
-                    "text": "Maintain a reproducible release checklist for deployments.",
-                    "category": "unknown",
-                    "confidence": 0.95,
-                },
+                "The user prefers concise commit messages with imperative mood.",
+                "Always run tests before pushing code to remote branches.",
+                "The user prefers concise commit messages with imperative mood.",
+                {"text": "Use deterministic formatting in CI to reduce noisy diffs."},
             ],
         }
 
@@ -170,20 +151,49 @@ def test_distill_session_filters_global_insights_and_persists_only_high_signal(t
         session_id=session_id,
     )
 
-    assert result.promoted_counts["tier3"] == 1
-    assert len(_FakeSQLiteMemory.created) == 1
+    assert result.promoted_counts["tier3"] == 3
+    assert len(_FakeSQLiteMemory.created) == 3
 
-    text, metadata = _FakeSQLiteMemory.created[0]
-    assert text == "The user prefers concise commit messages with imperative mood."
+    stored_texts = [entry[0] for entry in _FakeSQLiteMemory.created]
+    assert "The user prefers concise commit messages with imperative mood." in stored_texts
+    assert "Always run tests before pushing code to remote branches." in stored_texts
+    assert "Use deterministic formatting in CI to reduce noisy diffs." in stored_texts
+
+    _, metadata = _FakeSQLiteMemory.created[0]
     assert metadata["tier"] == 3
-    assert metadata["category"] == "user_preference"
     assert metadata["workspace_id"] == "ws-2"
     assert metadata["workspace_name"] == "MiMinions"
     assert metadata["session_id"] == session_id
     assert metadata["source"] == "distiller"
     assert "created_at" in metadata
 
-    assert any("non-durable" in reason for reason in result.dropped_reasons)
-    assert any("below threshold" in reason for reason in result.dropped_reasons)
-    assert any("duplicate" in reason for reason in result.dropped_reasons)
-    assert any("unsupported category" in reason for reason in result.dropped_reasons)
+    assert result.dropped_reasons == []
+
+
+def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypatch):
+    class _BrokenSQLiteMemory:
+        def __init__(self, db_path: str):
+            raise RuntimeError("sqlite unavailable")
+
+    monkeypatch.setattr("miminions.memory.distiller.SQLiteMemory", _BrokenSQLiteMemory)
+    session_id = _append_transcript(tmp_path)
+
+    distiller = MemoryDistiller(
+        lambda **_: {
+            "history_summary": "Completed a short implementation session.",
+            "workspace_facts": ["The repo uses pytest for tests."],
+            "global_insights": ["Prefer running focused tests before full suite."],
+        },
+        global_db_path=str(tmp_path / "global.db"),
+    )
+
+    result = distiller.distill_session(
+        workspace=SimpleNamespace(id="ws-3", name="MiMinions"),
+        root_path=str(tmp_path),
+        session_id=session_id,
+    )
+
+    assert result.promoted_counts["tier1"] == 1
+    assert result.promoted_counts["tier2"] == 1
+    assert result.promoted_counts["tier3"] == 0
+    assert any("tier3_unavailable" in reason for reason in result.dropped_reasons)
