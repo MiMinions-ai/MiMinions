@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import click
 
 from miminions.agent.context_builder import ContextBuilder
+from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager
 from miminions.interface.cli.auth import get_config_dir
@@ -90,6 +90,28 @@ def _run_agent(
 
     return _default_agent_reply(user_text, context, workspace, session_id)  
 
+
+def _default_memory_llm_filter(**_kwargs: Any) -> dict[str, Any]:
+    """Placeholder LLM filter until full memory extraction is integrated."""
+    return {
+        "history_summary": "",
+        "workspace_facts": [],
+        "global_insights": [],
+    }
+
+
+def _run_session_distillation(workspace: Any, root: Path, session_id: str) -> None:
+    """Run post-session distillation once, using a workspace override when available."""
+    llm_filter = getattr(workspace, "memory_llm_filter", None)
+    if not callable(llm_filter):
+        llm_filter = _default_memory_llm_filter
+
+    MemoryDistiller(llm_filter=llm_filter).distill_session(
+        workspace=workspace,
+        root_path=str(root),
+        session_id=session_id,
+    )
+
 @click.group()
 def chat_cli():
     """Chat commands."""
@@ -137,41 +159,47 @@ def chat_command(workspace_ref: str, session_id: str | None) -> None:
     click.echo("Type 'exit' or 'quit' to stop.")
     click.echo("")
 
-    while True:
+    try:
+        while True:
+            try:
+                user_text = input("> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                click.echo("\nExiting chat.")
+                break
+
+            if not user_text:
+                continue
+
+            if user_text.lower() in {"exit", "quit"}:
+                click.echo("Exiting chat.")
+                break
+
+            store.append(
+                session_id,
+                "user",
+                user_text,
+                meta={"source": "cli-chat"},
+            )
+
+            reply = _run_agent(
+                user_text=user_text,
+                context=context,
+                workspace=workspace,
+                session_id=session_id,
+            )
+
+            store.append(
+                session_id,
+                "assistant",
+                reply,
+                meta={"source": "cli-chat"},
+            )
+
+            click.echo("")
+            click.echo(reply)
+            click.echo("")
+    finally:
         try:
-            user_text = input("> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            click.echo("\nExiting chat.")
-            break
-
-        if not user_text:
-            continue
-
-        if user_text.lower() in {"exit", "quit"}:
-            click.echo("Exiting chat.")
-            break
-
-        store.append(
-            session_id,
-            "user",
-            user_text,
-            meta={"source": "cli-chat"},
-        )
-
-        reply = _run_agent(
-            user_text=user_text,
-            context=context,
-            workspace=workspace,
-            session_id=session_id,
-        )
-
-        store.append(
-            session_id,
-            "assistant",
-            reply,
-            meta={"source": "cli-chat"},
-        )
-
-        click.echo("")
-        click.echo(reply)
-        click.echo("")
+            _run_session_distillation(workspace=workspace, root=root, session_id=session_id)
+        except Exception as exc:
+            click.echo(f"Warning: memory distillation skipped: {exc}", err=True)

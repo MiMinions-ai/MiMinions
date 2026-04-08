@@ -73,3 +73,83 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     assert '"content": "hello"' in contents, f"Expected 'content' to be in the contents, but got: {contents}"
     assert '"role": "assistant"' in contents, f"Expected 'role: assistant' in contents, but got: {contents}"
     assert '"content": "assistant reply"' in contents, f"Expected 'content: assistant reply' in contents, but got: {contents}"
+
+
+def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
+    init_workspace(tmp_path)
+
+    workspace = SimpleNamespace(
+        id="ws1",
+        name="Test WS",
+        root_path=str(tmp_path),
+        nodes=[],
+        rules=[],
+        state={},
+    )
+    manager = DummyManager(workspace)
+
+    calls = []
+
+    monkeypatch.setattr(
+        "miminions.interface.cli.chat.WorkspaceManager",
+        lambda config_dir: manager,
+    )
+    monkeypatch.setattr(
+        "miminions.interface.cli.chat._run_agent",
+        lambda user_text, context, workspace, session_id: "assistant reply",
+    )
+    monkeypatch.setattr(
+        "miminions.interface.cli.chat._run_session_distillation",
+        lambda workspace, root, session_id: calls.append((workspace.id, root, session_id)),
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1"],
+        input="hello\nquit\n",
+    )
+
+    assert result.exit_code == 0
+    assert len(calls) == 1
+    assert calls[0][0] == "ws1"
+    assert calls[0][1] == tmp_path
+    assert calls[0][2]
+
+
+def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch):
+    init_workspace(tmp_path)
+
+    workspace = SimpleNamespace(
+        id="ws1",
+        name="Test WS",
+        root_path=str(tmp_path),
+        nodes=[],
+        rules=[],
+        state={},
+    )
+    manager = DummyManager(workspace)
+
+    monkeypatch.setattr(
+        "miminions.interface.cli.chat.WorkspaceManager",
+        lambda config_dir: manager,
+    )
+    monkeypatch.setattr(
+        "miminions.interface.cli.chat._run_agent",
+        lambda user_text, context, workspace, session_id: "assistant reply",
+    )
+
+    def _boom(*_args, **_kwargs):
+        raise RuntimeError("distiller unavailable")
+
+    monkeypatch.setattr("miminions.interface.cli.chat._run_session_distillation", _boom)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1"],
+        input="quit\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Warning: memory distillation skipped" in result.output
