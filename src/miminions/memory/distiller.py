@@ -33,13 +33,11 @@ class MemoryDistiller:
         self,
         llm_filter: Callable[..., dict[str, Any]],
         global_db_path: str | None = None,
-        global_confidence_threshold: float = 0.85,
     ):
         if not callable(llm_filter):
             raise TypeError("llm_filter must be callable")
         self.llm_filter = llm_filter
         self.global_db_path = global_db_path or get_global_memory_db_path(create_dir=True)
-        self.global_confidence_threshold = float(global_confidence_threshold)
 
     def _compact_transcript(self, records: list[dict[str, Any]], max_messages: int = 80) -> str:
         """Build a compact transcript string for extraction."""

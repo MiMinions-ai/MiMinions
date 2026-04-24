@@ -93,3 +93,79 @@ def test_context_builder_handles_empty_workspace_sections(tmp_path: Path):
     assert "- No nodes found." in context, f"Expected '- No nodes found.' in context, but got: {context}"
     assert "- No rules found." in context, f"Expected '- No rules found.' in context, but got: {context}"
     assert "- No state keys found." in context, f"Expected '- No state keys found.' in context, but got: {context}"
+
+
+def test_context_builder_injects_global_knowledge_when_available(tmp_path: Path, monkeypatch):
+    """Global Knowledge section appears when SQLite returns insights."""
+    init_workspace(tmp_path)
+
+    monkeypatch.setattr(
+        "miminions.agent.context_builder._fetch_global_insights",
+        lambda top_k, db_path: ["User prefers concise commit messages.", "Always run tests before pushing."],
+    )
+
+    workspace = {
+        "id": "ws_global",
+        "name": "Global WS",
+        "root_path": str(tmp_path),
+        "nodes": [],
+        "rules": [],
+        "state": {},
+    }
+
+    context = ContextBuilder().build(workspace, tmp_path)
+
+    assert "## Global Knowledge" in context, f"Expected '## Global Knowledge' in context, but got: {context}"
+    assert "- User prefers concise commit messages." in context
+    assert "- Always run tests before pushing." in context
+    # Global Knowledge must appear before Memory
+    assert context.index("## Global Knowledge") < context.index("## Memory")
+
+
+def test_context_builder_skips_global_knowledge_when_sqlite_unavailable(tmp_path: Path, monkeypatch):
+    """Context builds without error and omits Global Knowledge when SQLite is down."""
+    init_workspace(tmp_path)
+
+    monkeypatch.setattr(
+        "miminions.agent.context_builder._fetch_global_insights",
+        lambda top_k, db_path: [],
+    )
+
+    workspace = {
+        "id": "ws_nosql",
+        "name": "No SQL WS",
+        "root_path": str(tmp_path),
+        "nodes": [],
+        "rules": [],
+        "state": {},
+    }
+
+    context = ContextBuilder().build(workspace, tmp_path)
+
+    assert "## Memory" in context, "Context must still include Memory section"
+    assert "## Global Knowledge" not in context, "Global Knowledge must be absent when SQLite returns nothing"
+
+
+def test_context_builder_omits_global_knowledge_when_top_k_zero(tmp_path: Path, monkeypatch):
+    """Setting global_top_k=0 disables global injection entirely."""
+    init_workspace(tmp_path)
+
+    called = []
+    monkeypatch.setattr(
+        "miminions.agent.context_builder._fetch_global_insights",
+        lambda top_k, db_path: called.append(1) or ["some insight"],
+    )
+
+    workspace = {
+        "id": "ws_disabled",
+        "name": "Disabled WS",
+        "root_path": str(tmp_path),
+        "nodes": [],
+        "rules": [],
+        "state": {},
+    }
+
+    context = ContextBuilder(global_top_k=0).build(workspace, tmp_path)
+
+    assert not called, "_fetch_global_insights must not be called when global_top_k=0"
+    assert "## Global Knowledge" not in context
