@@ -35,11 +35,25 @@ def test_records_prompt_tools_and_output():
 
     wf = WorkflowRun(agent_name="MyAgent", run=run)
 
-    assert wf.run.prompt == "Summarize this PDF"
-    assert wf.run.output == "Here is the summary."
-    assert len(wf.run.tool_calls) == 3
-    assert wf.tool_usage_counts()["web_search"] == 2
-    assert wf.most_used_tool() == "web_search"
+    assert wf.run.prompt == "Summarize this PDF", (
+        f"expected wf.run.prompt to equal 'Summarize this PDF.', "
+        f"but got {wf.run.prompt}"
+    )
+    assert wf.run.output == "Here is the summary.", (
+        f"expected wf.run.output to equal 'Here is the summary.', "
+        f"but got {wf.run.output}"
+    )
+    assert len(wf.run.tool_calls) == 3, (
+        f"expected 3 tool calls, but got {len(wf.run.tool_calls)}"
+    )
+    assert wf.tool_usage_counts()["web_search"] == 2, (
+        f"expected 'web_search to be used 2 times, "
+        f"but got {wf.tool_usage_counts()}"
+    )
+    assert wf.most_used_tool() == "web_search", (
+        f"expected most used tool to be 'web_search', "
+        f"but got {wf.most_used_tool()}"
+    )
 
 
 def test_serialization_round_trip():
@@ -59,11 +73,23 @@ def test_serialization_round_trip():
     data = wf.to_dict()
     wf2 = WorkflowRun.from_dict(data)
 
-    assert wf2.agent_name == "AgentA"
-    assert wf2.run.prompt == "Hello"
-    assert wf2.run.output == "Done"
-    assert wf2.run.tool_calls[0].tool_name == "calculator"
-    assert wf2.most_used_tool() == "calculator"
+    assert wf2.agent_name == "AgentA", (
+        f"expected agent_name to be 'AgentA', but got {wf2.agent_name}"
+    )
+    assert wf2.run.prompt == "Hello", (
+        f"expected run.prompt to be 'Hello', but got {wf2.run.prompt}"
+    )
+    assert wf2.run.output == "Done",  (
+        f"expected run.prompt to be 'Done', but got {wf2.run.output}"
+    )
+    assert wf2.run.tool_calls[0].tool_name == "calculator", (
+        f"expected first tool call to be 'calculator', "
+        f"but got {wf2.run.tool_calls[0].tool_name}"
+    )
+    assert wf2.most_used_tool() == "calculator", (
+        f"expected most used tool to be 'calculator', "
+        f"but got {wf2.most_used_tool()}"
+    )
 
 
 def test_most_used_tool_none_when_no_calls():
@@ -73,7 +99,10 @@ def test_most_used_tool_none_when_no_calls():
     run = AgentRunRecord(prompt="No tools")
     wf = WorkflowRun(agent_name="AgentA", run=run)
 
-    assert wf.most_used_tool() is None
+    assert wf.most_used_tool() is None, (
+        f"expected most_used_tool() to return None when no tool calls exist, "
+        f"but got {wf.most_used_tool()}"
+    )
 
 
 def test_tool_call_order_increments():
@@ -85,5 +114,9 @@ def test_tool_call_order_increments():
     t1 = run.record_tool_call("tool_a")
     t2 = run.record_tool_call("tool_b")
 
-    assert t1.order == 0
-    assert t2.order == 1
+    assert t1.order == 0, (
+        f"expected first tool call order to be 0, but got {t1.order}"
+    )
+    assert t2.order == 1, (
+        f"expected second tool call order to be 1, but got {t2.order}"
+    )
