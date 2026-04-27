@@ -42,16 +42,42 @@ def test_controller_records_successful_tool_call():
     result = controller.execute("calculator", a=2, b=3)
     workflow_run = controller.finish_run("The answer is 5")
 
-    assert result.result == 5
-    assert isinstance(workflow_run, WorkflowRun)
-    assert workflow_run.run.prompt == "Add two numbers"
-    assert workflow_run.run.output == "The answer is 5"
-    assert len(workflow_run.run.tool_calls) == 1
-    assert workflow_run.run.tool_calls[0].tool_name == "calculator"
-    assert workflow_run.run.tool_calls[0].result == 5
-    assert workflow_run.run.tool_calls[0].error is None
-    assert workflow_run.run.tool_calls[0].status == "success"
-    assert workflow_run.run.tool_calls[0].execution_time_ms == 12.5
+    assert result.result == 5, (
+        f"expected result.result to be 5, but got {result.result}"
+    )
+    assert isinstance(workflow_run, WorkflowRun), (
+        f"expected workflow_run to be instance of WorkflowRun, "
+        f"but got {type(workflow_run)}"
+    )
+    assert workflow_run.run.prompt == "Add two numbers", (
+        f"expected run.prompt to be 'Add two numbers', "
+        f"but got {workflow_run.run.prompt}"
+    )
+    assert workflow_run.run.output == "The answer is 5", (
+        f"expected run.output to be 'The answer is 5', "
+        f"but got {workflow_run.run.output}"
+    )
+    assert len(workflow_run.run.tool_calls) == 1, (
+        f"expected 1 tool call, but got {len(workflow_run.run.tool_calls)}"
+    )
+    assert workflow_run.run.tool_calls[0].tool_name == "calculator", (
+        f"expected tool_name to be 'calculator', "
+        f"but got {workflow_run.run.tool_calls[0].tool_name}"
+    )
+    assert workflow_run.run.tool_calls[0].result == 5, (
+        f"expected tool result to be 5, "
+        f"but got {workflow_run.run.tool_calls[0].result}"
+    )
+    assert workflow_run.run.tool_calls[0].error is None, (
+        f"expected no error, but got {workflow_run.run.tool_calls[0].error}"
+    )
+    assert workflow_run.run.tool_calls[0].status == "success", (
+        f"expected status to be 'success', but got {workflow_run.run.tool_calls[0].status}"
+    )
+    assert workflow_run.run.tool_calls[0].execution_time_ms == 12.5, (
+        f"expected execution_time_ms to be 12.5, "
+        f"but got {workflow_run.run.tool_calls[0].execution_time_ms}"
+    )
 
 
 def test_controller_records_failed_tool_call():
@@ -62,11 +88,24 @@ def test_controller_records_failed_tool_call():
     result = controller.execute("unknown_tool")
     workflow_run = controller.finish_run("Tool failed")
 
-    assert result.error == "Tool failed"
-    assert len(workflow_run.run.tool_calls) == 1
-    assert workflow_run.run.tool_calls[0].tool_name == "unknown_tool"
-    assert workflow_run.run.tool_calls[0].error == "Tool failed"
-    assert workflow_run.run.tool_calls[0].status == "error"
+    assert result.error == "Tool failed", (
+        f"expected result.error to be 'Tool failed', but got {result.error}"
+    )
+    assert len(workflow_run.run.tool_calls) == 1, (
+        f"expected 1 tool call, but got {len(workflow_run.run.tool_calls)}"
+    )
+    assert workflow_run.run.tool_calls[0].tool_name == "unknown_tool", (
+        f"expected tool_name to be 'unknown_tool', "
+        f"but got {workflow_run.run.tool_calls[0].error}"
+    )
+    assert workflow_run.run.tool_calls[0].error == "Tool failed", (
+        f"expected tool error to be 'Tool failed', "
+        f"but got {workflow_run.run.tool_calls[0].error}"
+    )
+    assert workflow_run.run.tool_calls[0].status == "error", (
+        f"expected status to be 'error', "
+        f"but got {workflow_run.run.tool_calls[0].status}"
+    )
 
 
 def test_controller_requires_start_run():

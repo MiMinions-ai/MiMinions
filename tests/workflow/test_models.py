@@ -36,7 +36,7 @@ def test_records_prompt_tools_and_output():
     wf = WorkflowRun(agent_name="MyAgent", run=run)
 
     assert wf.run.prompt == "Summarize this PDF", (
-        f"expected wf.run.prompt to equal 'Summarize this PDF.', "
+        f"expected wf.run.prompt to equal 'Summarize this PDF', "
         f"but got {wf.run.prompt}"
     )
     assert wf.run.output == "Here is the summary.", (
@@ -47,7 +47,7 @@ def test_records_prompt_tools_and_output():
         f"expected 3 tool calls, but got {len(wf.run.tool_calls)}"
     )
     assert wf.tool_usage_counts()["web_search"] == 2, (
-        f"expected 'web_search to be used 2 times, "
+        f"expected 'web_search' to be used 2 times, "
         f"but got {wf.tool_usage_counts()}"
     )
     assert wf.most_used_tool() == "web_search", (
@@ -80,7 +80,7 @@ def test_serialization_round_trip():
         f"expected run.prompt to be 'Hello', but got {wf2.run.prompt}"
     )
     assert wf2.run.output == "Done",  (
-        f"expected run.prompt to be 'Done', but got {wf2.run.output}"
+        f"expected run.output to be 'Done', but got {wf2.run.output}"
     )
     assert wf2.run.tool_calls[0].tool_name == "calculator", (
         f"expected first tool call to be 'calculator', "
