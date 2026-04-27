@@ -66,11 +66,17 @@ class RegisteredTool:
 
 class Minion:
     """
-    Minion agent implementation.
-    
-    Uses pydantic_ai infrastructure for LLM-ready tool management.
-    Currently operates in direct execution mode (no LLM) but structured
-    for easy LLM integration by replacing TestModel with a real model.
+    Minion — an LLM-powered agent built on top of pydantic_ai.
+
+    Minion owns the full agent lifecycle: model config, tool registry, and the
+    async reasoning loop.  Callers interact only with Minion — the underlying
+    pydantic_ai Agent is a private implementation detail.
+
+    Typical usage::
+
+        minion = create_minion(name="MyAgent", description="...")
+        minion.register_tool("do_thing", "Does a thing", do_thing)
+        reply = await minion.run("Please do the thing")
     """
 
     def __init__(
@@ -414,10 +420,31 @@ class Minion:
         if rebuild:
             self._rebuild_pydantic_ai_agent()
 
-    def get_pydantic_ai_agent(self) -> Agent:
-        """Get the underlying pydantic_ai Agent for LLM operations. Use for when integrating with an LLM."""
+    async def run(self, prompt: str, message_history: Optional[List[Any]] = None) -> str:
+        """Send a prompt to the LLM and return the reply.
+
+        This is the primary entry point for agent interaction.  Tools registered
+        via ``register_tool`` are automatically available to the LLM and will be
+        called by pydantic_ai whenever the model decides to use them.
+
+        Args:
+            prompt: The user message to send.
+            message_history: Optional prior messages (pydantic_ai message objects)
+                             for multi-turn conversation context.
+
+        Returns:
+            The LLM's reply as a plain string.
+
+        Raises:
+            Exception: Re-raises any network / API error so callers can handle it.
+        """
         self._rebuild_pydantic_ai_agent()
-        return self._pydantic_ai_agent
+        result = await self._pydantic_ai_agent.run(
+            prompt,
+            message_history=message_history or None,
+        )
+        self._last_messages = result.all_messages()
+        return result.output if hasattr(result, "output") else str(result.data)
 
     def set_model(self, model: Any) -> None:
         self._model = model
