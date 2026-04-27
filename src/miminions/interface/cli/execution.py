@@ -1,15 +1,16 @@
 """
 Execution commands for MiMinions CLI.
 Handles tool execution, session management, and interaction tracking.
+
+Interaction records are persisted as WorkflowRun objects (from miminions.workflow.models),
+ensuring consistency with the workflow tracing layer introduced in PR #46.
 """
 
 import asyncio
 import click
 import io
 import json
-import subprocess
 import sys
-import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,9 +19,10 @@ from typing import Any, Optional
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 from miminions.agent.simple_agent import Agent
 from miminions.tools import GenericTool
+from miminions.workflow.models import AgentRunRecord, WorkflowRun
 
 
-# ── File helpers (same pattern as agent.py / task.py) ──────────────────────
+# ── File helpers ──────────────────────────────────────────────────────────────
 
 def _sessions_file() -> Path:
     return get_config_dir() / "sessions.json"
@@ -42,7 +44,7 @@ def _active_session():
     return None, None
 
 
-# ── Auth decorator (mirrors all other CLI modules) ──────────────────────────
+# ── Auth decorator ────────────────────────────────────────────────────────────
 
 def require_auth():
     def decorator(f):
@@ -58,13 +60,10 @@ def require_auth():
     return decorator
 
 
-# ── Agent builder — replays tool_sources for in-session persistency ─────────
+# ── Agent builder ─────────────────────────────────────────────────────────────
 
 def _build_agent(session_id: str, session: dict) -> Agent:
-    """
-    Reconstruct the session Agent by replaying its persisted tool_sources.
-    This gives tools in-memory persistency across CLI calls without a server.
-    """
+    """Reconstruct the session Agent by replaying its persisted tool_sources."""
     agent = Agent(name=f"session-{session_id}")
     for src in session.get("tool_sources", []):
         if src["type"] == "module":
@@ -74,325 +73,320 @@ def _build_agent(session_id: str, session: dict) -> Agent:
 def _load_module(agent: Agent, path: str) -> int:
     """Load GenericTool instances from a .py file into the agent."""
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_mm_tools", path)
+    spec = importlib.util.spec_from_file_location("_dyn_module", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     count = 0
-    for name in dir(mod):
-        obj = getattr(mod, name)
-        if isinstance(obj, GenericTool):
-            agent.add_tool(obj)
+    for attr in vars(mod).values():
+        if isinstance(attr, GenericTool):
+            agent.register_tool(attr)
             count += 1
     return count
 
 
-# ── Execution context — captures stdout, intercepts stdin ───────────────────
+# ── Interaction recording (uses WorkflowRun from PR #46 models) ───────────────
 
-class _Stdin:
-    """Intercepts input() calls from tools, records them for the interaction log."""
-    def __init__(self):
-        self.exchanges = []
-
-    def readline(self) -> str:
-        sys.__stdout__.write("\n🔵  Tool requires input: ")
-        sys.__stdout__.flush()
-        response = sys.__stdin__.readline().rstrip("\n")
-        self.exchanges.append({"prompt": "stdin", "response": response})
-        return response + "\n"
-
-    def fileno(self): return sys.__stdin__.fileno()
-    def isatty(self): return False
-
-
-def _run_tool(agent: Agent, tool_name: str, inputs: dict, session_id: str) -> None:
+def _record_interaction(
+    session_id: str,
+    agent_name: str,
+    prompt: str,
+    tool_name: str,
+    inputs: dict,
+    result: Any,
+    error: Optional[str],
+    status: str,
+    execution_time_ms: Optional[float],
+    stdout_output: str,
+) -> WorkflowRun:
     """
-    Execute a tool with stdout capture and stdin interception.
-    Automatically logs the interaction — no manual call needed.
+    Record a tool execution as a WorkflowRun and persist it to interactions.json.
+
+    Uses AgentRunRecord + ToolCallRecord from miminions.workflow.models so that
+    the CLI interaction log shares the same schema as the workflow tracing layer.
+    stdout_output is stored in the ToolCallRecord's kwargs for full reproducibility.
     """
-    buf = io.StringIO()
-    stdin = _Stdin()
-    old_out, old_in = sys.stdout, sys.stdin
-    sys.stdout, sys.stdin = buf, stdin
+    run = AgentRunRecord(prompt=prompt)
+    run.record_tool_call(
+        tool_name=tool_name,
+        kwargs={**inputs, "__stdout__": stdout_output},
+        result=result,
+        error=error,
+        status=status,
+        execution_time_ms=execution_time_ms,
+    )
+    run.output = stdout_output or str(result)
 
-    start = time.time()
-    result, status = None, "success"
+    workflow_run = WorkflowRun(agent_name=agent_name, run=run)
 
-    try:
-        raw = agent.execute_tool(tool_name, **inputs)
-        result = asyncio.run(raw) if asyncio.iscoroutine(raw) else raw
-    except RuntimeError as e:
-        if "async" in str(e).lower():
-            try:
-                result = asyncio.run(agent.execute_tool_async(tool_name, **inputs))
-            except Exception as inner:
-                result, status = str(inner), "error"
-        else:
-            result, status = str(e), "error"
-    except Exception as e:
-        result, status = str(e), "error"
-    finally:
-        sys.stdout, sys.stdin = old_out, old_in
-
-    elapsed = round((time.time() - start) * 1000, 2)
-    captured = buf.getvalue()
-
-    # Auto-log every execution
-    interactions = _load(_interactions_file()) or []
-    interaction_id = str(uuid.uuid4())[:8]
-    interactions.append({
-        "id": interaction_id,
-        "session_id": session_id,
-        "tool": tool_name,
-        "inputs": inputs,
-        "result": result if isinstance(result, (str, int, float, bool, dict, list, type(None))) else str(result),
-        "status": status,
-        "stdout": captured,
-        "user_inputs": stdin.exchanges,
-        "elapsed_ms": elapsed,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
+    # Persist
+    interactions = _load(_interactions_file())
+    if session_id not in interactions:
+        interactions[session_id] = []
+    interactions[session_id].append(workflow_run.to_dict())
     _save(_interactions_file(), interactions)
 
-    # Update session counter
-    sessions = _load(_sessions_file())
-    if session_id in sessions:
-        sessions[session_id]["interaction_count"] = sessions[session_id].get("interaction_count", 0) + 1
-        _save(_sessions_file(), sessions)
-
-    # Print results
-    if captured:
-        click.echo(f"\n── stdout ──\n{captured.rstrip()}\n───────────")
-    if stdin.exchanges:
-        click.echo(f"   ({len(stdin.exchanges)} user input(s) recorded)")
-    if status == "success":
-        click.echo(f"✓  {result}  [{elapsed}ms | {interaction_id}]")
-    else:
-        click.echo(f"✗  {result}", err=True)
+    return workflow_run
 
 
-# ── CLI ─────────────────────────────────────────────────────────────────────
+# ── Tool execution ────────────────────────────────────────────────────────────
+
+def _run_tool(session_id: str, session: dict, tool_name: str, inputs: dict):
+    """Execute a tool and record the result as a WorkflowRun."""
+    agent = _build_agent(session_id, session)
+    agent_name = f"session-{session_id}"
+
+    buf = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buf
+    start = datetime.now(timezone.utc)
+    result_val = None
+    error_val = None
+    status = "success"
+
+    try:
+        result_obj = asyncio.get_event_loop().run_until_complete(
+            agent.execute_async(tool_name, arguments=inputs)
+        )
+        result_val = result_obj.result
+        error_val = result_obj.error
+        status = str(result_obj.status)
+    except Exception as e:
+        error_val = str(e)
+        status = "error"
+    finally:
+        sys.stdout = old_stdout
+
+    elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+    stdout_output = buf.getvalue()
+
+    workflow_run = _record_interaction(
+        session_id=session_id,
+        agent_name=agent_name,
+        prompt=f"Execute tool: {tool_name}",
+        tool_name=tool_name,
+        inputs=inputs,
+        result=result_val,
+        error=error_val,
+        status=status,
+        execution_time_ms=elapsed_ms,
+        stdout_output=stdout_output,
+    )
+
+    return workflow_run, stdout_output
+
+
+# ── CLI command group ─────────────────────────────────────────────────────────
 
 @click.group()
-def execution_cli():
-    """Tool execution, session management, and interaction tracking."""
+def execution():
+    """Manage live execution sessions and tool runs."""
     pass
 
 
-@execution_cli.command("run")
-@click.argument("tool_name")
-@click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE", help="Repeatable.")
-@require_auth()
-def run_tool(tool_name: str, inputs: tuple):
-    """Execute a tool in the active session.
+# ── Session commands ──────────────────────────────────────────────────────────
 
-    \b
-    Example:
-        miminions execution run calculator --input operation=add --input a=5 --input b=3
-    """
-    session_id, session = _active_session()
-    if not session_id:
-        click.echo("No active session. Run: miminions execution session start", err=True)
-        return
-
-    parsed = {}
-    for pair in inputs:
-        if "=" not in pair:
-            click.echo(f"Invalid input '{pair}'. Use KEY=VALUE.", err=True)
-            return
-        k, _, v = pair.partition("=")
-        try:
-            parsed[k.strip()] = json.loads(v.strip())
-        except json.JSONDecodeError:
-            parsed[k.strip()] = v.strip()
-
-    agent = _build_agent(session_id, session)
-    if not agent.get_tool(tool_name):
-        click.echo(f"Tool '{tool_name}' not found. Available: {', '.join(agent.list_tools()) or 'none'}", err=True)
-        return
-
-    _run_tool(agent, tool_name, parsed, session_id)
-
-
-# ── Session ──────────────────────────────────────────────────────────────────
-
-@execution_cli.group("session")
-def session_group():
-    """Manage live execution sessions."""
+@execution.group()
+def session():
+    """Manage execution sessions."""
     pass
 
 
-@session_group.command("start")
-@click.option("--name", default=None)
-@require_auth()
-def start_session(name: Optional[str]):
-    """Start a new session."""
-    sid, _ = _active_session()
+@session.command("start")
+@click.option("--name", default=None, help="Optional session name.")
+def session_start(name):
+    """Start a new execution session."""
+    sid, existing = _active_session()
     if sid:
-        click.echo(f"Session '{sid}' already active. Stop it first.", err=True)
+        click.echo(f"Session {sid} is already active. Stop it first.")
         return
-    session_id = str(uuid.uuid4())[:8]
+
+    session_id = uuid.uuid4().hex[:8]
     sessions = _load(_sessions_file())
     sessions[session_id] = {
-        "name": name or f"session-{session_id}",
+        "name": name or session_id,
         "status": "active",
-        "started_at": datetime.now(timezone.utc).isoformat(),
-        "interaction_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "tool_sources": [],
     }
     _save(_sessions_file(), sessions)
-    click.echo(f"✓  Session started  |  ID: {session_id}")
-    click.echo(f"   Add tools: miminions execution session add-tool {session_id} ./tools.py")
+    click.echo(f"Session started: {session_id}")
 
 
-@session_group.command("stop")
-@require_auth()
-def stop_session():
+@session.command("stop")
+def session_stop():
     """Stop the active session."""
-    session_id, session = _active_session()
-    if not session_id:
-        click.echo("No active session.", err=True)
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session.")
         return
     sessions = _load(_sessions_file())
-    sessions[session_id]["status"] = "stopped"
-    sessions[session_id]["stopped_at"] = datetime.now(timezone.utc).isoformat()
+    sessions[sid]["status"] = "stopped"
+    sessions[sid]["stopped_at"] = datetime.now(timezone.utc).isoformat()
     _save(_sessions_file(), sessions)
-    click.echo(f"✓  Session '{session.get('name', session_id)}' stopped.")
+    click.echo(f"Session {sid} stopped.")
 
 
-@session_group.command("list")
-@require_auth()
-def list_sessions():
+@session.command("list")
+def session_list():
     """List all sessions."""
     sessions = _load(_sessions_file())
     if not sessions:
         click.echo("No sessions found.")
         return
     for sid, s in sessions.items():
-        marker = " ◀ active" if s.get("status") == "active" else ""
-        click.echo(f"  {sid}  {s.get('name', sid)}  ({s.get('status')})  interactions={s.get('interaction_count', 0)}{marker}")
+        click.echo(f"[{s['status']}] {sid}  name={s.get('name')}  created={s.get('created_at')}")
 
 
-@session_group.command("add-tool")
-@click.argument("session_id")
-@click.argument("module_path")
-@require_auth()
-def add_tool(session_id: str, module_path: str):
-    """Register a Python module's tools into a session (persists across runs).
+# ── Add-tool command ──────────────────────────────────────────────────────────
 
-    \b
-    Example:
-        miminions execution session add-tool abc123 ./my_tools.py
-    """
+@execution.command("add-tool")
+@click.argument("path")
+def add_tool(path):
+    """Register a tool module (.py) with the active session."""
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session. Run 'execution session start' first.")
+        return
+
+    resolved = str(Path(path).resolve())
     sessions = _load(_sessions_file())
-    if session_id not in sessions:
-        click.echo(f"Session '{session_id}' not found.", err=True)
+    sources = sessions[sid].setdefault("tool_sources", [])
+
+    if any(src["path"] == resolved for src in sources):
+        click.echo(f"Tool source already registered: {resolved}")
         return
-    path = Path(module_path).resolve()
-    if not path.exists():
-        click.echo(f"File not found: {path}", err=True)
-        return
-    tmp = Agent(name="tmp")
-    try:
-        count = _load_module(tmp, str(path))
-    except Exception as e:
-        click.echo(f"✗  Failed to load: {e}", err=True)
-        return
-    sessions[session_id]["tool_sources"].append({"type": "module", "path": str(path)})
+
+    # Verify it loads
+    agent = Agent(name="probe")
+    count = _load_module(agent, resolved)
+    sources.append({"type": "module", "path": resolved})
     _save(_sessions_file(), sessions)
-    click.echo(f"✓  {count} tool(s) registered: {', '.join(tmp.list_tools())}")
+    click.echo(f"Registered {count} tool(s) from {resolved}")
 
 
-# ── Interactions ─────────────────────────────────────────────────────────────
+# ── Run command ───────────────────────────────────────────────────────────────
 
-@execution_cli.group("interactions")
-def interactions_group():
-    """View the interaction log."""
+@execution.command("run")
+@click.argument("tool_name")
+@click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
+              help="Tool input as KEY=VALUE pairs.")
+def run_tool(tool_name, inputs):
+    """Execute a tool in the active session."""
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session.")
+        return
+
+    parsed = {}
+    for item in inputs:
+        if "=" not in item:
+            click.echo(f"Invalid input format '{item}'. Use KEY=VALUE.")
+            return
+        k, v = item.split("=", 1)
+        parsed[k.strip()] = v.strip()
+
+    workflow_run, stdout_output = _run_tool(sid, s, tool_name, parsed)
+    tool_call = workflow_run.run.tool_calls[0]
+
+    if stdout_output:
+        click.echo(stdout_output, nl=False)
+
+    if tool_call.error:
+        click.echo(f"Error: {tool_call.error}", err=True)
+    else:
+        click.echo(f"Result: {tool_call.result}")
+
+    click.echo(f"Recorded as WorkflowRun {workflow_run.id} ({tool_call.execution_time_ms:.1f}ms)")
+
+
+# ── Interaction commands ──────────────────────────────────────────────────────
+
+@execution.group()
+def interaction():
+    """View recorded interactions (stored as WorkflowRun objects)."""
     pass
 
 
-@interactions_group.command("list")
-@click.option("--session", default=None)
-@click.option("--limit", default=20, show_default=True)
-@require_auth()
-def list_interactions(session: Optional[str], limit: int):
-    """List recorded interactions."""
-    items = _load(_interactions_file()) or []
-    if session:
-        items = [i for i in items if i.get("session_id") == session]
-    for r in items[-limit:]:
-        flags = ("📄" if r.get("stdout") else "  ") + ("💬" if r.get("user_inputs") else "  ")
-        click.echo(f"  {r['id']}  {r['timestamp'][:19]}  {r['tool']:<20}  {r['status']:<8}  {r.get('elapsed_ms', 0):>7.1f}ms  {flags}")
-
-
-@interactions_group.command("show")
-@click.argument("interaction_id")
-@require_auth()
-def show_interaction(interaction_id: str):
-    """Show full details for one interaction."""
-    items = _load(_interactions_file()) or []
-    record = next((i for i in items if i.get("id") == interaction_id), None)
-    if not record:
-        click.echo(f"Interaction '{interaction_id}' not found.", err=True)
-        return
-    click.echo(json.dumps(record, indent=2))
-
-
-# ── Test runner ───────────────────────────────────────────────────────────────
-
-@execution_cli.command("test")
-@click.argument("path", default="tests/")
-@click.option("--verbose", "-v", is_flag=True, help="Run pytest with verbose output.")
-@click.option("--session", "session_id", default=None, help="Session to log against (defaults to active).")
-@require_auth()
-def run_tests(path: str, verbose: bool, session_id: Optional[str]):
-    """Run pytest on a path and log the result as an interaction.
-
-    \b
-    Examples:
-        miminions execution test
-        miminions execution test tests/test_agent.py
-        miminions execution test tests/ --verbose
-    """
+@interaction.command("list")
+@click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+def interaction_list(session_id):
+    """List all recorded WorkflowRuns for a session."""
     if not session_id:
         session_id, _ = _active_session()
-    session_id = session_id or "no-session"
+    if not session_id:
+        click.echo("No active session and no --session-id provided.")
+        return
 
-    cmd = [sys.executable, "-m", "pytest", path, "--tb=short"]
-    if verbose:
-        cmd.append("-v")
+    interactions = _load(_interactions_file())
+    runs = interactions.get(session_id, [])
+    if not runs:
+        click.echo("No interactions recorded.")
+        return
 
-    click.echo(f"▶  Running tests: {' '.join(cmd)}")
-    start = time.time()
+    for i, wf_dict in enumerate(runs):
+        wf = WorkflowRun.from_dict(wf_dict)
+        tc = wf.run.tool_calls[0] if wf.run.tool_calls else None
+        tool_name = tc.tool_name if tc else "?"
+        status = tc.status if tc else "?"
+        click.echo(f"[{i}] {wf.id}  tool={tool_name}  status={status}  created={wf.created_at}")
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    elapsed = round((time.time() - start) * 1000, 2)
 
-    output = proc.stdout + proc.stderr
-    status = "success" if proc.returncode == 0 else "error"
+@interaction.command("show")
+@click.argument("index", type=int)
+@click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+def interaction_show(index, session_id):
+    """Show full details of a recorded WorkflowRun by index."""
+    if not session_id:
+        session_id, _ = _active_session()
+    if not session_id:
+        click.echo("No active session and no --session-id provided.")
+        return
 
-    items = _load(_interactions_file()) or []
-    interaction_id = str(uuid.uuid4())[:8]
-    items.append({
-        "id": interaction_id,
-        "session_id": session_id,
-        "tool": "pytest",
-        "inputs": {"path": path, "verbose": verbose},
-        "result": f"exit code {proc.returncode}",
-        "status": status,
-        "stdout": output,
-        "user_inputs": [],
-        "elapsed_ms": elapsed,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
-    _save(_interactions_file(), items)
+    interactions = _load(_interactions_file())
+    runs = interactions.get(session_id, [])
 
-    sessions = _load(_sessions_file())
-    if session_id in sessions:
-        sessions[session_id]["interaction_count"] = sessions[session_id].get("interaction_count", 0) + 1
-        _save(_sessions_file(), sessions)
+    if index < 0 or index >= len(runs):
+        click.echo(f"No interaction at index {index}.")
+        return
 
-    click.echo(output.rstrip())
-    if status == "success":
-        click.echo(f"\n✓  All tests passed  [{elapsed}ms | {interaction_id}]")
-    else:
-        click.echo(f"\n✗  Tests failed  [{elapsed}ms | {interaction_id}]", err=True)
+    wf = WorkflowRun.from_dict(runs[index])
+    click.echo(json.dumps(wf.to_dict(), indent=2))
+
+
+# ── Test runner command ───────────────────────────────────────────────────────
+
+@execution.command("test")
+@click.argument("path", default=".")
+def run_tests(path):
+    """Run pytest and record the result as a WorkflowRun interaction."""
+    import subprocess
+    sid, s = _active_session()
+
+    start = datetime.now(timezone.utc)
+    proc = subprocess.run(
+        ["pytest", path, "-v"],
+        capture_output=True,
+        text=True,
+    )
+    elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+    passed = proc.returncode == 0
+    click.echo(proc.stdout)
+
+    if sid:
+        run = AgentRunRecord(prompt=f"pytest {path}")
+        run.record_tool_call(
+            tool_name="pytest",
+            kwargs={"path": path},
+            result=proc.stdout,
+            error=proc.stderr if not passed else None,
+            status="success" if passed else "failure",
+            execution_time_ms=elapsed_ms,
+        )
+        run.output = "Tests passed." if passed else "Tests failed."
+        wf = WorkflowRun(agent_name=f"session-{sid}", run=run)
+
+        interactions = _load(_interactions_file())
+        interactions.setdefault(sid, []).append(wf.to_dict())
+        _save(_interactions_file(), interactions)
+
+        click.echo(f"Recorded as WorkflowRun {wf.id}")
