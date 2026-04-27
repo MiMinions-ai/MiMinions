@@ -2,12 +2,14 @@
 
 import asyncio
 import inspect
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
 from pydantic_ai import Agent, Tool, RunContext
-from pydantic_ai.models.test import TestModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from mcp import StdioServerParameters
 
 from ..tools import GenericTool
@@ -87,8 +89,27 @@ class Minion:
         self._connected_servers: Dict[str, StdioServerParameters] = {}
         self._chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
         
-        # Replace TestModel with real model for LLM support
-        self._model = model or TestModel()
+        # ------------------------------------------------------------------
+        # Model selection
+        # ------------------------------------------------------------------
+        # Build the default OpenRouter-backed model when no model is supplied.
+        # OpenRouter speaks the OpenAI wire protocol; we point OpenAIProvider
+        # at their base URL and hand it the OPENROUTER_API_KEY from the env.
+        # The model string uses the free-tier suffix (:free) to avoid burning
+        # credits during development.
+        if model is not None:
+            self._model = model
+        else:
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            provider = OpenAIProvider(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+            )
+            self._model = OpenAIModel(
+                "openai/gpt-oss-20b:free",
+                provider=provider,
+            )
+
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
         
