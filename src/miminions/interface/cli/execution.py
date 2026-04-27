@@ -1,259 +1,397 @@
 """
-Unit tests for the MiMinions CLI execution module.
+Execution commands for MiMinions CLI.
+Handles tool execution, session management, and interaction tracking.
+
+Interaction records are persisted as WorkflowRun objects (from miminions.workflow.models),
+ensuring consistency with the workflow tracing layer introduced in PR #46.
 """
 
-import pytest
+import asyncio
+import click
+import io
 import json
+import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-from click.testing import CliRunner
+from typing import Any, Optional
 
-from miminions.interface.cli.main import cli
+from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from miminions.agent.simple_agent import Agent
+from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun
 
 
-# ── Fixtures ─────────────────────────────────────────────────────────────────
+# ── File helpers ──────────────────────────────────────────────────────────────
 
-@pytest.fixture
-def runner():
-    return CliRunner()
+def _sessions_file() -> Path:
+    return get_config_dir() / "sessions.json"
 
+def _interactions_file() -> Path:
+    return get_config_dir() / "interactions.json"
 
-@pytest.fixture
-def config_dir(tmp_path):
-    config = tmp_path / ".miminions"
-    config.mkdir()
-    return config
+def _load(path: Path) -> Any:
+    return json.loads(path.read_text()) if path.exists() else {}
 
+def _save(path: Path, data: Any) -> None:
+    path.write_text(json.dumps(data, indent=2))
 
-@pytest.fixture
-def authenticated(config_dir):
-    """Pre-authenticated config dir so auth checks pass."""
-    auth_file = config_dir / "auth.json"
-    auth_file.write_text(json.dumps({"username": "testuser", "authenticated": True}))
-    return config_dir
-
-
-@pytest.fixture
-def active_session(config_dir):
-    """Config dir with one active session already in sessions.json."""
-    session_id = "abc12345"
-    sessions_file = config_dir / "sessions.json"
-    sessions_file.write_text(json.dumps({
-        session_id: {
-            "name": "test-session",
-            "status": "active",
-            "started_at": "2026-01-01T00:00:00",
-            "interaction_count": 0,
-            "tool_sources": [],
-        }
-    }))
-    return config_dir, session_id
+def _active_session():
+    """Return (id, session) for the current active session, else (None, None)."""
+    for sid, s in _load(_sessions_file()).items():
+        if s.get("status") == "active":
+            return sid, s
+    return None, None
 
 
-@pytest.fixture
-def mock_agent():
-    """MagicMock standing in for a fully constructed Agent."""
-    agent = MagicMock()
-    agent.list_tools.return_value = ["calculator"]
-    agent.get_tool.return_value = MagicMock()
-    agent.execute_tool.return_value = "42"
+# ── Auth decorator ────────────────────────────────────────────────────────────
+
+def require_auth():
+    def decorator(f):
+        def wrapper(*args, **kwargs):
+            if not is_authenticated():
+                if is_public_access_enabled():
+                    click.echo("⚠️  Public access mode.", err=True)
+                else:
+                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
+                    return
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# ── Agent builder ─────────────────────────────────────────────────────────────
+
+def _build_agent(session_id: str, session: dict) -> Agent:
+    """Reconstruct the session Agent by replaying its persisted tool_sources."""
+    agent = Agent(name=f"session-{session_id}")
+    for src in session.get("tool_sources", []):
+        if src["type"] == "module":
+            _load_module(agent, src["path"])
     return agent
 
+def _load_module(agent: Agent, path: str) -> int:
+    """Load GenericTool instances from a .py file into the agent."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_dyn_module", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    count = 0
+    for attr in vars(mod).values():
+        if isinstance(attr, GenericTool):
+            agent.register_tool(attr)
+            count += 1
+    return count
 
-def _make_workflow_run_dict(session_id: str, tool_name: str = "calculator", status: str = "success") -> dict:
-    """Helper: build a WorkflowRun dict in the format interactions.json now uses."""
-    run = AgentRunRecord(prompt=f"Execute tool: {tool_name}")
+
+# ── Interaction recording (uses WorkflowRun from PR #46 models) ───────────────
+
+def _record_interaction(
+    session_id: str,
+    agent_name: str,
+    prompt: str,
+    tool_name: str,
+    inputs: dict,
+    result: Any,
+    error: Optional[str],
+    status: str,
+    execution_time_ms: Optional[float],
+    stdout_output: str,
+) -> WorkflowRun:
+    """
+    Record a tool execution as a WorkflowRun and persist it to interactions.json.
+
+    Uses AgentRunRecord + ToolCallRecord from miminions.workflow.models so that
+    the CLI interaction log shares the same schema as the workflow tracing layer.
+    stdout_output is stored in the ToolCallRecord's kwargs for full reproducibility.
+    """
+    run = AgentRunRecord(prompt=prompt)
     run.record_tool_call(
         tool_name=tool_name,
-        kwargs={"a": 1},
-        result="42",
-        error=None,
+        kwargs={**inputs, "__stdout__": stdout_output},
+        result=result,
+        error=error,
         status=status,
-        execution_time_ms=10.0,
+        execution_time_ms=execution_time_ms,
     )
-    run.output = "42"
-    wf = WorkflowRun(agent_name=f"session-{session_id}", run=run)
-    return wf.to_dict()
+    run.output = stdout_output or str(result)
 
+    workflow_run = WorkflowRun(agent_name=agent_name, run=run)
 
-# ── Help / smoke ──────────────────────────────────────────────────────────────
+    # Persist
+    interactions = _load(_interactions_file())
+    if session_id not in interactions:
+        interactions[session_id] = []
+    interactions[session_id].append(workflow_run.to_dict())
+    _save(_interactions_file(), interactions)
 
-class TestExecutionHelp:
-
-    def test_execution_help(self, runner):
-        result = runner.invoke(cli, ["execution", "--help"])
-        assert result.exit_code == 0
-        assert "session" in result.output
-        assert "interaction" in result.output
-        assert "test" in result.output
-
-    def test_session_help(self, runner):
-        result = runner.invoke(cli, ["execution", "session", "--help"])
-        assert result.exit_code == 0
-        assert "start" in result.output
-        assert "stop" in result.output
-        assert "list" in result.output
-
-    def test_interactions_help(self, runner):
-        result = runner.invoke(cli, ["execution", "interaction", "--help"])
-        assert result.exit_code == 0
-        assert "list" in result.output
-        assert "show" in result.output
-
-
-# ── Session management ────────────────────────────────────────────────────────
-
-class TestSessionManagement:
-
-    def test_start_session(self, runner, authenticated):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "session", "start", "--name", "my-session"])
-            assert result.exit_code == 0
-            assert "Session started" in result.output
-
-    def test_start_session_blocks_duplicate(self, runner, authenticated, active_session):
-        config_dir, _ = active_session
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "session", "start", "--name", "new-session"])
-            assert result.exit_code == 0
-            assert "already active" in result.output
-
-    def test_list_sessions_empty(self, runner, authenticated):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "session", "list"])
-            assert result.exit_code == 0
-            assert "No sessions found" in result.output
-
-    def test_list_sessions_shows_active(self, runner, authenticated, active_session):
-        config_dir, session_id = active_session
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "session", "list"])
-            assert result.exit_code == 0
-            assert "test-session" in result.output
-            assert "active" in result.output
-
-    def test_stop_active_session(self, runner, authenticated, active_session):
-        config_dir, _ = active_session
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "session", "stop"])
-            assert result.exit_code == 0
-            assert "stopped" in result.output
-
-    def test_stop_no_active_session(self, runner, authenticated):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "session", "stop"])
-            assert result.exit_code == 0
-            assert "No active session" in result.output
+    return workflow_run
 
 
 # ── Tool execution ────────────────────────────────────────────────────────────
 
-class TestToolExecution:
+def _run_tool(session_id: str, session: dict, tool_name: str, inputs: dict):
+    """Execute a tool and record the result as a WorkflowRun."""
+    agent = _build_agent(session_id, session)
+    agent_name = f"session-{session_id}"
 
-    def test_run_no_active_session(self, runner, authenticated):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "run", "calculator"])
-            assert result.exit_code == 0
-            assert "No active session" in result.output
+    buf = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buf
+    start = datetime.now(timezone.utc)
+    result_val = None
+    error_val = None
+    status = "success"
 
-    def test_run_tool_not_found(self, runner, authenticated, active_session, mock_agent):
-        config_dir, _ = active_session
-        mock_agent.get_tool.return_value = None
-        mock_agent.list_tools.return_value = []
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution._build_agent", return_value=mock_agent):
-            result = runner.invoke(cli, ["execution", "run", "nonexistent_tool"])
-            assert result.exit_code == 0
-            assert "not found" in result.output
+    try:
+        result_obj = asyncio.get_event_loop().run_until_complete(
+            agent.execute_async(tool_name, arguments=inputs)
+        )
+        result_val = result_obj.result
+        error_val = result_obj.error
+        status = str(result_obj.status)
+    except Exception as e:
+        error_val = str(e)
+        status = "error"
+    finally:
+        sys.stdout = old_stdout
 
-    def test_run_tool_success(self, runner, authenticated, active_session, mock_agent):
-        config_dir, _ = active_session
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution._build_agent", return_value=mock_agent):
-            result = runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
-            assert result.exit_code == 0
-            assert "42" in result.output
+    elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+    stdout_output = buf.getvalue()
 
-    def test_run_tool_logs_interaction_as_workflow_run(self, runner, authenticated, active_session, mock_agent):
-        """Interactions are now persisted as WorkflowRun objects, not raw dicts."""
-        config_dir, session_id = active_session
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution._build_agent", return_value=mock_agent):
-            runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
-            interactions_file = config_dir / "interactions.json"
-            assert interactions_file.exists(), "interactions.json should be created after a run"
-            raw = json.loads(interactions_file.read_text())
-            assert session_id in raw, f"Expected session_id '{session_id}' as a key in interactions.json"
-            runs = raw[session_id]
-            assert len(runs) == 1, f"Expected 1 recorded WorkflowRun, got {len(runs)}"
-            wf = WorkflowRun.from_dict(runs[0])
-            assert len(wf.run.tool_calls) == 1, f"Expected 1 tool call, got {len(wf.run.tool_calls)}"
-            assert wf.run.tool_calls[0].tool_name == "calculator", \
-                f"Expected tool_name 'calculator', got '{wf.run.tool_calls[0].tool_name}'"
-            assert wf.run.tool_calls[0].status == "success", \
-                f"Expected status 'success', got '{wf.run.tool_calls[0].status}'"
+    workflow_run = _record_interaction(
+        session_id=session_id,
+        agent_name=agent_name,
+        prompt=f"Execute tool: {tool_name}",
+        tool_name=tool_name,
+        inputs=inputs,
+        result=result_val,
+        error=error_val,
+        status=status,
+        execution_time_ms=elapsed_ms,
+        stdout_output=stdout_output,
+    )
+
+    return workflow_run, stdout_output
 
 
-# ── Interactions ──────────────────────────────────────────────────────────────
+# ── CLI command group ─────────────────────────────────────────────────────────
 
-class TestInteractions:
-
-    def test_list_interactions_empty(self, runner, authenticated):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "interaction", "list"])
-            assert result.exit_code == 0
-
-    def test_show_interaction_index_out_of_range(self, runner, authenticated):
-        """show takes an integer index — passing 99 on an empty log returns not found."""
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=authenticated), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=authenticated):
-            result = runner.invoke(cli, ["execution", "interaction", "show", "99"])
-            assert result.exit_code == 0
-            assert "No interaction at index" in result.output
-
-    def test_show_interaction_found(self, runner, authenticated, active_session):
-        """interactions.json now stores WorkflowRun dicts keyed by session_id."""
-        config_dir, session_id = active_session
-        wf_dict = _make_workflow_run_dict(session_id, tool_name="calculator", status="success")
-        interactions_file = config_dir / "interactions.json"
-        interactions_file.write_text(json.dumps({session_id: [wf_dict]}))
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "interaction", "show", "0",
-                                         "--session-id", session_id])
-            assert result.exit_code == 0, f"Unexpected output: {result.output}"
-            assert "calculator" in result.output, \
-                f"Expected 'calculator' in output, got: {result.output}"
-            assert "success" in result.output, \
-                f"Expected 'success' in output, got: {result.output}"
+@click.group()
+def execution():
+    """Manage live execution sessions and tool runs."""
+    pass
 
 
-# ── Auth guard ────────────────────────────────────────────────────────────────
+# ── Session commands ──────────────────────────────────────────────────────────
 
-class TestAuthGuard:
+@execution.group()
+def session():
+    """Manage execution sessions."""
+    pass
 
-    def test_session_start_requires_auth(self, runner, config_dir):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "session", "start"])
-            assert result.exit_code == 0
-            assert "sign in" in result.output.lower()
 
-    def test_run_requires_auth(self, runner, config_dir):
-        with patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir), \
-             patch("miminions.interface.cli.execution.get_config_dir", return_value=config_dir):
-            result = runner.invoke(cli, ["execution", "run", "some_tool"])
-            assert result.exit_code == 0
-            assert "sign in" in result.output.lower()
+@session.command("start")
+@click.option("--name", default=None, help="Optional session name.")
+def session_start(name):
+    """Start a new execution session."""
+    sid, existing = _active_session()
+    if sid:
+        click.echo(f"Session {sid} is already active. Stop it first.")
+        return
+
+    session_id = uuid.uuid4().hex[:8]
+    sessions = _load(_sessions_file())
+    sessions[session_id] = {
+        "name": name or session_id,
+        "status": "active",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "tool_sources": [],
+    }
+    _save(_sessions_file(), sessions)
+    click.echo(f"Session started: {session_id}")
+
+
+@session.command("stop")
+def session_stop():
+    """Stop the active session."""
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session.")
+        return
+    sessions = _load(_sessions_file())
+    sessions[sid]["status"] = "stopped"
+    sessions[sid]["stopped_at"] = datetime.now(timezone.utc).isoformat()
+    _save(_sessions_file(), sessions)
+    click.echo(f"Session {sid} stopped.")
+
+
+@session.command("list")
+def session_list():
+    """List all sessions."""
+    sessions = _load(_sessions_file())
+    if not sessions:
+        click.echo("No sessions found.")
+        return
+    for sid, s in sessions.items():
+        click.echo(f"[{s['status']}] {sid}  name={s.get('name')}  created={s.get('created_at')}")
+
+
+# ── Add-tool command ──────────────────────────────────────────────────────────
+
+@execution.command("add-tool")
+@click.argument("path")
+def add_tool(path):
+    """Register a tool module (.py) with the active session."""
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session. Run 'execution session start' first.")
+        return
+
+    resolved = str(Path(path).resolve())
+    sessions = _load(_sessions_file())
+    sources = sessions[sid].setdefault("tool_sources", [])
+
+    if any(src["path"] == resolved for src in sources):
+        click.echo(f"Tool source already registered: {resolved}")
+        return
+
+    # Verify it loads
+    agent = Agent(name="probe")
+    count = _load_module(agent, resolved)
+    sources.append({"type": "module", "path": resolved})
+    _save(_sessions_file(), sessions)
+    click.echo(f"Registered {count} tool(s) from {resolved}")
+
+
+# ── Run command ───────────────────────────────────────────────────────────────
+
+@execution.command("run")
+@click.argument("tool_name")
+@click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
+              help="Tool input as KEY=VALUE pairs.")
+def run_tool(tool_name, inputs):
+    """Execute a tool in the active session."""
+    sid, s = _active_session()
+    if not sid:
+        click.echo("No active session.")
+        return
+
+    parsed = {}
+    for item in inputs:
+        if "=" not in item:
+            click.echo(f"Invalid input format '{item}'. Use KEY=VALUE.")
+            return
+        k, v = item.split("=", 1)
+        parsed[k.strip()] = v.strip()
+
+    workflow_run, stdout_output = _run_tool(sid, s, tool_name, parsed)
+    tool_call = workflow_run.run.tool_calls[0]
+
+    if stdout_output:
+        click.echo(stdout_output, nl=False)
+
+    if tool_call.error:
+        click.echo(f"Error: {tool_call.error}", err=True)
+    else:
+        click.echo(f"Result: {tool_call.result}")
+
+    click.echo(f"Recorded as WorkflowRun {workflow_run.id} ({tool_call.execution_time_ms:.1f}ms)")
+
+
+# ── Interaction commands ──────────────────────────────────────────────────────
+
+@execution.group()
+def interaction():
+    """View recorded interactions (stored as WorkflowRun objects)."""
+    pass
+
+
+@interaction.command("list")
+@click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+def interaction_list(session_id):
+    """List all recorded WorkflowRuns for a session."""
+    if not session_id:
+        session_id, _ = _active_session()
+    if not session_id:
+        click.echo("No active session and no --session-id provided.")
+        return
+
+    interactions = _load(_interactions_file())
+    runs = interactions.get(session_id, [])
+    if not runs:
+        click.echo("No interactions recorded.")
+        return
+
+    for i, wf_dict in enumerate(runs):
+        wf = WorkflowRun.from_dict(wf_dict)
+        tc = wf.run.tool_calls[0] if wf.run.tool_calls else None
+        tool_name = tc.tool_name if tc else "?"
+        status = tc.status if tc else "?"
+        click.echo(f"[{i}] {wf.id}  tool={tool_name}  status={status}  created={wf.created_at}")
+
+
+@interaction.command("show")
+@click.argument("index", type=int)
+@click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+def interaction_show(index, session_id):
+    """Show full details of a recorded WorkflowRun by index."""
+    if not session_id:
+        session_id, _ = _active_session()
+    if not session_id:
+        click.echo("No active session and no --session-id provided.")
+        return
+
+    interactions = _load(_interactions_file())
+    runs = interactions.get(session_id, [])
+
+    if index < 0 or index >= len(runs):
+        click.echo(f"No interaction at index {index}.")
+        return
+
+    wf = WorkflowRun.from_dict(runs[index])
+    click.echo(json.dumps(wf.to_dict(), indent=2))
+
+
+# ── Test runner command ───────────────────────────────────────────────────────
+
+@execution.command("test")
+@click.argument("path", default=".")
+def run_tests(path):
+    """Run pytest and record the result as a WorkflowRun interaction."""
+    import subprocess
+    sid, s = _active_session()
+
+    start = datetime.now(timezone.utc)
+    proc = subprocess.run(
+        ["pytest", path, "-v"],
+        capture_output=True,
+        text=True,
+    )
+    elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+    passed = proc.returncode == 0
+    click.echo(proc.stdout)
+
+    if sid:
+        run = AgentRunRecord(prompt=f"pytest {path}")
+        run.record_tool_call(
+            tool_name="pytest",
+            kwargs={"path": path},
+            result=proc.stdout,
+            error=proc.stderr if not passed else None,
+            status="success" if passed else "failure",
+            execution_time_ms=elapsed_ms,
+        )
+        run.output = "Tests passed." if passed else "Tests failed."
+        wf = WorkflowRun(agent_name=f"session-{sid}", run=run)
+
+        interactions = _load(_interactions_file())
+        interactions.setdefault(sid, []).append(wf.to_dict())
+        _save(_interactions_file(), interactions)
+
+        click.echo(f"Recorded as WorkflowRun {wf.id}")
+
+
+# ── Alias for main.py import ──────────────────────────────────────────────────
+
+execution_cli = execution
