@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun
@@ -364,7 +365,6 @@ def run_test(prompt):
 
     for tool_name in tool_names:
         tool_info = agent.get_tool_info(tool_name)
-        # Build kwargs from default values in the tool schema
         kwargs = {}
         if tool_info and "parameters" in tool_info:
             for param in tool_info["parameters"].get("properties", {}).values():
