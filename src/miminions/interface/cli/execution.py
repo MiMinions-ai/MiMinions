@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
-from miminions.agent.simple_agent import Agent
+from miminions.agent import create_minion
 from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun
 
@@ -44,34 +44,18 @@ def _active_session():
     return None, None
 
 
-# ── Auth decorator ────────────────────────────────────────────────────────────
-
-def require_auth():
-    def decorator(f):
-        def wrapper(*args, **kwargs):
-            if not is_authenticated():
-                if is_public_access_enabled():
-                    click.echo("⚠️  Public access mode.", err=True)
-                else:
-                    click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                    return
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
-
-
 # ── Agent builder ─────────────────────────────────────────────────────────────
 
-def _build_agent(session_id: str, session: dict) -> Agent:
-    """Reconstruct the session Agent by replaying its persisted tool_sources."""
-    agent = Agent(name=f"session-{session_id}")
+def _build_agent(session_id: str, session: dict):
+    """Reconstruct the session Minion using create_minion and replay tool_sources."""
+    agent = create_minion(name=f"session-{session_id}")
     for src in session.get("tool_sources", []):
         if src["type"] == "module":
             _load_module(agent, src["path"])
     return agent
 
-def _load_module(agent: Agent, path: str) -> int:
-    """Load GenericTool instances from a .py file into the agent."""
+def _load_module(agent, path: str) -> int:
+    """Load GenericTool instances from a .py file into the Minion via add_tool()."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("_dyn_module", path)
     mod = importlib.util.module_from_spec(spec)
@@ -79,7 +63,7 @@ def _load_module(agent: Agent, path: str) -> int:
     count = 0
     for attr in vars(mod).values():
         if isinstance(attr, GenericTool):
-            agent.register_tool(attr)
+            agent.add_tool(attr)
             count += 1
     return count
 
@@ -144,12 +128,9 @@ def _run_tool(session_id: str, session: dict, tool_name: str, inputs: dict):
     status = "success"
 
     try:
-        result_obj = asyncio.get_event_loop().run_until_complete(
-            agent.execute_async(tool_name, arguments=inputs)
+        result_val = asyncio.get_event_loop().run_until_complete(
+            agent.execute_tool_async(tool_name, **inputs)
         )
-        result_val = result_obj.result
-        error_val = result_obj.error
-        status = str(result_obj.status)
     except Exception as e:
         error_val = str(e)
         status = "error"
@@ -256,8 +237,7 @@ def add_tool(path):
         click.echo(f"Tool source already registered: {resolved}")
         return
 
-    # Verify it loads
-    agent = Agent(name="probe")
+    agent = create_minion(name="probe")
     count = _load_module(agent, resolved)
     sources.append({"type": "module", "path": resolved})
     _save(_sessions_file(), sessions)
@@ -353,43 +333,78 @@ def interaction_show(index, session_id):
     click.echo(json.dumps(wf.to_dict(), indent=2))
 
 
-# ── Test runner command ───────────────────────────────────────────────────────
+# ── Test command ──────────────────────────────────────────────────────────────
 
 @execution.command("test")
-@click.argument("path", default=".")
-def run_tests(path):
-    """Run pytest and record the result as a WorkflowRun interaction."""
-    import subprocess
+@click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
+def run_test(prompt):
+    """
+    Query the agent with all registered tools and record inputs/outputs.
+
+    Builds the agent for the active session, runs each registered tool
+    using its default parameters, and logs the full execution as a WorkflowRun.
+    """
     sid, s = _active_session()
+    if not sid:
+        click.echo("No active session.")
+        return
 
-    start = datetime.now(timezone.utc)
-    proc = subprocess.run(
-        ["pytest", path, "-v"],
-        capture_output=True,
-        text=True,
-    )
-    elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-    passed = proc.returncode == 0
-    click.echo(proc.stdout)
+    agent = _build_agent(sid, s)
+    agent_name = f"session-{sid}"
+    tool_names = agent.list_tools()
 
-    if sid:
-        run = AgentRunRecord(prompt=f"pytest {path}")
+    if not tool_names:
+        click.echo("No tools registered in this session.")
+        return
+
+    click.echo(f"Testing {len(tool_names)} tool(s) for agent '{agent_name}'...")
+
+    run = AgentRunRecord(prompt=prompt)
+    final_outputs = []
+
+    for tool_name in tool_names:
+        tool_info = agent.get_tool_info(tool_name)
+        # Build kwargs from default values in the tool schema
+        kwargs = {}
+        if tool_info and "parameters" in tool_info:
+            for param in tool_info["parameters"].get("properties", {}).values():
+                if "default" in param:
+                    kwargs[param["name"]] = param["default"]
+
+        start = datetime.now(timezone.utc)
+        result_val = None
+        error_val = None
+        status = "success"
+
+        try:
+            result_val = asyncio.get_event_loop().run_until_complete(
+                agent.execute_tool_async(tool_name, **kwargs)
+            )
+            click.echo(f"  ✓ {tool_name}: {result_val}")
+        except Exception as e:
+            error_val = str(e)
+            status = "error"
+            click.echo(f"  ✗ {tool_name}: {error_val}", err=True)
+
+        elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
         run.record_tool_call(
-            tool_name="pytest",
-            kwargs={"path": path},
-            result=proc.stdout,
-            error=proc.stderr if not passed else None,
-            status="success" if passed else "failure",
+            tool_name=tool_name,
+            kwargs=kwargs,
+            result=result_val,
+            error=error_val,
+            status=status,
             execution_time_ms=elapsed_ms,
         )
-        run.output = "Tests passed." if passed else "Tests failed."
-        wf = WorkflowRun(agent_name=f"session-{sid}", run=run)
+        final_outputs.append(f"{tool_name}: {result_val if result_val is not None else error_val}")
 
-        interactions = _load(_interactions_file())
-        interactions.setdefault(sid, []).append(wf.to_dict())
-        _save(_interactions_file(), interactions)
+    run.output = " | ".join(final_outputs)
+    wf = WorkflowRun(agent_name=agent_name, run=run)
 
-        click.echo(f"Recorded as WorkflowRun {wf.id}")
+    interactions = _load(_interactions_file())
+    interactions.setdefault(sid, []).append(wf.to_dict())
+    _save(_interactions_file(), interactions)
+
+    click.echo(f"\nRecorded as WorkflowRun {wf.id} ({len(tool_names)} tool(s) tested)")
 
 
 # ── Alias for main.py import ──────────────────────────────────────────────────
