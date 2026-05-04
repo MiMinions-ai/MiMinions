@@ -1,5 +1,5 @@
 import pytest
-
+from miminions.workflow.models import AgentRunRecord, WorkflowRun
 from miminions.workflow.controller import WorkflowController
 from miminions.workflow.models import WorkflowRun
 
@@ -36,9 +36,9 @@ class MockAgent:
 
 def test_controller_records_successful_tool_call():
     agent = MockAgent()
-    controller = WorkflowController(agent)
-
-    controller.start_run("Add two numbers")
+    from miminions.workflow.models import AgentRunRecord
+    run = AgentRunRecord(prompt="Add two numbers")
+    controller = WorkflowController(agent, run=run)
     result = controller.execute("calculator", a=2, b=3)
     workflow_run = controller.finish_run("The answer is 5")
 
@@ -82,9 +82,8 @@ def test_controller_records_successful_tool_call():
 
 def test_controller_records_failed_tool_call():
     agent = MockAgent()
-    controller = WorkflowController(agent)
-
-    controller.start_run("Try bad tool")
+    run = AgentRunRecord(prompt="Try bad tool")
+    controller = WorkflowController(agent, run=run)
     result = controller.execute("unknown_tool")
     workflow_run = controller.finish_run("Tool failed")
 
@@ -108,9 +107,7 @@ def test_controller_records_failed_tool_call():
     )
 
 
-def test_controller_requires_start_run():
+def test_controller_requires_run_at_construction():
     agent = MockAgent()
-    controller = WorkflowController(agent)
-
-    with pytest.raises(RuntimeError):
-        controller.execute("calculator", a=1, b=2)
+    with pytest.raises(TypeError):
+        controller = WorkflowController(agent)  # run= is now required, no default
