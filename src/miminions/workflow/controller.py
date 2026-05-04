@@ -11,16 +11,48 @@ if TYPE_CHECKING:
 class WorkflowController:
     """
     Bridge between the Minion agent and workflow tracing.
+
+    The caller is responsible for creating the AgentRunRecord and passing it in.
+    The controller only appends tool call records and finalises the WorkflowRun —
+    it never takes the initiative to start a run on its own.
+
+    Typical usage:
+        run = AgentRunRecord(prompt="Hello")
+        controller = WorkflowController(agent, run=run)
+        controller.execute("some_tool", arguments={...})
+        workflow_run = controller.finish_run(output="Done")
     """
 
-    def __init__(self, agent: Any, agent_name: Optional[str] = None):
+    def __init__(
+        self,
+        agent: Any,
+        run: AgentRunRecord,
+        agent_name: Optional[str] = None,
+    ):
         self._agent = agent
         self._agent_name = agent_name or getattr(agent, "name", "UnknownAgent")
-        self._current_record: Optional[AgentRunRecord] = None
+        self._current_record: AgentRunRecord = run
 
-    def start_run(self, prompt: str) -> AgentRunRecord:
-        self._current_record = AgentRunRecord(prompt=prompt)
-        return self._current_record
+    # ------------------------------------------------------------------
+    # Backward-compat shim — lets existing call sites keep working while
+    # we migrate them.  Mark deprecated so reviewers/linters can flag it.
+    # ------------------------------------------------------------------
+    @classmethod
+    def from_prompt(
+        cls,
+        agent: Any,
+        prompt: str,
+        agent_name: Optional[str] = None,
+    ) -> "WorkflowController":
+        """
+        Convenience constructor that creates the AgentRunRecord externally
+        and passes it in.  Prefer constructing AgentRunRecord yourself and
+        calling WorkflowController(agent, run=run) directly.
+
+        Deprecated: will be removed once all call-sites are migrated.
+        """
+        run = AgentRunRecord(prompt=prompt)
+        return cls(agent, run=run, agent_name=agent_name)
 
     def execute(
         self,
@@ -28,9 +60,6 @@ class WorkflowController:
         arguments: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        if self._current_record is None:
-            raise RuntimeError("Call start_run() before execute().")
-
         result = self._agent.execute(tool_name, arguments=arguments, **kwargs)
         merged_kwargs = {**(arguments or {}), **kwargs}
 
@@ -50,9 +79,6 @@ class WorkflowController:
         arguments: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        if self._current_record is None:
-            raise RuntimeError("Call start_run() before execute_async().")
-
         result = await self._agent.execute_async(tool_name, arguments=arguments, **kwargs)
         merged_kwargs = {**(arguments or {}), **kwargs}
 
@@ -67,13 +93,8 @@ class WorkflowController:
         return result
 
     def finish_run(self, output: str) -> WorkflowRun:
-        if self._current_record is None:
-            raise RuntimeError("Call start_run() before finish_run().")
-
         self._current_record.output = output
-        workflow_run = WorkflowRun(
+        return WorkflowRun(
             agent_name=self._agent_name,
             run=self._current_record,
         )
-        self._current_record = None
-        return workflow_run
