@@ -2,12 +2,14 @@
 
 import asyncio
 import inspect
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
 from pydantic_ai import Agent, Tool, RunContext
-from pydantic_ai.models.test import TestModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from mcp import StdioServerParameters
 
 from ..tools import GenericTool
@@ -64,11 +66,17 @@ class RegisteredTool:
 
 class Minion:
     """
-    Minion agent implementation.
-    
-    Uses pydantic_ai infrastructure for LLM-ready tool management.
-    Currently operates in direct execution mode (no LLM) but structured
-    for easy LLM integration by replacing TestModel with a real model.
+    Minion — an LLM-powered agent built on top of pydantic_ai.
+
+    Minion owns the full agent lifecycle: model config, tool registry, and the
+    async reasoning loop.  Callers interact only with Minion — the underlying
+    pydantic_ai Agent is a private implementation detail.
+
+    Typical usage::
+
+        minion = create_minion(name="MyAgent", description="...")
+        minion.register_tool("do_thing", "Does a thing", do_thing)
+        reply = await minion.run("Please do the thing")
     """
 
     def __init__(
@@ -87,8 +95,27 @@ class Minion:
         self._connected_servers: Dict[str, StdioServerParameters] = {}
         self._chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
         
-        # Replace TestModel with real model for LLM support
-        self._model = model or TestModel()
+        # ------------------------------------------------------------------
+        # Model selection
+        # ------------------------------------------------------------------
+        # Build the default OpenRouter-backed model when no model is supplied.
+        # OpenRouter speaks the OpenAI wire protocol; we point OpenAIProvider
+        # at their base URL and hand it the OPENROUTER_API_KEY from the env.
+        # The model string uses the free-tier suffix (:free) to avoid burning
+        # credits during development.
+        if model is not None:
+            self._model = model
+        else:
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            provider = OpenAIProvider(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+            )
+            self._model = OpenAIModel(
+                "openai/gpt-oss-20b:free",
+                provider=provider,
+            )
+
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
         
@@ -393,10 +420,31 @@ class Minion:
         if rebuild:
             self._rebuild_pydantic_ai_agent()
 
-    def get_pydantic_ai_agent(self) -> Agent:
-        """Get the underlying pydantic_ai Agent for LLM operations. Use for when integrating with an LLM."""
+    async def run(self, prompt: str, message_history: Optional[List[Any]] = None) -> str:
+        """Send a prompt to the LLM and return the reply.
+
+        This is the primary entry point for agent interaction.  Tools registered
+        via ``register_tool`` are automatically available to the LLM and will be
+        called by pydantic_ai whenever the model decides to use them.
+
+        Args:
+            prompt: The user message to send.
+            message_history: Optional prior messages (pydantic_ai message objects)
+                             for multi-turn conversation context.
+
+        Returns:
+            The LLM's reply as a plain string.
+
+        Raises:
+            Exception: Re-raises any network / API error so callers can handle it.
+        """
         self._rebuild_pydantic_ai_agent()
-        return self._pydantic_ai_agent
+        result = await self._pydantic_ai_agent.run(
+            prompt,
+            message_history=message_history or None,
+        )
+        self._last_messages = result.all_messages()
+        return result.output if hasattr(result, "output") else str(result.data)
 
     def set_model(self, model: Any) -> None:
         self._model = model
