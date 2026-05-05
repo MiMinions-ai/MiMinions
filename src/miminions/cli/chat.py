@@ -12,7 +12,7 @@ from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager
-from miminions.interface.cli.auth import get_config_dir
+from miminions.cli.auth import get_config_dir
 
 
 # ---------------------------------------------------------------------------

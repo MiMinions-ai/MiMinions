@@ -4,7 +4,8 @@ from pathlib import Path
 
 from miminions.memory.sqlite import SQLiteMemory
 from miminions.memory.sqlite import get_global_memory_db_path
-from miminions.agent import create_minion, ExecutionStatus
+from miminions.agent import create_minion
+from miminions.tools.schemas import ExecutionStatus
 
 
 def setup_agent():

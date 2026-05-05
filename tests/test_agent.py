@@ -7,6 +7,8 @@ from pathlib import Path
 from miminions.agent import (
     Minion,
     create_minion,
+)
+from miminions.tools.schemas import (
     ToolDefinition,
     ToolExecutionRequest,
     ToolExecutionResult,

@@ -28,6 +28,10 @@ cli.add_command(knowledge_cli, name="knowledge")
 cli.add_command(workspace_cli, name="workspace")
 cli.add_command(chat_cli, name="chat")
 
+def main():
+    """Entry point for the CLI."""
+    cli()
+
 
 if __name__ == "__main__":
-    cli()
+    main()

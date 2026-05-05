@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from miminions.agent.context_builder import ContextBuilder
+from miminions.context import ContextBuilder
 from miminions.memory.md_store import write_memory
 from miminions.workspace_fs.bootstrap import init_workspace
 
@@ -100,7 +100,7 @@ def test_context_builder_injects_global_knowledge_when_available(tmp_path: Path,
     init_workspace(tmp_path)
 
     monkeypatch.setattr(
-        "miminions.agent.context_builder._fetch_global_insights",
+        "miminions.context.context_builder._fetch_global_insights",
         lambda top_k, db_path: ["User prefers concise commit messages.", "Always run tests before pushing."],
     )
 
@@ -127,7 +127,7 @@ def test_context_builder_skips_global_knowledge_when_sqlite_unavailable(tmp_path
     init_workspace(tmp_path)
 
     monkeypatch.setattr(
-        "miminions.agent.context_builder._fetch_global_insights",
+        "miminions.context.context_builder._fetch_global_insights",
         lambda top_k, db_path: [],
     )
 
@@ -152,7 +152,7 @@ def test_context_builder_omits_global_knowledge_when_top_k_zero(tmp_path: Path, 
 
     called = []
     monkeypatch.setattr(
-        "miminions.agent.context_builder._fetch_global_insights",
+        "miminions.context.context_builder._fetch_global_insights",
         lambda top_k, db_path: called.append(1) or ["some insight"],
     )
 

@@ -153,10 +153,9 @@ class Minion:
         # has been attached via set_context().
         _workspace = getattr(self, "_workspace", None)
         _root_path = getattr(self, "_root_path", None)
-        if _workspace is not None and _root_path is not None:
+        if _workspace and _root_path:
             from miminions.context.context_builder import ContextBuilder
 
-            # Capture in local variables for the closure.
             _ws = _workspace
             _rp = _root_path
 

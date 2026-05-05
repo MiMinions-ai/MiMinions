@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-miminions = "miminions.cli:main"
+miminions = "miminions.cli.main:main"
 
 [project.optional-dependencies]
 sqlite = [

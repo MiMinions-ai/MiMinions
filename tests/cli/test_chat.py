@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from miminions.interface.cli.chat import chat_command
+from miminions.cli.chat import chat_command
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
@@ -20,7 +20,7 @@ def test_chat_cli_requires_root_path(monkeypatch):
     manager = DummyManager(workspace)
 
     monkeypatch.setattr(
-        "miminions.interface.cli.chat.WorkspaceManager",
+        "miminions.cli.chat.WorkspaceManager",
         lambda config_dir: manager,
     )
 
@@ -44,13 +44,22 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     )
     manager = DummyManager(workspace)
 
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            return "assistant reply"
+
     monkeypatch.setattr(
-        "miminions.interface.cli.chat.WorkspaceManager",
+        "miminions.cli.chat.WorkspaceManager",
         lambda config_dir: manager,
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.chat._run_agent",
-        lambda user_text, context, workspace, session_id: "assistant reply",
+        "miminions.cli.chat.create_minion",
+        lambda *args, **kwargs: MockMinion()
     )
 
     runner = CliRunner()
@@ -61,7 +70,7 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     )
 
     assert result.exit_code == 0, f"Expected exit code 0, but got {result.exit_code}"
-    assert "Session:" in result.output, f"Expected 'Session:' in output, but got: {result.output}"
+    assert "Session   :" in result.output, f"Expected 'Session   :' in output, but got: {result.output}"
     assert "assistant reply" in result.output, f"Expected 'assistant reply' in output, but got: {result.output}"
 
     sessions_dir = tmp_path / "sessions"
@@ -90,17 +99,26 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
 
     calls = []
 
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            return "assistant reply"
+
     monkeypatch.setattr(
-        "miminions.interface.cli.chat.WorkspaceManager",
+        "miminions.cli.chat.WorkspaceManager",
         lambda config_dir: manager,
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.chat._run_agent",
-        lambda user_text, context, workspace, session_id: "assistant reply",
+        "miminions.cli.chat.create_minion",
+        lambda *args, **kwargs: MockMinion()
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.chat._run_session_distillation",
-        lambda workspace, root, session_id: calls.append((workspace.id, root, session_id)),
+        "miminions.cli.chat._run_session_distillation",
+        lambda workspace, root, session_id, model=None: calls.append((workspace.id, root, session_id)),
     )
 
     runner = CliRunner()
@@ -130,19 +148,28 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
     )
     manager = DummyManager(workspace)
 
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            return "assistant reply"
+
     monkeypatch.setattr(
-        "miminions.interface.cli.chat.WorkspaceManager",
+        "miminions.cli.chat.WorkspaceManager",
         lambda config_dir: manager,
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.chat._run_agent",
-        lambda user_text, context, workspace, session_id: "assistant reply",
+        "miminions.cli.chat.create_minion",
+        lambda *args, **kwargs: MockMinion()
     )
 
     def _boom(*_args, **_kwargs):
         raise RuntimeError("distiller unavailable")
 
-    monkeypatch.setattr("miminions.interface.cli.chat._run_session_distillation", _boom)
+    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", _boom)
 
     runner = CliRunner()
     result = runner.invoke(
