@@ -8,10 +8,13 @@ from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
 from pydantic_ai import Agent, Tool, RunContext
+from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.models.test import TestModel
 from mcp import StdioServerParameters
 
+from miminions.agent.provider import ModelFactory
 from ..tools import GenericTool
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
@@ -82,6 +85,7 @@ class Minion:
         chunk_size: int = 800,
         overlap: int = 150,
         model: Optional[Any] = None,
+        provider: str = "openrouter",
     ):
         self.config = AgentConfig(name=name, description=description, chunk_size=chunk_size, overlap=overlap)
         self._tools: Dict[str, RegisteredTool] = {}
@@ -100,14 +104,7 @@ class Minion:
         if model is not None:
             self._model = model
         else:
-            provider = OpenAIProvider(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            )
-            self._model = OpenAIModel(
-                "openai/gpt-oss-20b:free",
-                provider=provider,
-            )
+            self._model = ModelFactory.create(provider)
 
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
@@ -499,6 +496,7 @@ def create_minion(
     description: str = "",
     memory: Optional[BaseMemory] = None,
     model: Optional[Any] = None,
+    provider: str = "openrouter",
 ) -> Minion:
     """
     Create a new Minion instance.
@@ -507,10 +505,11 @@ def create_minion(
         name: Agent name
         description: Agent description
         memory: Optional memory backend (for example SQLiteMemory)
-        model: Optional pydantic_ai model. Defaults to TestModel (no LLM).
+        model: Optional pydantic_ai model. Defaults to None.
                Pass a real model like 'openai:gpt-4' for LLM support.
+        provider: The string name of the provider. Defaults to "openrouter".
     
     Returns:
         Minion instance ready for tool registration and execution
     """
-    return Minion(name=name, description=description, memory=memory, model=model)
+    return Minion(name=name, description=description, memory=memory, model=model, provider=provider)
