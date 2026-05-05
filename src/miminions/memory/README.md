@@ -107,6 +107,9 @@ Distiller failures are caught and printed as warnings — they never block sessi
 
 Missing or partial LLM output never crashes — all fields default to empty.
 
+**Why a factory (`create_llm_filter`)?**
+We use `create_llm_filter(model)` to generate the filter function rather than defining a hardcoded `llm_filter` function. This is a dependency injection pattern (a closure). It allows `MemoryDistiller` to remain completely agnostic about the LLM provider, `pydantic_ai`, or any API keys. The distiller simply calls `llm_filter(transcript)` exactly as expected, while the function internally remembers and uses the exact model configuration the active agent was instantiated with.
+
 ### `md_store.py` — Tier 1 and Tier 2 I/O
 
 | Function | What it does |

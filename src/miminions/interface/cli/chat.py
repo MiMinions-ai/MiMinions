@@ -64,7 +64,7 @@ def _run_session_distillation(
     without extraction).
     """
     if model is not None:
-        from miminions.memory.distiller import create_llm_filter
+        from miminions.memory import create_llm_filter
 
         llm_filter = create_llm_filter(model)
     else:

@@ -178,3 +178,4 @@ class MemoryDistiller:
                 result.dropped_reasons.append(f"tier3_unavailable: {exc}")
 
         return result
+

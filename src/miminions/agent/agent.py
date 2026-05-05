@@ -17,11 +17,12 @@ from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
 from ..utils.chunker import TextChunker
 
-from .models import (
-    AgentConfig, AgentState, ExecutionStatus, MemoryEntry, MemoryQueryResult,
-    ParameterType, ToolDefinition, ToolExecutionRequest, ToolExecutionResult,
-    ToolParameter, ToolSchema,
+from miminions.agent.models import AgentConfig, AgentState
+from miminions.tools.schemas import (
+    ExecutionStatus, ParameterType, ToolDefinition, ToolExecutionRequest,
+    ToolExecutionResult, ToolParameter, ToolSchema,
 )
+from miminions.memory.types import MemoryEntry, MemoryQueryResult
 
 
 def _python_type_to_param_type(py_type: type) -> ParameterType:
@@ -153,7 +154,7 @@ class Minion:
         _workspace = getattr(self, "_workspace", None)
         _root_path = getattr(self, "_root_path", None)
         if _workspace is not None and _root_path is not None:
-            from .context_builder import ContextBuilder
+            from miminions.context.context_builder import ContextBuilder
 
             # Capture in local variables for the closure.
             _ws = _workspace

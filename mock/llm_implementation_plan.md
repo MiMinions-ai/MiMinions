@@ -182,7 +182,7 @@ async def _chat_loop(workspace_ref, session_id):
 
 ---
 
-## Phase 4 — Full Module Implementations
+## Phase 4 — Full Module Implementations [COMPLETE]
 
 This phase completes the three modules from `llm_issue.txt` that require real
 implementations: the `llm_filter` callable for post-session memory extraction, the
@@ -327,7 +327,7 @@ def load_as_pydantic_messages(self, session_id: str) -> list:
 
 ---
 
-## Phase 5 — Example Chat Test Script
+## Phase 5 — Example Chat Test Script [COMPLETE]
 
 Rather than requiring the user to set up a workspace through the CLI before they can
 test anything, we create a fully self-contained test script in `examples/example_chat/`.
@@ -381,7 +381,7 @@ _workspace/
 
 ---
 
-## Phase 6 — Demo Tools & Final Verification
+## Phase 6 — Demo Tools & Final Verification [COMPLETE]
 
 Before the implementation is complete, we verify that every layer works together in the
 example script: the model connects to OpenRouter, tools are called correctly, the
@@ -414,7 +414,7 @@ cycle works:
 
 ---
 
-## Phase 7 — Workflow Modularization
+## Phase 7 — Workflow Modularization [COMPLETE]
 
 To keep the codebase cleanly separated by concern, we need to restructure the folders into
 `agent`, `memory`, and `context`, ensuring each module only contains its relevant logic.
