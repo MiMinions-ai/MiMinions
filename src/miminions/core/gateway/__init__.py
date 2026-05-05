@@ -30,6 +30,7 @@ from .services import (
 
 # Orchestration
 from .orchestrator import GatewayOrchestrator, Lifecycle, Phase
+from .runtime import ChannelManagerLifecycle, CronLifecycle, LocalGatewayRuntime
 
 __all__ = [
     # Events
@@ -55,4 +56,7 @@ __all__ = [
     "GatewayOrchestrator",
     "Lifecycle",
     "Phase",
+    "ChannelManagerLifecycle",
+    "CronLifecycle",
+    "LocalGatewayRuntime",
 ]

@@ -136,6 +136,22 @@ await gateway.shutdown()
 |------------|----------|-----------------------------------------|
 | `croniter` | Optional | Required for `cron`-kind schedules only |
 
+## Gateway CLI
+
+The gateway runtime is exposed through a focused CLI that avoids raw bus,
+event, and channel internals:
+
+```bash
+miminions gateway status --workspace my-ws
+miminions gateway cron list --workspace my-ws
+miminions gateway sessions list --workspace my-ws
+```
+
+Gateway storage is rooted in the workspace folder:
+
+- `sessions/gateway/` for gateway session JSONL files
+- `data/gateway/cron/jobs.json` for scheduled jobs
+
 ## Roadmap / Next Steps
 
 - **Distributed message bus backends** — Add adapter hooks so the
