@@ -1,0 +1,69 @@
+### Feature Description
+
+LLM Future Support/Implementation
+
+Current State:
+- Agent uses pydantic_ai with TestModel (no LLM calls)
+- Tools execute directly without LLM reasoning
+
+### Proposed Solution
+
+To Add LLM Support:
+
+1. Install a model provider:
+   pip install pydantic-ai[openai] # Can use others such as Anthropic or Grok
+
+2. Set the model on an existing agent:
+   from pydantic_ai.models.openai import OpenAIModel
+   
+   agent = create_pydantic_agent("MyAgent")
+   agent.set_model(OpenAIModel("gpt-4"))
+
+3. Or pass model during creation (requires modifying create_pydantic_agent):
+   - Add optional 'model' parameter to create_pydantic_agent()
+   - Pass model to PydanticAgent.__init__()
+
+4. Access the pydantic_ai Agent for LLM conversations:
+   pydantic_agent = agent.get_pydantic_ai_agent()
+   result = await pydantic_agent.run("Your prompt here")
+
+Current Model:
+- TestModel (current default, for testing without LLM)
+
+Can switch to (will require an API key in environment variables: 
+- OpenAIModel("gpt-4", "gpt-4o", "gpt-3.5-turbo")
+- AnthropicModel("claude-3-opus", "claude-3-sonnet")
+- GroqModel("llama-3", "mixtral")
+
+5. Update all other modules that use the agent
+   - `interface/cli/chat.py` --> Convert the chat loop and `_run_agent` to be asynchronous (`async def` / `await`) since real LLM network calls are async. Add `asyncio.run()` to the main CLI command and handle potential API error/timeout exceptions.
+   - `memory/distiller.py` → Implement llm_filter as a real callable that sends the compacted transcript to the LLM with a structured extraction prompt and parses the returned JSON into `history_summary`, `workspace_facts`, and `global_insights`.
+   - `agent/context_builder.py` --> Adapt the built workspace context string so it serves as the dynamic `system_prompt` for `pydantic_ai` (e.g., using the `@agent.system_prompt` decorator or dependency injection).
+   - `session/store.py` --> Implement a method to convert the saved JSONL session history into `pydantic_ai`'s specific Message classes so the LLM has memory of the previous conversation in the `message history.
+   - Update dependencies and add environment variable support for API keys.
+
+Reference: https://ai.pydantic.dev/models/
+
+### Feature Category
+
+Agent System
+
+### Priority Level
+
+Medium - Would be helpful
+
+### Use Case
+
+Allows the agent to think and reason when using calling tools. 
+   pydantic_agent = agent.get_pydantic_ai_agent()
+   result = await pydantic_agent.run("Your prompt here")
+
+### Implementation
+
+- [x] I would like to work on implementing this feature
+- [ ] I can provide detailed requirements and testing
+- [x] I can provide feedback during development
+
+### Code of Conduct
+
+- [x] I agree to follow this project's Code of Conduct

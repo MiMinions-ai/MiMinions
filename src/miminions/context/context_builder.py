@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from miminions.memory.md_store import read_memory
+from miminions.memory.sqlite import SQLiteMemory, get_global_memory_db_path
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
 
 
@@ -129,8 +130,32 @@ def _state_keys(state: Any) -> list[str]:
     return sorted(str(key) for key in normalized.keys())
 
 
+def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[str]:
+    """Return top-k plain-text global insights from SQLite, or [] on any failure."""
+    path = db_path or get_global_memory_db_path(create_dir=False)
+    try:
+        mem = SQLiteMemory(db_path=path)
+        try:
+            rows = mem.date_time_search(top_k=top_k)
+            return [r["text"] for r in rows if r.get("text")]
+        finally:
+            mem.close()
+    except Exception:
+        return []
+
+
 class ContextBuilder:
     """Build a composed agent context from markdown files and workspace summary."""
+
+    def __init__(self, global_top_k: int = 5, global_db_path: str | None = None):
+        """Configure optional global memory injection.
+
+        Args:
+            global_top_k: Number of global SQLite insights to inject. Set to 0 to disable.
+            global_db_path: Override path to global_memory.db. Defaults to ~/.miminions/global_memory.db.
+        """
+        self.global_top_k = global_top_k
+        self.global_db_path = global_db_path
 
     def build(
         self,
@@ -185,6 +210,16 @@ class ContextBuilder:
         else:
             lines.append("No prompt files found.")
             lines.append("")
+
+        if self.global_top_k > 0:
+            global_insights = _fetch_global_insights(
+                top_k=self.global_top_k, db_path=self.global_db_path
+            )
+            if global_insights:
+                lines.append("## Global Knowledge")
+                for insight in global_insights:
+                    lines.append(f"- {insight}")
+                lines.append("")
 
         lines.append("## Memory")
         lines.append(memory_text.rstrip())

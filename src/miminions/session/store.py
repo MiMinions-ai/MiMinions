@@ -93,3 +93,42 @@ class JsonlSessionStore:
                     raise ValueError(
                         f"Invalid JSONL in session file {session_path} at line {line_number}"
                     ) from exc
+
+    def load_as_pydantic_messages(self, session_id: str) -> list:
+        """Load a saved session as pydantic_ai ``ModelMessage`` objects.
+
+        Converts each JSONL record into the pydantic_ai message type that
+        ``Agent.run(message_history=...)`` expects:
+
+        - ``role == "user"``      → ``ModelRequest(parts=[UserPromptPart(...)])``
+        - ``role == "assistant"`` → ``ModelResponse(parts=[TextPart(...)])``
+        - Any other role is silently skipped (tool calls are not re-injected).
+
+        Returns an empty list if the session file does not exist or is empty,
+        so callers never need to guard against ``None``.
+        """
+        from pydantic_ai.messages import (
+            ModelRequest,
+            ModelResponse,
+            UserPromptPart,
+            TextPart,
+        )
+
+        messages: list = []
+        for record in self.iter_messages(session_id):
+            role = record.get("role", "")
+            content = record.get("content", "")
+            if not content:
+                continue
+            if role == "user":
+                messages.append(
+                    ModelRequest(parts=[UserPromptPart(content=content)])
+                )
+            elif role == "assistant":
+                messages.append(
+                    ModelResponse(
+                        parts=[TextPart(content=content)],
+                        model_name="openrouter",
+                    )
+                )
+        return messages
