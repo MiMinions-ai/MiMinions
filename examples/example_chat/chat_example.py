@@ -17,6 +17,7 @@ from typing import Any
 
 from miminions.agent import create_minion
 from miminions.core.workspace import Workspace
+from miminions.workspace_fs.bootstrap import init_workspace
 from miminions.memory import MemoryDistiller, create_llm_filter
 from miminions.session.store import JsonlSessionStore
 
@@ -27,33 +28,7 @@ logging.basicConfig(level=logging.WARNING)
 
 def _bootstrap_workspace(root: Path) -> Workspace:
     """Create the test workspace directories and files if they don't exist."""
-    root.mkdir(parents=True, exist_ok=True)
-    
-    # Create required subdirectories
-    (root / "prompt").mkdir(exist_ok=True)
-    (root / "memory").mkdir(exist_ok=True)
-    (root / "sessions").mkdir(exist_ok=True)
-    (root / "data").mkdir(exist_ok=True)
-    
-    # Seed prompt files
-    agents_md = root / "prompt" / "AGENTS.md"
-    if not agents_md.exists():
-        agents_md.write_text(
-            "# MiMinions Agent Identity\n\n"
-            "You are a helpful, concise AI agent. You have access to tools and "
-            "should use them when asked to perform calculations or check capabilities.\n"
-        )
-        
-    user_md = root / "prompt" / "USER.md"
-    if not user_md.exists():
-        user_md.write_text(
-            "# User Preferences\n\n"
-            "The user prefers clear, direct answers without unnecessary fluff.\n"
-        )
-        
-    memory_md = root / "memory" / "MEMORY.md"
-    if not memory_md.exists():
-        memory_md.write_text("# Project Facts\n\n(No facts recorded yet.)\n")
+    init_workspace(root)
 
     # Save or load the workspace.json
     workspace_file = root / "workspace.json"

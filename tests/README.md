@@ -4,24 +4,21 @@ Comprehensive test suites for the Minion Agent.
 
 ## Test Files
 
-- `test_agent.py` - Core agent functionality with Pydantic models
-- `test_pydantic_memory.py` - Memory with structured results
-- `test_sqlite_memory.py` - SQLite CRUD operations
-- `test_sqlite_memory_search.py` - Vector and keyword search
-- `test_document_ingestion.py` - Document processing
-
+- **general/** - Core agent functionality, memory, and general test cases
 - **cli/** - CLI interface tests
 - **data/** - Data management system tests
+- **gateway/** - Gateway integration tests
+- **task/** - Task management tests
 
 ## Running Tests
 
+To run the complete test suite across all subfolders automatically, you can use the newly provided script:
+
 ```bash
-python tests/test_agent.py
-python tests/test_pydantic_memory.py
-python tests/test_sqlite_memory.py
-python tests/test_sqlite_memory_search.py
-python tests/test_document_ingestion.py
+./tests/run_all.sh
 ```
+
+This bash script simplifies test execution by automatically navigating to the project root and running `pytest tests/` with the appropriate verbosity flags.
 
 ## Test Coverage
 
@@ -56,7 +53,7 @@ work correctly in all cases.
 
 Recommended approach:
 ```bash
-python -m pytest
+./tests/run_all.sh
 ```
 
 Or run specific test files:
