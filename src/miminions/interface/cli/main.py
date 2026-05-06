@@ -10,6 +10,7 @@ from .task import task_cli
 from .workflow import workflow_cli
 from .knowledge import knowledge_cli
 from .workspace import workspace_cli
+from .execution import execution_cli
 from .chat import chat_cli
 
 
@@ -27,6 +28,7 @@ cli.add_command(task_cli, name="task")
 # cli.add_command(workflow_cli, name="workflow") #TODO: workflow management is not yet implemented
 cli.add_command(knowledge_cli, name="knowledge")
 cli.add_command(workspace_cli, name="workspace")
+cli.add_command(execution_cli, name="execution")
 cli.add_command(chat_cli, name="chat")
 
 
