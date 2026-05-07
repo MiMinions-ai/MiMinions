@@ -6,7 +6,8 @@ import click
 import json
 import uuid
 from pathlib import Path
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from .auth import get_config_dir
+from miminions.core.auth import require_auth
 
 
 def get_knowledge_file():
@@ -31,30 +32,6 @@ def save_knowledge(knowledge):
         json.dump(knowledge, f, indent=2)
 
 
-# TODO: require_auth disabled until auth is fully implemented
-# and the public-access path is clear to users.
-# def require_auth():
-#     """Decorator to require authentication or allow public access."""
-#     def decorator(f):
-#         def wrapper(*args, **kwargs):
-#             if not is_authenticated():
-#                 if is_public_access_enabled():
-#                     # Show warning but allow access
-#                     click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-#                 else:
-#                     # Require authentication
-#                     click.echo("Please sign in first using 'miminions auth signin'", err=True)
-#                     return
-#             return f(*args, **kwargs)
-#         return wrapper
-#     return decorator
-def require_auth():
-    """Temporary no-op decorator while auth is being stabilized."""
-    def decorator(f):
-        return f
-    return decorator
-
-
 @click.group()
 def knowledge_cli():
     """Knowledge management commands."""
@@ -62,7 +39,7 @@ def knowledge_cli():
 
 
 @knowledge_cli.command("list")
-@require_auth()
+@require_auth
 def list_knowledge():
     """List all knowledge entries."""
     knowledge = load_knowledge()
@@ -85,12 +62,11 @@ def list_knowledge():
 @click.option("--content", prompt="Content", help="Content of the knowledge entry")
 @click.option("--category", default="general", help="Category of the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth()
+@require_auth
 def add_knowledge(title, content, category, tags):
     """Add a new knowledge entry."""
     knowledge = load_knowledge()
     
-    # Generate a unique ID
     entry_id = str(uuid.uuid4())[:8]
     
     tag_list = []
@@ -125,7 +101,7 @@ def add_knowledge(title, content, category, tags):
 @click.option("--content", help="New content for the knowledge entry")
 @click.option("--category", help="New category for the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth()
+@require_auth
 def update_knowledge(entry_id, title, content, category, tags):
     """Update an existing knowledge entry."""
     knowledge = load_knowledge()
@@ -136,12 +112,10 @@ def update_knowledge(entry_id, title, content, category, tags):
     
     entry = knowledge[entry_id]
     
-    # If content is being updated, create a new version
     if content and content != entry["content"]:
         current_version = float(entry["version"])
         new_version = f"{current_version + 0.1:.1f}"
         
-        # Add new version to history
         entry["versions"].append({
             "version": new_version,
             "content": content,
@@ -167,7 +141,7 @@ def update_knowledge(entry_id, title, content, category, tags):
 @knowledge_cli.command("remove")
 @click.argument("entry_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this knowledge entry?")
-@require_auth()
+@require_auth
 def remove_knowledge(entry_id):
     """Remove a knowledge entry."""
     knowledge = load_knowledge()
@@ -184,7 +158,7 @@ def remove_knowledge(entry_id):
 @knowledge_cli.command("revert")
 @click.argument("entry_id")
 @click.option("--version", prompt="Version to revert to", help="Version to revert to")
-@require_auth()
+@require_auth
 def revert_knowledge(entry_id, version):
     """Revert a knowledge entry to a previous version."""
     knowledge = load_knowledge()
@@ -195,7 +169,6 @@ def revert_knowledge(entry_id, version):
     
     entry = knowledge[entry_id]
     
-    # Find the version to revert to
     target_version = None
     for v in entry["versions"]:
         if v["version"] == version:
@@ -206,7 +179,6 @@ def revert_knowledge(entry_id, version):
         click.echo(f"Version '{version}' not found for entry '{entry_id}'.", err=True)
         return
     
-    # Revert to the target version
     entry["content"] = target_version["content"]
     entry["version"] = target_version["version"]
     entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
@@ -217,7 +189,7 @@ def revert_knowledge(entry_id, version):
 
 @knowledge_cli.command("version")
 @click.argument("entry_id")
-@require_auth()
+@require_auth
 def show_versions(entry_id):
     """Show version history of a knowledge entry."""
     knowledge = load_knowledge()
@@ -238,7 +210,7 @@ def show_versions(entry_id):
 @click.argument("entry_id")
 @click.option("--template", help="Template to apply")
 @click.option("--format", type=click.Choice(["json", "markdown", "plain"]), default="plain", help="Output format")
-@require_auth()
+@require_auth
 def customize_knowledge(entry_id, template, format):
     """Customize knowledge entry format or template."""
     knowledge = load_knowledge()
@@ -250,13 +222,11 @@ def customize_knowledge(entry_id, template, format):
     entry = knowledge[entry_id]
     
     if template:
-        # Apply template (this is a simplified implementation)
         entry["template"] = template
         entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
         save_knowledge(knowledge)
         click.echo(f"Template '{template}' applied to knowledge entry '{entry_id}'")
     
-    # Display the entry in the requested format
     if format == "json":
         click.echo(json.dumps(entry, indent=2))
     elif format == "markdown":
@@ -272,7 +242,7 @@ def customize_knowledge(entry_id, template, format):
 
 @knowledge_cli.command("show")
 @click.argument("entry_id")
-@require_auth()
+@require_auth
 def show_knowledge(entry_id):
     """Show detailed information about a knowledge entry."""
     knowledge = load_knowledge()
