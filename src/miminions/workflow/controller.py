@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from miminions.workflow.models import AgentRunRecord, WorkflowRun
+from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace
 
 if TYPE_CHECKING:
     from miminions.agent.models import ToolExecutionResult
@@ -12,13 +12,14 @@ class WorkflowController:
     """
     Bridge between the Minion agent and workflow tracing.
 
-    The caller is responsible for creating the AgentRunRecord and passing it in.
-    The controller only appends tool call records and finalises the WorkflowRun —
-    it never takes the initiative to start a run on its own.
+    The caller is responsible for creating both the AgentRunRecord and
+    WorkflowTrace and passing them in. The controller only appends records
+    into the trace — it never takes initiative to start a run on its own.
 
     Typical usage:
-        run = AgentRunRecord(prompt="Hello")
-        controller = WorkflowController(agent, run=run)
+        agent_record = AgentRunRecord(prompt="Hello")
+        trace = WorkflowTrace()
+        controller = WorkflowController(agent, agent_record=agent_record, trace=trace)
         controller.execute("some_tool", arguments={...})
         workflow_run = controller.finish_run(output="Done")
     """
@@ -26,33 +27,15 @@ class WorkflowController:
     def __init__(
         self,
         agent: Any,
-        run: AgentRunRecord,
+        agent_record: AgentRunRecord,
+        trace: WorkflowTrace,
         agent_name: Optional[str] = None,
     ):
         self._agent = agent
         self._agent_name = agent_name or getattr(agent, "name", "UnknownAgent")
-        self._current_record: AgentRunRecord = run
-
-    # ------------------------------------------------------------------
-    # Backward-compat shim — lets existing call sites keep working while
-    # we migrate them.  Mark deprecated so reviewers/linters can flag it.
-    # ------------------------------------------------------------------
-    @classmethod
-    def from_prompt(
-        cls,
-        agent: Any,
-        prompt: str,
-        agent_name: Optional[str] = None,
-    ) -> "WorkflowController":
-        """
-        Convenience constructor that creates the AgentRunRecord externally
-        and passes it in.  Prefer constructing AgentRunRecord yourself and
-        calling WorkflowController(agent, run=run) directly.
-
-        Deprecated: will be removed once all call-sites are migrated.
-        """
-        run = AgentRunRecord(prompt=prompt)
-        return cls(agent, run=run, agent_name=agent_name)
+        self._agent_record = agent_record
+        self._trace = trace
+        self._trace.add_agent_record(agent_record)
 
     def execute(
         self,
@@ -63,7 +46,7 @@ class WorkflowController:
         result = self._agent.execute(tool_name, arguments=arguments, **kwargs)
         merged_kwargs = {**(arguments or {}), **kwargs}
 
-        self._current_record.record_tool_call(
+        self._trace.add_tool_record(
             tool_name=tool_name,
             kwargs=merged_kwargs,
             result=result.result,
@@ -82,7 +65,7 @@ class WorkflowController:
         result = await self._agent.execute_async(tool_name, arguments=arguments, **kwargs)
         merged_kwargs = {**(arguments or {}), **kwargs}
 
-        self._current_record.record_tool_call(
+        self._trace.add_tool_record(
             tool_name=tool_name,
             kwargs=merged_kwargs,
             result=result.result,
@@ -93,8 +76,8 @@ class WorkflowController:
         return result
 
     def finish_run(self, output: str) -> WorkflowRun:
-        self._current_record.output = output
+        self._agent_record.output = output
         return WorkflowRun(
             agent_name=self._agent_name,
-            run=self._current_record,
+            trace=self._trace,
         )
