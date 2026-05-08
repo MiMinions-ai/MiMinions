@@ -6,7 +6,8 @@ import click
 import json
 import uuid
 from pathlib import Path
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from .auth import get_config_dir
+from miminions.core.auth import require_auth
 
 
 def get_tasks_file():
@@ -31,30 +32,6 @@ def save_tasks(tasks):
         json.dump(tasks, f, indent=2)
 
 
-# TODO: require_auth disabled until auth is fully implemented
-# and the public-access path is clear to users.
-# def require_auth():
-#     """Decorator to require authentication or allow public access."""
-#     def decorator(f):
-#         def wrapper(*args, **kwargs):
-#             if not is_authenticated():
-#                 if is_public_access_enabled():
-#                     # Show warning but allow access
-#                     click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-#                 else:
-#                     # Require authentication
-#                     click.echo("Please sign in first using 'miminions auth signin'", err=True)
-#                     return
-#             return f(*args, **kwargs)
-#         return wrapper
-#     return decorator
-def require_auth():
-    """Temporary no-op decorator while auth is being stabilized."""
-    def decorator(f):
-        return f
-    return decorator
-
-
 @click.group()
 def task_cli():
     """Task management commands."""
@@ -62,7 +39,7 @@ def task_cli():
 
 
 @task_cli.command("list")
-@require_auth()
+@require_auth
 def list_tasks():
     """List all tasks."""
     tasks = load_tasks()
@@ -85,12 +62,11 @@ def list_tasks():
 @click.option("--description", prompt="Description", help="Description of the task")
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), default="medium", help="Priority level")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth()
+@require_auth
 def add_task(title, description, priority, agent):
     """Add a new task."""
     tasks = load_tasks()
     
-    # Generate a unique ID
     task_id = str(uuid.uuid4())[:8]
     
     tasks[task_id] = {
@@ -114,7 +90,7 @@ def add_task(title, description, priority, agent):
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), help="New priority level")
 @click.option("--status", type=click.Choice(["pending", "in_progress", "completed", "cancelled"]), help="New status")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth()
+@require_auth
 def update_task(task_id, title, description, priority, status, agent):
     """Update an existing task."""
     tasks = load_tasks()
@@ -145,7 +121,7 @@ def update_task(task_id, title, description, priority, status, agent):
 @task_cli.command("remove")
 @click.argument("task_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this task?")
-@require_auth()
+@require_auth
 def remove_task(task_id):
     """Remove a task."""
     tasks = load_tasks()
@@ -162,7 +138,7 @@ def remove_task(task_id):
 @task_cli.command("duplicate")
 @click.argument("task_id")
 @click.option("--title", help="Title for the duplicated task")
-@require_auth()
+@require_auth
 def duplicate_task(task_id, title):
     """Duplicate an existing task."""
     tasks = load_tasks()
@@ -171,17 +147,14 @@ def duplicate_task(task_id, title):
         click.echo(f"Task '{task_id}' not found.", err=True)
         return
     
-    # Create a copy of the task
     original_task = tasks[task_id].copy()
     new_task_id = str(uuid.uuid4())[:8]
     
-    # Update the title if provided
     if title:
         original_task["title"] = title
     else:
         original_task["title"] = f"{original_task['title']} (copy)"
     
-    # Reset certain fields
     original_task["status"] = "pending"
     original_task["created_at"] = click.get_current_context().meta.get("timestamp", "")
     original_task["updated_at"] = None
@@ -193,7 +166,7 @@ def duplicate_task(task_id, title):
 
 @task_cli.command("show")
 @click.argument("task_id")
-@require_auth()
+@require_auth
 def show_task(task_id):
     """Show detailed information about a task."""
     tasks = load_tasks()
