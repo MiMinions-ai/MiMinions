@@ -5,7 +5,8 @@ from types import SimpleNamespace
 import pytest
 
 from miminions.memory import DistillationResult, MemoryDistiller
-from miminions.session.store import JsonlSessionStore
+
+from miminions.utils.session import append_transcript
 
 
 class _FakeSQLiteMemory:
@@ -20,13 +21,6 @@ class _FakeSQLiteMemory:
 
     def close(self) -> None:
         return None
-
-
-def _append_transcript(root, session_id="s1"):
-    store = JsonlSessionStore(root)
-    store.append(session_id, "user", "Please enforce black formatting in this repo")
-    store.append(session_id, "assistant", "Will do. I will keep formatting deterministic.")
-    return session_id
 
 
 def test_distillation_result_defaults():
@@ -67,7 +61,7 @@ def test_distill_session_handles_empty_session_gracefully(tmp_path):
 
 
 def test_distill_session_accepts_partial_llm_output_with_permissive_defaults(tmp_path):
-    session_id = _append_transcript(tmp_path)
+    session_id = append_transcript(tmp_path)
     distiller = MemoryDistiller(
         lambda **_: {
             "history_summary": "ok",
@@ -88,7 +82,7 @@ def test_distill_session_promotes_history_and_workspace_memory(tmp_path, monkeyp
     _FakeSQLiteMemory.created = []
     monkeypatch.setattr("miminions.memory.distiller.SQLiteMemory", _FakeSQLiteMemory)
 
-    session_id = _append_transcript(tmp_path)
+    session_id = append_transcript(tmp_path)
 
     def llm_filter(**_kwargs):
         return {
@@ -128,7 +122,7 @@ def test_distill_session_stores_global_insights_as_plain_text(tmp_path, monkeypa
     _FakeSQLiteMemory.created = []
     monkeypatch.setattr("miminions.memory.distiller.SQLiteMemory", _FakeSQLiteMemory)
 
-    session_id = _append_transcript(tmp_path)
+    session_id = append_transcript(tmp_path)
 
     def llm_filter(**_kwargs):
         return {
@@ -172,11 +166,11 @@ def test_distill_session_stores_global_insights_as_plain_text(tmp_path, monkeypa
 
 def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypatch):
     class _BrokenSQLiteMemory:
-        def __init__(self, db_path: str):
+        def __init__(self, _db_path: str):
             raise RuntimeError("sqlite unavailable")
 
     monkeypatch.setattr("miminions.memory.distiller.SQLiteMemory", _BrokenSQLiteMemory)
-    session_id = _append_transcript(tmp_path)
+    session_id = append_transcript(tmp_path)
 
     distiller = MemoryDistiller(
         lambda **_: {

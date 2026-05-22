@@ -25,6 +25,21 @@ Transcript:
 """
 
 
+def _parse_json_response(raw: str) -> tuple[dict[str, Any] | None, str]:
+    """Strip markdown fences and parse JSON; returns (dict, cleaned_raw) or (None, cleaned_raw)."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = "\n".join(
+            line for line in raw.splitlines()
+            if not line.strip().startswith("```")
+        ).strip()
+    try:
+        result = json.loads(raw)
+        return (result if isinstance(result, dict) else None), raw
+    except json.JSONDecodeError:
+        return None, raw
+
+
 def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
     """Return a real LLM-backed ``llm_filter`` callable for ``MemoryDistiller``.
 
@@ -42,7 +57,6 @@ def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
         ``(transcript, **kwargs) -> dict[str, Any]``.
     """
     import asyncio
-    import json
     from pydantic_ai import Agent
 
     def llm_filter(transcript: str, **_kwargs: Any) -> dict[str, Any]:
@@ -82,27 +96,13 @@ def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
         else:
             raw = loop.run_until_complete(_run())
 
-        raw = raw.strip()
-
-        # Strip markdown fences if the model wraps its JSON in ```json ... ```.
-        if raw.startswith("```"):
-            raw = "\n".join(
-                line for line in raw.splitlines()
-                if not line.strip().startswith("```")
-            ).strip()
-
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            # Partial extraction: preserve summary even if JSON is malformed.
+        payload, raw = _parse_json_response(raw)
+        if payload is None:
             return {
                 "history_summary": raw[:500],
                 "workspace_facts": [],
                 "global_insights": [],
             }
-
-        if not isinstance(payload, dict):
-            return empty
 
         return {
             "history_summary": str(payload.get("history_summary", "")).strip(),

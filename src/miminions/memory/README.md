@@ -41,8 +41,9 @@ When the chat session ends (e.g., you type `exit`), the `MemoryDistiller` spins 
 
 ## Memory vs. History
 
-| | `MEMORY.md` | `HISTORY.md` |
-|---|---|---|
-| **Contains** | Stable facts and decisions | Chronological session log |
-| **Updated** | Upserted (sections replaced) | Appended (never modified) |
-| **Read by agent**| Yes (via ContextBuilder) | No |
+| | `MEMORY.md` (Tier 2) | `HISTORY.md` (Tier 1) | `global_memory.db` (Tier 3) |
+|---|---|---|---|
+| **Contains** | Stable facts and decisions | Chronological session log | Reusable cross-workspace insights |
+| **Scope** | Workspace-local | Workspace-local | Global |
+| **Updated** | Upserted (sections replaced) | Appended (never modified) | Inserted (deduped by SQLite) |
+| **Read by agent** | Yes (via ContextBuilder) | No | Yes (via ContextBuilder) |

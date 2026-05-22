@@ -1,5 +1,6 @@
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 from click.testing import CliRunner
 
@@ -7,17 +8,10 @@ from miminions.cli.chat import chat_command
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
-class DummyManager:
-    def __init__(self, workspace):
-        self._workspace = workspace
-
-    def load_workspaces(self):
-        return {self._workspace.id: self._workspace}
-
-
 def test_chat_cli_requires_root_path(monkeypatch):
     workspace = SimpleNamespace(id="ws1", name="Test WS", root_path=None)
-    manager = DummyManager(workspace)
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
 
     monkeypatch.setattr(
         "miminions.cli.chat.WorkspaceManager",
@@ -42,7 +36,8 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
         rules=[],
         state={},
     )
-    manager = DummyManager(workspace)
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
 
     class MockMinion:
         def __init__(self, *args, **kwargs):
@@ -66,7 +61,7 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     result = runner.invoke(
         chat_command,
         ["--workspace", "ws1"],
-        input="hello\nquit\n",
+        input="hello\n/quit\n",
     )
 
     assert result.exit_code == 0, f"Expected exit code 0, but got {result.exit_code}"
@@ -95,7 +90,8 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
         rules=[],
         state={},
     )
-    manager = DummyManager(workspace)
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
 
     calls = []
 
@@ -125,7 +121,7 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
     result = runner.invoke(
         chat_command,
         ["--workspace", "ws1"],
-        input="hello\nquit\n",
+        input="hello\n/quit\n",
     )
 
     assert result.exit_code == 0
@@ -146,7 +142,8 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
         rules=[],
         state={},
     )
-    manager = DummyManager(workspace)
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
 
     class MockMinion:
         def __init__(self, *args, **kwargs):
@@ -175,7 +172,7 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
     result = runner.invoke(
         chat_command,
         ["--workspace", "ws1"],
-        input="quit\n",
+        input="/quit\n",
     )
 
     assert result.exit_code == 0

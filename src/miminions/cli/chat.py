@@ -20,29 +20,40 @@ from miminions.cli.auth import get_config_dir
 # ---------------------------------------------------------------------------
 
 
-def _resolve_workspace(manager: Any, workspace_ref: str) -> Any:
-    """Resolve a workspace by id or name using WorkspaceManager.load_workspaces()."""
+def _resolve_workspace(manager: Any, workspace_ref: str) -> tuple[Any, Path]:
+    """Resolve a workspace by id or name, validate its root_path, and return (workspace, root)."""
     workspaces = manager.load_workspaces()
 
-    if not workspaces:
-        return None
+    workspace = None
+    if workspaces:
+        if workspace_ref in workspaces:
+            workspace = workspaces[workspace_ref]
+        else:
+            for workspace_id, ws in workspaces.items():
+                if str(workspace_id) == workspace_ref:
+                    workspace = ws
+                    break
+                if getattr(ws, "id", None) is not None and str(ws.id) == workspace_ref:
+                    workspace = ws
+                    break
+                if getattr(ws, "name", None) is not None and str(ws.name) == workspace_ref:
+                    workspace = ws
+                    break
 
-    # Try exact dict key match
-    if workspace_ref in workspaces:
-        return workspaces[workspace_ref]
+    if workspace is None:
+        raise click.ClickException(f"Workspace not found: {workspace_ref}")
 
-    # Try matching against workspace.id or workspace.name
-    for workspace_id, workspace in workspaces.items():
-        if str(workspace_id) == workspace_ref:
-            return workspace
+    root_path = getattr(workspace, "root_path", None)
+    if not root_path:
+        raise click.ClickException(
+            "This workspace has no root_path yet. Run workspace init-files first."
+        )
 
-        if getattr(workspace, "id", None) is not None and str(workspace.id) == workspace_ref:
-            return workspace
+    root = Path(root_path)
+    if not root.exists():
+        raise click.ClickException(f"Workspace root_path does not exist: {root}")
 
-        if getattr(workspace, "name", None) is not None and str(workspace.name) == workspace_ref:
-            return workspace
-
-    return None
+    return workspace, root
 
 
 # ---------------------------------------------------------------------------
@@ -129,20 +140,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     6. On exit, run session distillation in the finally block.
     """
     manager = WorkspaceManager(get_config_dir())
-    workspace = _resolve_workspace(manager, workspace_ref)
-
-    if workspace is None:
-        raise click.ClickException(f"Workspace not found: {workspace_ref}")
-
-    root_path = getattr(workspace, "root_path", None)
-    if not root_path:
-        raise click.ClickException(
-            "This workspace has no root_path yet. Run workspace init-files first."
-        )
-
-    root = Path(root_path)
-    if not root.exists():
-        raise click.ClickException(f"Workspace root_path does not exist: {root}")
+    workspace, root = _resolve_workspace(manager, workspace_ref)
 
     store = JsonlSessionStore(root)
 
@@ -153,7 +151,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     workspace_name = getattr(workspace, "name", getattr(workspace, "id", "unknown"))
     minion = create_minion(
         name="MiMinions",
-        description=f"MiMinions agent for workspace '{workspace_name}'.",
+        description=f"MiMinions agent for workspace '{workspace_name}'.",  # TODO: make customizable per workspace
     )
     minion.set_context(workspace, root)
 
@@ -167,7 +165,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     click.echo(f"Workspace : {workspace_name}")
     click.echo(f"Session   : {session_id}")
     click.echo("Model     : openai/gpt-oss-20b:free via OpenRouter")
-    click.echo("Type 'exit' or 'quit' to end the session.\n")
+    click.echo("Type '/exit' or '/quit' to end the session.\n")
 
     try:
         while True:
@@ -180,7 +178,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
             if not user_text:
                 continue
 
-            if user_text.lower() in {"exit", "quit"}:
+            if user_text in {"/exit", "/quit"}:
                 click.echo("Session ended.")
                 break
 
