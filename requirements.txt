@@ -22,3 +22,6 @@ click>=8.0.0
 
 # Utility
 Faker>=40.0.0
+
+# Documentation
+mkdocs-material>=9.0.0
