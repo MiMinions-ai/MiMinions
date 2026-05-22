@@ -12,18 +12,18 @@ from pathlib import Path
 from unittest.mock import patch
 from click.testing import CliRunner
 
-from miminions.interface.cli.main import cli
+from miminions.cli.main import cli
 
 
 def patch_config_dir(config_dir):
     """Context manager that patches get_config_dir in all CLI modules."""
     modules = [
-        'miminions.interface.cli.auth',
-        'miminions.interface.cli.agent',
-        'miminions.interface.cli.task',
-        'miminions.interface.cli.workflow',
-        'miminions.interface.cli.knowledge',
-        'miminions.interface.cli.workspace',
+        'miminions.cli.auth',
+        'miminions.cli.agent',
+        'miminions.cli.task',
+        'miminions.cli.workflow',
+        'miminions.cli.knowledge',
+        'miminions.cli.workspace',
     ]
     stack = ExitStack()
     for mod in modules:

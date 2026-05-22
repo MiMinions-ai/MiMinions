@@ -105,9 +105,8 @@ def _execute_prompt_with_tool_fallback(runtime_agent, prompt):
             return f"Tool error: {tool_result.error}"
         return f"Used tool cli_echo -> {tool_result.result}"
 
-    pydantic_agent = runtime_agent.get_pydantic_ai_agent()
-    result = pydantic_agent.run_sync(prompt)
-    output = getattr(result, "output", str(result))
+    import asyncio
+    output = asyncio.run(runtime_agent.run(prompt))
 
     return output
 
