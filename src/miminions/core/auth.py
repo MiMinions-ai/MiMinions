@@ -6,7 +6,7 @@ instead of each defining their own copy.
 """
 
 import click
-from miminions.interface.cli.auth import is_authenticated, is_public_access_enabled
+from miminions.cli.auth import is_authenticated, is_public_access_enabled
 
 
 def require_auth(f):

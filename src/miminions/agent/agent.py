@@ -2,24 +2,30 @@
 
 import asyncio
 import inspect
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
 from pydantic_ai import Agent, Tool, RunContext
+from pydantic_ai.models import Model
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.test import TestModel
 from mcp import StdioServerParameters
 
+from miminions.agent.provider import ModelFactory
 from ..tools import GenericTool
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
 from ..utils.chunker import TextChunker
 
-from .models import (
-    AgentConfig, AgentState, ExecutionStatus, MemoryEntry, MemoryQueryResult,
-    ParameterType, ToolDefinition, ToolExecutionRequest, ToolExecutionResult,
-    ToolParameter, ToolSchema,
+from miminions.agent.models import AgentConfig, AgentState
+from miminions.tools.schemas import (
+    ExecutionStatus, ParameterType, ToolDefinition, ToolExecutionRequest,
+    ToolExecutionResult, ToolParameter, ToolSchema,
 )
+from miminions.memory.types import MemoryEntry, MemoryQueryResult
 
 
 def _python_type_to_param_type(py_type: type) -> ParameterType:
@@ -79,6 +85,7 @@ class Minion:
         chunk_size: int = 800,
         overlap: int = 150,
         model: Optional[Any] = None,
+        provider: str = "openrouter",
     ):
         self.config = AgentConfig(name=name, description=description, chunk_size=chunk_size, overlap=overlap)
         self._tools: Dict[str, RegisteredTool] = {}
@@ -87,10 +94,21 @@ class Minion:
         self._connected_servers: Dict[str, StdioServerParameters] = {}
         self._chunker = TextChunker(chunk_size=chunk_size, overlap=overlap)
         
-        # Replace TestModel with real model for LLM support
-        self._model = model or TestModel()
+        # ------------------------------------------------------------------
+        # Model selection
+        # ------------------------------------------------------------------
+        # Default: OpenAIModel pointing at OpenRouter (free-tier model).
+        # OpenRouter speaks the OpenAI wire protocol, so we configure
+        # OpenAIProvider with their base URL and the OPENROUTER_API_KEY.
+        # Callers who need a different model can pass model=... explicitly.
+        if model is not None:
+            self._model = model
+        else:
+            self._model = ModelFactory.create(provider)
+
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
+        self._last_messages: List[Any] = []
         
         if self._memory:
             self._register_memory_tools()
@@ -116,12 +134,33 @@ class Minion:
         )
     
     def _rebuild_pydantic_ai_agent(self) -> None:
-        """Rebuild the pydantic_ai Agent with current tools."""
-        self._pydantic_ai_agent = Agent(
+        """Rebuild the pydantic_ai Agent with current tools and system prompt.
+
+        If ``set_context()`` was called, the ContextBuilder output is
+        registered as a ``@agent.system_prompt`` callback so the LLM
+        receives the full workspace context on every call.
+        """
+        agent = Agent(
             model=self._model,
             tools=self._pydantic_ai_tools,
             instructions=self.config.description or f"Agent: {self.config.name}",
         )
+
+        # Wire ContextBuilder into the system prompt when workspace context
+        # has been attached via set_context().
+        _workspace = getattr(self, "_workspace", None)
+        _root_path = getattr(self, "_root_path", None)
+        if _workspace and _root_path:
+            from miminions.context.context_builder import ContextBuilder
+
+            _ws = _workspace
+            _rp = _root_path
+
+            @agent.system_prompt
+            def _build_system_prompt() -> str:  # type: ignore[misc]
+                return ContextBuilder().build(_ws, _rp)
+
+        self._pydantic_ai_agent = agent
     
     # tool management
     def register_tool(self, name: str, description: str, func: Callable, schema: Optional[ToolSchema] = None) -> ToolDefinition:
@@ -393,10 +432,51 @@ class Minion:
         if rebuild:
             self._rebuild_pydantic_ai_agent()
 
-    def get_pydantic_ai_agent(self) -> Agent:
-        """Get the underlying pydantic_ai Agent for LLM operations. Use for when integrating with an LLM."""
+    async def run(self, prompt: str, message_history: Optional[List[Any]] = None) -> str:
+        """Send a prompt to the LLM and return the reply as a plain string.
+
+        This is the single public entry point for LLM interaction. Tools
+        registered via ``register_tool`` are available to the model and will
+        be called by pydantic_ai whenever the model decides to use them.
+        The full message list is stored on ``_last_messages`` after each call
+        so the caller can pass it back in on the next turn for multi-turn
+        conversation memory within a session.
+
+        Args:
+            prompt: The user message to send.
+            message_history: Prior pydantic_ai ModelMessage objects for
+                             multi-turn context. Pass ``minion._last_messages``
+                             from the previous call to maintain conversation.
+
+        Returns:
+            The LLM's reply as a plain string.
+
+        Raises:
+            Exception: Re-raises any network / API error so the caller can
+                       decide how to surface it.
+        """
         self._rebuild_pydantic_ai_agent()
-        return self._pydantic_ai_agent
+        result = await self._pydantic_ai_agent.run(
+            prompt,
+            message_history=message_history or None,
+        )
+        self._last_messages = result.all_messages()
+        return result.output if hasattr(result, "output") else str(result.data)
+
+    def set_context(self, workspace: Any, root_path: str | Path) -> None:
+        """Attach workspace context so ContextBuilder feeds the system prompt.
+
+        Call this before the first ``run()`` to enable the
+        ``@agent.system_prompt`` decorator to inject the ContextBuilder
+        output into every LLM call.  The context includes prompt files,
+        MEMORY.md, global SQLite insights, workspace graph, and skills.
+
+        Args:
+            workspace: The Workspace object (or dict with equivalent keys).
+            root_path: Filesystem root of the workspace.
+        """
+        self._workspace = workspace
+        self._root_path = Path(root_path)
 
     def set_model(self, model: Any) -> None:
         self._model = model
@@ -416,6 +496,7 @@ def create_minion(
     description: str = "",
     memory: Optional[BaseMemory] = None,
     model: Optional[Any] = None,
+    provider: str = "openrouter",
 ) -> Minion:
     """
     Create a new Minion instance.
@@ -424,10 +505,11 @@ def create_minion(
         name: Agent name
         description: Agent description
         memory: Optional memory backend (for example SQLiteMemory)
-        model: Optional pydantic_ai model. Defaults to TestModel (no LLM).
+        model: Optional pydantic_ai model. Defaults to None.
                Pass a real model like 'openai:gpt-4' for LLM support.
+        provider: The string name of the provider. Defaults to "openrouter".
     
     Returns:
         Minion instance ready for tool registration and execution
     """
-    return Minion(name=name, description=description, memory=memory, model=model)
+    return Minion(name=name, description=description, memory=memory, model=model, provider=provider)

@@ -20,7 +20,7 @@ from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 from miminions.tools import GenericTool
-from miminions.workflow.models import AgentRunRecord, WorkflowRun
+from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
 
 
 # ── File helpers ──────────────────────────────────────────────────────────────
@@ -90,8 +90,10 @@ def _record_interaction(
     the CLI interaction log shares the same schema as the workflow tracing layer.
     stdout_output is stored in the ToolCallRecord's kwargs for full reproducibility.
     """
-    run = AgentRunRecord(prompt=prompt)
-    run.record_tool_call(
+    trace = WorkflowTrace()
+    agent_rec = AgentRunRecord(prompt=prompt, output=stdout_output or str(result))
+    trace.add_agent_record(agent_rec)
+    trace.add_tool_record(
         tool_name=tool_name,
         kwargs={**inputs, "__stdout__": stdout_output},
         result=result,
@@ -99,9 +101,8 @@ def _record_interaction(
         status=status,
         execution_time_ms=execution_time_ms,
     )
-    run.output = stdout_output or str(result)
 
-    workflow_run = WorkflowRun(agent_name=agent_name, run=run)
+    workflow_run = WorkflowRun(agent_name=agent_name, trace=trace)
 
     # Persist
     interactions = _load(_interactions_file())
@@ -129,9 +130,7 @@ def _run_tool(session_id: str, session: dict, tool_name: str, inputs: dict):
     status = "success"
 
     try:
-        result_val = asyncio.get_event_loop().run_until_complete(
-            agent.execute_tool_async(tool_name, **inputs)
-        )
+        result_val = asyncio.run(agent.execute_tool_async(tool_name, **inputs))
     except Exception as e:
         error_val = str(e)
         status = "error"
@@ -175,6 +174,7 @@ def session():
 
 @session.command("start")
 @click.option("--name", default=None, help="Optional session name.")
+@require_auth
 def session_start(name):
     """Start a new execution session."""
     sid, existing = _active_session()
@@ -195,6 +195,7 @@ def session_start(name):
 
 
 @session.command("stop")
+@require_auth
 def session_stop():
     """Stop the active session."""
     sid, s = _active_session()
@@ -209,6 +210,7 @@ def session_stop():
 
 
 @session.command("list")
+@require_auth
 def session_list():
     """List all sessions."""
     sessions = _load(_sessions_file())
@@ -223,6 +225,7 @@ def session_list():
 
 @execution.command("add-tool")
 @click.argument("path")
+@require_auth
 def add_tool(path):
     """Register a tool module (.py) with the active session."""
     sid, s = _active_session()
@@ -251,6 +254,7 @@ def add_tool(path):
 @click.argument("tool_name")
 @click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
               help="Tool input as KEY=VALUE pairs.")
+@require_auth
 def run_tool(tool_name, inputs):
     """Execute a tool in the active session."""
     sid, s = _active_session()
@@ -267,17 +271,19 @@ def run_tool(tool_name, inputs):
         parsed[k.strip()] = v.strip()
 
     workflow_run, stdout_output = _run_tool(sid, s, tool_name, parsed)
-    tool_call = workflow_run.run.tool_calls[0]
+    tool_calls = [r for r in workflow_run.trace.records if isinstance(r, ToolCallRecord)]
+    tool_call = tool_calls[0] if tool_calls else None
 
     if stdout_output:
         click.echo(stdout_output, nl=False)
 
-    if tool_call.error:
+    if tool_call and tool_call.error:
         click.echo(f"Error: {tool_call.error}", err=True)
-    else:
+    elif tool_call:
         click.echo(f"Result: {tool_call.result}")
 
-    click.echo(f"Recorded as WorkflowRun {workflow_run.id} ({tool_call.execution_time_ms:.1f}ms)")
+    ms = tool_call.execution_time_ms if tool_call else 0.0
+    click.echo(f"Recorded as WorkflowRun {workflow_run.id} ({ms:.1f}ms)")
 
 
 # ── Interaction commands ──────────────────────────────────────────────────────
@@ -290,6 +296,7 @@ def interaction():
 
 @interaction.command("list")
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+@require_auth
 def interaction_list(session_id):
     """List all recorded WorkflowRuns for a session."""
     if not session_id:
@@ -306,7 +313,8 @@ def interaction_list(session_id):
 
     for i, wf_dict in enumerate(runs):
         wf = WorkflowRun.from_dict(wf_dict)
-        tc = wf.run.tool_calls[0] if wf.run.tool_calls else None
+        tool_calls = [r for r in wf.trace.records if isinstance(r, ToolCallRecord)]
+        tc = tool_calls[0] if tool_calls else None
         tool_name = tc.tool_name if tc else "?"
         status = tc.status if tc else "?"
         click.echo(f"[{i}] {wf.id}  tool={tool_name}  status={status}  created={wf.created_at}")
@@ -315,6 +323,7 @@ def interaction_list(session_id):
 @interaction.command("show")
 @click.argument("index", type=int)
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+@require_auth
 def interaction_show(index, session_id):
     """Show full details of a recorded WorkflowRun by index."""
     if not session_id:
@@ -338,6 +347,7 @@ def interaction_show(index, session_id):
 
 @execution.command("test")
 @click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
+@require_auth
 def run_test(prompt):
     """
     Query the agent with all registered tools and record inputs/outputs.
@@ -360,7 +370,7 @@ def run_test(prompt):
 
     click.echo(f"Testing {len(tool_names)} tool(s) for agent '{agent_name}'...")
 
-    run = AgentRunRecord(prompt=prompt)
+    trace = WorkflowTrace()
     final_outputs = []
 
     for tool_name in tool_names:
@@ -387,7 +397,7 @@ def run_test(prompt):
             click.echo(f"  ✗ {tool_name}: {error_val}", err=True)
 
         elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-        run.record_tool_call(
+        trace.add_tool_record(
             tool_name=tool_name,
             kwargs=kwargs,
             result=result_val,
@@ -397,8 +407,9 @@ def run_test(prompt):
         )
         final_outputs.append(f"{tool_name}: {result_val if result_val is not None else error_val}")
 
-    run.output = " | ".join(final_outputs)
-    wf = WorkflowRun(agent_name=agent_name, run=run)
+    agent_rec = AgentRunRecord(prompt=prompt, output=" | ".join(final_outputs))
+    trace.add_agent_record(agent_rec)
+    wf = WorkflowRun(agent_name=agent_name, trace=trace)
 
     interactions = _load(_interactions_file())
     interactions.setdefault(sid, []).append(wf.to_dict())

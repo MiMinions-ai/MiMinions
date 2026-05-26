@@ -31,6 +31,10 @@ cli.add_command(workspace_cli, name="workspace")
 cli.add_command(execution_cli, name="execution")
 cli.add_command(chat_cli, name="chat")
 
+def main():
+    """Entry point for the CLI."""
+    cli()
+
 
 if __name__ == "__main__":
-    cli()
+    main()

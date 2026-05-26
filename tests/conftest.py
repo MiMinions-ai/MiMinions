@@ -14,6 +14,9 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 @pytest.fixture
 def temp_config_dir():
     """Provide a temporary configuration directory for tests."""
