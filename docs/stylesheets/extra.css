@@ -1,0 +1,45 @@
+/* MiMinions brand palette — matched from miminions.ai landing.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --md-primary-fg-color:        #2DD4BF;
+  --md-primary-fg-color--light: #5ee8d8;
+  --md-primary-fg-color--dark:  #1ba394;
+  --md-accent-fg-color:         #0EA5E9;
+  --md-accent-fg-color--transparent: #0EA5E910;
+
+  --md-text-font: "Plus Jakarta Sans", sans-serif;
+  --md-code-font: "Fira Code", "Monaco", "Consolas", monospace;
+}
+
+/* Dark (slate) scheme — yellow accent matches the site's hover/CTA accent */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #2DD4BF;
+  --md-primary-fg-color--light: #5ee8d8;
+  --md-primary-fg-color--dark:  #1ba394;
+  --md-accent-fg-color:         #FDE047;
+  --md-accent-fg-color--transparent: #FDE04710;
+}
+
+/* Code blocks — match the site's dark code panel (#1f2937 bg, #e5e7eb text) */
+.md-typeset code,
+.md-typeset pre {
+  font-family: var(--md-code-font);
+}
+
+.md-typeset pre > code {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+/* Nav header gradient — mirrors the site's CTA gradient */
+.md-header {
+  background: linear-gradient(135deg, #2DD4BF 0%, #0EA5E9 100%);
+}
+
+/* Active nav tabs */
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: #FDE047;
+}
