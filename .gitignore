@@ -143,3 +143,6 @@ AGENTS.md
 .cursor
 
 *.egg-info/
+
+# macOS system files
+.DS_Store
