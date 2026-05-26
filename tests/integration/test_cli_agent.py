@@ -93,7 +93,7 @@ class TestAgentCLI:
 
     def test_list_agents_empty(self):
         """Test list agents when no agents exist."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = {}
@@ -105,7 +105,7 @@ class TestAgentCLI:
 
     def test_list_agents_not_authenticated(self):
         """Test list agents when not authenticated."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             
             result = self.runner.invoke(agent_cli, ['list'])
@@ -134,7 +134,7 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = test_agents
@@ -148,7 +148,7 @@ class TestAgentCLI:
 
     def test_add_agent_success(self):
         """Test successful agent addition."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 with patch('miminions.cli.agent.save_agents') as mock_save:
                     mock_is_auth.return_value = True
@@ -176,7 +176,7 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = existing_agents
@@ -193,7 +193,7 @@ class TestAgentCLI:
 
     def test_add_agent_not_authenticated(self):
         """Test adding agent when not authenticated."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             
             result = self.runner.invoke(agent_cli, [
@@ -221,7 +221,7 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 with patch('miminions.cli.agent.save_agents') as mock_save:
                     mock_is_auth.return_value = True
@@ -240,7 +240,7 @@ class TestAgentCLI:
 
     def test_update_agent_not_found(self):
         """Test updating non-existent agent."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = {}
@@ -265,7 +265,7 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 with patch('miminions.cli.agent.save_agents') as mock_save:
                     mock_is_auth.return_value = True
@@ -283,7 +283,7 @@ class TestAgentCLI:
 
     def test_remove_agent_not_found(self):
         """Test removing non-existent agent."""
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_is_auth.return_value = True
                 mock_load.return_value = {}
@@ -308,7 +308,7 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
+        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 with patch('miminions.cli.agent.save_agents') as mock_save:
                     mock_is_auth.return_value = True
@@ -337,10 +337,11 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
 
-            result = self.runner.invoke(agent_cli, ['tool-list', 'test_agent'])
+                result = self.runner.invoke(agent_cli, ['tool-list', 'test_agent'])
 
             assert result.exit_code == 0
             assert "Tools for 'test_agent':" in result.output
@@ -358,10 +359,11 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
 
-            result = self.runner.invoke(agent_cli, ['tool-info', 'test_agent', 'cli_add'])
+                result = self.runner.invoke(agent_cli, ['tool-info', 'test_agent', 'cli_add'])
 
             assert result.exit_code == 0
             assert "Tool: cli_add" in result.output
@@ -379,13 +381,14 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
 
-            result = self.runner.invoke(
-                agent_cli,
-                ['tool-run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
-            )
+                result = self.runner.invoke(
+                    agent_cli,
+                    ['tool-run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
+                )
 
             assert result.exit_code == 0
             assert "Tool: cli_add" in result.output
@@ -403,13 +406,14 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
 
-            result = self.runner.invoke(
-                agent_cli,
-                ['tool-run', 'test_agent', 'cli_add', '--arguments', 'not-json']
-            )
+                result = self.runner.invoke(
+                    agent_cli,
+                    ['tool-run', 'test_agent', 'cli_add', '--arguments', 'not-json']
+                )
 
             assert result.exit_code == 0
             assert "Invalid JSON for --arguments." in result.output
@@ -425,13 +429,14 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
 
-            result = self.runner.invoke(
-                agent_cli,
-                ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
-            )
+                result = self.runner.invoke(
+                    agent_cli,
+                    ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
+                )
 
             assert result.exit_code == 0
             assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output
@@ -449,13 +454,14 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.cli.agent.load_agents') as mock_load:
-            with patch('miminions.cli.agent.save_agents') as mock_save:
-                mock_load.return_value = existing_agents
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                with patch('miminions.cli.agent.save_agents') as mock_save:
+                    mock_load.return_value = existing_agents
 
-                result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
+                    result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
 
-                assert result.exit_code == 0
-                assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output
-                assert "Agent response: Used tool cli_add -> 15" in result.output
-                mock_save.assert_called_once()
+                    assert result.exit_code == 0
+                    assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output
+                    assert "Agent response: Used tool cli_add -> 15" in result.output
+                    mock_save.assert_called_once()

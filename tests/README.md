@@ -58,4 +58,3 @@ pytest tests/ -v
 ### e2e/
 - **test_e2e.py** — Full CLI use-case flows
 - **test_data_management_e2e.py** — Data management end-to-end
-- **run_all.sh** — Shell script for full test suite
