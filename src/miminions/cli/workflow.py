@@ -6,7 +6,8 @@ import click
 import json
 import uuid
 from pathlib import Path
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from .auth import get_config_dir
+from miminions.core.auth import require_auth
 
 
 def get_workflows_file():
@@ -31,30 +32,6 @@ def save_workflows(workflows):
         json.dump(workflows, f, indent=2)
 
 
-# TODO: require_auth disabled until auth is fully implemented
-# and the public-access path is clear to users.
-# def require_auth():
-#     """Decorator to require authentication or allow public access."""
-#     def decorator(f):
-#         def wrapper(*args, **kwargs):
-#             if not is_authenticated():
-#                 if is_public_access_enabled():
-#                     # Show warning but allow access
-#                     click.echo("⚠️  Running in public access mode. Sign in for full functionality.", err=True)
-#                 else:
-#                     # Require authentication
-#                     click.echo("Please sign in first using 'miminions auth signin'", err=True)
-#                     return
-#             return f(*args, **kwargs)
-#         return wrapper
-#     return decorator
-def require_auth():
-    """Temporary no-op decorator while auth is being stabilized."""
-    def decorator(f):
-        return f
-    return decorator
-
-
 @click.group()
 def workflow_cli():
     """Workflow management commands."""
@@ -62,7 +39,7 @@ def workflow_cli():
 
 
 @workflow_cli.command("list")
-@require_auth()
+@require_auth
 def list_workflows():
     """List all workflows."""
     workflows = load_workflows()
@@ -84,12 +61,11 @@ def list_workflows():
 @click.option("--name", prompt="Workflow name", help="Name of the workflow")
 @click.option("--description", prompt="Description", help="Description of the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth()
+@require_auth
 def add_workflow(name, description, agents):
     """Add a new workflow."""
     workflows = load_workflows()
     
-    # Generate a unique ID
     workflow_id = str(uuid.uuid4())[:8]
     
     agent_list = []
@@ -115,7 +91,7 @@ def add_workflow(name, description, agents):
 @click.option("--name", help="New name for the workflow")
 @click.option("--description", help="New description for the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth()
+@require_auth
 def update_workflow(workflow_id, name, description, agents):
     """Update an existing workflow."""
     workflows = load_workflows()
@@ -142,7 +118,7 @@ def update_workflow(workflow_id, name, description, agents):
 @workflow_cli.command("remove")
 @click.argument("workflow_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this workflow?")
-@require_auth()
+@require_auth
 def remove_workflow(workflow_id):
     """Remove a workflow."""
     workflows = load_workflows()
@@ -158,7 +134,7 @@ def remove_workflow(workflow_id):
 
 @workflow_cli.command("start")
 @click.argument("workflow_id")
-@require_auth()
+@require_auth
 def start_workflow(workflow_id):
     """Start a workflow."""
     workflows = load_workflows()
@@ -186,7 +162,7 @@ def start_workflow(workflow_id):
 
 @workflow_cli.command("pause")
 @click.argument("workflow_id")
-@require_auth()
+@require_auth
 def pause_workflow(workflow_id):
     """Pause a running workflow."""
     workflows = load_workflows()
@@ -210,7 +186,7 @@ def pause_workflow(workflow_id):
 
 @workflow_cli.command("stop")
 @click.argument("workflow_id")
-@require_auth()
+@require_auth
 def stop_workflow(workflow_id):
     """Stop a workflow."""
     workflows = load_workflows()
@@ -234,7 +210,7 @@ def stop_workflow(workflow_id):
 
 @workflow_cli.command("show")
 @click.argument("workflow_id")
-@require_auth()
+@require_auth
 def show_workflow(workflow_id):
     """Show detailed information about a workflow."""
     workflows = load_workflows()
