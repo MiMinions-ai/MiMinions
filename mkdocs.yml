@@ -1,6 +1,6 @@
 site_name: MiMinions
 site_description: An agentic framework with pydantic_ai, MCP server support and vector memory
-site_url: https://docs.miminions.ai
+# site_url: https://docs.miminions.ai
 repo_url: https://github.com/MiMinions-ai/MiMinions
 repo_name: MiMinions-ai/MiMinions
 
