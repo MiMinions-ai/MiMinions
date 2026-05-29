@@ -1,0 +1,16 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - pip install mkdocs mkdocs-material pymdown-extensions
+    build:
+      commands:
+        - mkdocs build
+  artifacts:
+    baseDirectory: site
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ~/.cache/pip/**/*
