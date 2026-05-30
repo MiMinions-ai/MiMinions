@@ -43,3 +43,67 @@
 .md-tabs__link:hover {
   color: #FDE047;
 }
+
+/* ── Homepage hero ───────────────────────────────────────────── */
+.home-hero {
+  text-align: center;
+  padding: 3rem 1rem 2.5rem;
+  margin: 0 0 1rem;
+  background: linear-gradient(135deg,
+    var(--md-primary-fg-color--transparent, #2DD4BF14) 0%,
+    var(--md-accent-fg-color--transparent, #0EA5E914) 100%);
+  border-radius: 1rem;
+}
+
+.home-hero h1 {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 auto 1rem;
+  max-width: 22ch;
+}
+
+.home-hero > p {
+  font-size: 1.05rem;
+  color: var(--md-default-fg-color--light);
+  max-width: 60ch;
+  margin: 0 auto 1.75rem;
+}
+
+/* Buttons sit in a row, wrapping on small screens */
+.home-hero .md-button,
+.home-cta .md-button {
+  margin: 0.3rem 0.4rem;
+}
+
+@media screen and (max-width: 44.9375em) {
+  .home-hero h1 {
+    font-size: 1.9rem;
+  }
+}
+
+/* ── Homepage closing CTA ────────────────────────────────────── */
+.home-cta {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.home-cta h2 {
+  margin-top: 0;
+}
+
+/* ── Feature/use-case category badge ─────────────────────────── */
+.feature-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #2DD4BF 0%, #0EA5E9 100%);
+  color: #ffffff !important;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.7rem;
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
+}
