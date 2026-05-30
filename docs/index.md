@@ -1,30 +1,91 @@
-# MiMinions
+---
+hide:
+  - navigation
+  - toc
+---
 
-An agentic framework for multi-agent systems with knowledge retrieval, long-term memory, and MCP server support — built on [pydantic-ai](https://ai.pydantic.dev/) and [OpenRouter](https://openrouter.ai/).
+<div class="home-hero" markdown>
 
-## Features
+# Build Autonomous AI Agents with MiMinions
 
-- **Minion Agent** — async reasoning loop powered by pydantic-ai and OpenRouter
-- **Long-Term Memory** — three-tier memory system (session logs, workspace facts, global insights)
-- **Context Injection** — workspace state and memory automatically injected into every LLM call
-- **Generic Tool System** — create tools once, use with LangChain, AutoGen, and AGNO
-- **MCP Integration** — load tools directly from Model Context Protocol servers
-- **CLI & Chat** — interactive chat with session resumption and background memory distillation
-- **Vector Search** — SQLite-backed vector memory with keyword and full-text search
+The open-source framework for creating, deploying, and managing agentic AI systems at scale — built on [pydantic-ai](https://ai.pydantic.dev/) and [OpenRouter](https://openrouter.ai/).
 
-## Quick Install
+[Get Started](getting-started.md){ .md-button .md-button--primary }
+[Explore Features](features.md){ .md-button }
+[:fontawesome-brands-github: GitHub](https://github.com/MiMinions-ai/MiMinions){ .md-button }
+
+</div>
+
+## Key Features
+
+<div class="grid cards" markdown>
+
+-   :material-robot:{ .lg .middle } &nbsp; **Autonomous Agents**
+
+    ---
+
+    Create AI agents that think, plan, and execute tasks independently through
+    an async reasoning loop powered by pydantic-ai and OpenRouter.
+
+-   :material-graph-outline:{ .lg .middle } &nbsp; **Multi-Agent Systems**
+
+    ---
+
+    Build complex systems where multiple agents collaborate, share context, and
+    coordinate to solve problems no single agent could.
+
+-   :material-brain:{ .lg .middle } &nbsp; **Long-Term Memory**
+
+    ---
+
+    A three-tier memory system — session logs, workspace facts, and global
+    insights — keeps agents context-aware across conversations.
+
+-   :material-connection:{ .lg .middle } &nbsp; **MCP Integration**
+
+    ---
+
+    Load tools directly from Model Context Protocol servers and run them
+    alongside your own custom Python functions.
+
+-   :material-tools:{ .lg .middle } &nbsp; **Generic Tool System**
+
+    ---
+
+    Define a tool once and use it across LangChain, AutoGen, and AGNO without
+    rewriting a thing.
+
+-   :material-magnify:{ .lg .middle } &nbsp; **Vector Search**
+
+    ---
+
+    SQLite-backed vector memory with semantic, keyword, and full-text search for
+    fast, relevant retrieval.
+
+</div>
+
+## Get Started with MiMinions
+
+Build powerful autonomous AI agents that understand complex tasks, make
+decisions, and execute actions with minimal human intervention. Everything you
+need to create intelligent systems that scale — in a few lines of code.
+
+### Why choose MiMinions?
+
+- :material-check-circle:{ .middle } **Rapid development** — get started in minutes with an intuitive API
+- :material-check-circle:{ .middle } **Production ready** — built for scale with reliable, tested internals
+- :material-check-circle:{ .middle } **Flexible architecture** — customise agents to fit your unique needs
+- :material-check-circle:{ .middle } **Open source** — join the community and shape the future of agentic AI
+
+### Quick start
+
+Install the framework:
 
 ```bash
 pip install miminions
 ```
 
-For optional SQLite vector memory:
-
-```bash
-pip install miminions[sqlite]
-```
-
-## Quick Start
+Create your first agent:
 
 ```python
 import asyncio
@@ -42,6 +103,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+Then head to the [Getting Started](getting-started.md) guide to go further.
 
 ## Architecture
 
@@ -62,4 +125,13 @@ asyncio.run(main())
     └─────────────┘ └────────────┘ └──────────────────┘
 ```
 
-See the [Getting Started](getting-started.md) guide to set up your first agent.
+<div class="home-cta" markdown>
+
+## Ready to build something amazing?
+
+Join the developers building the future of autonomous AI.
+
+[Get Started](getting-started.md){ .md-button .md-button--primary }
+[Read the Docs](modules/agent.md){ .md-button }
+
+</div>

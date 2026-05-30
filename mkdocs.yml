@@ -32,26 +32,46 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/MiMinions-ai/MiMinions
+      name: MiMinions on GitHub
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/miminions_ai
+      name: MiMinions on Twitter
+
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - Modules:
-      - Agent: modules/agent.md
-      - Memory: modules/memory.md
-      - Context Builder: modules/context.md
-      - Tools: modules/tools.md
-      - CLI & Chat: modules/cli.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
+  - Features: features.md
+  - Documentation:
+      - Getting Started: getting-started.md
+      - Modules:
+          - Agent: modules/agent.md
+          - Memory: modules/memory.md
+          - Context Builder: modules/context.md
+          - Tools: modules/tools.md
+          - CLI & Chat: modules/cli.md
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+  - About: about.md
+  - FAQ: faq.md
+  - Contact: contact.md
 
 markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - tables
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.tabbed:
       alternate_style: true
-  - admonition
-  - tables
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
