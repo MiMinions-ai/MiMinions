@@ -1,39 +1,29 @@
 import json
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 from click.testing import CliRunner
 
 from miminions.core.workspace import Workspace, WorkspaceManager
-from miminions.interface.cli.main import cli
+from miminions.cli.main import cli
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
-class FakeMinion:
-    def __init__(self, reply: str = "assistant reply", error: Exception | None = None):
-        self.reply = reply
-        self.error = error
-        self.prompts = []
-
-    async def run(self, prompt: str) -> str:
-        self.prompts.append(prompt)
-        if self.error:
-            raise self.error
-        return self.reply
-
-
-def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: FakeMinion | None = None) -> FakeMinion:
-    fake = fake_minion or FakeMinion()
+def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | None = None) -> MagicMock:
+    fake = fake_minion or MagicMock()
+    if not hasattr(fake, "run") or not isinstance(fake.run, AsyncMock):
+        fake.run = AsyncMock(return_value="assistant reply")
 
     monkeypatch.setattr(
-        "miminions.interface.cli.prompt.get_config_dir",
+        "miminions.cli.prompt.get_config_dir",
         lambda: tmp_path / "config",
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.prompt._default_root_path",
-        lambda workspace_id: tmp_path / "workspaces" / f"ws_{workspace_id}",
+        "miminions.core.workspace.DEFAULT_WORKSPACES_ROOT",
+        tmp_path / "workspaces",
     )
     monkeypatch.setattr(
-        "miminions.interface.cli.prompt.create_minion",
+        "miminions.cli.prompt.create_minion",
         lambda name, description: fake,
     )
 
@@ -69,7 +59,7 @@ def test_prompt_ask_creates_default_workspace_files_logs_and_prints(tmp_path, mo
 
     assert result.exit_code == 0, f"Expected exit code 0, got {result.exit_code}: {result.output}"
     assert result.output == "assistant reply\n", f"Expected assistant-only output, got: {result.output}"
-    assert fake.prompts == ["book a chinese food restaurant at 6 pm today"]
+    fake.run.assert_awaited_once_with("book a chinese food restaurant at 6 pm today")
 
     config_dir = tmp_path / "config"
     workspace_data = _read_workspace_data(config_dir)
@@ -154,11 +144,13 @@ def test_prompt_ask_writes_to_requested_session(tmp_path, monkeypatch):
 
 
 def test_prompt_ask_logs_runtime_error_and_exits_nonzero(tmp_path, monkeypatch):
-    _patch_prompt_runtime(monkeypatch, tmp_path, FakeMinion(error=RuntimeError("runtime failed")))
+    fake = MagicMock()
+    fake.run = AsyncMock(side_effect=RuntimeError("runtime failed"))
+    _patch_prompt_runtime(monkeypatch, tmp_path, fake)
 
     result = CliRunner().invoke(cli, ["prompt", "ask", "hello"])
 
-    assert result.exit_code != 0, "Expected a non-zero exit code for runtime failure"
+    assert result.exit_code != 0, f"Expected non-zero exit code for runtime failure, got {result.exit_code}"
     assert "RuntimeError: runtime failed" in result.output
 
     workspace_data = _read_workspace_data(tmp_path / "config")
