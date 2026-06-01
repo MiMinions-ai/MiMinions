@@ -11,14 +11,9 @@ from miminions.session.store import JsonlSessionStore
 
 from .md_store import append_history, upsert_memory_section
 
-try:
-    from .sqlite import SQLiteMemory
-except ImportError:
-    SQLiteMemory = None  # type: ignore[assignment]
-
 
 def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return the default global memory DB path without importing sqlite-vec."""
+    """Return canonical path for cross-workspace global memory DB."""
     path = Path.home() / ".miminions" / "global_memory.db"
     if create_dir:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -169,11 +164,8 @@ class MemoryDistiller:
 
         if global_insights:
             try:
-                if SQLiteMemory is None:
-                    raise ImportError(
-                        "sqlite memory dependencies are unavailable; install "
-                        "the sqlite extra to enable Tier 3 memory"
-                    )
+                from .sqlite import SQLiteMemory
+
                 sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
                 try:
                     for insight_text in global_insights:
