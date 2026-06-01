@@ -10,7 +10,14 @@ from typing import Any, Callable
 from miminions.session.store import JsonlSessionStore
 
 from .md_store import append_history, upsert_memory_section
-from .sqlite import SQLiteMemory, get_global_memory_db_path
+
+
+def get_global_memory_db_path(create_dir: bool = True) -> str:
+    """Return canonical path for cross-workspace global memory DB."""
+    path = Path.home() / ".miminions" / "global_memory.db"
+    if create_dir:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return str(path)
 
 
 @dataclass
@@ -157,6 +164,8 @@ class MemoryDistiller:
 
         if global_insights:
             try:
+                from .sqlite import SQLiteMemory
+
                 sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
                 try:
                     for insight_text in global_insights:
