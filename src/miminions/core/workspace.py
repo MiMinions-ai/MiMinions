@@ -8,9 +8,12 @@ and structured logic based on internal state.
 import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict, field
 from enum import Enum
+
+DEFAULT_WORKSPACES_ROOT = Path("~/.miminions/workspaces").expanduser()
 
 
 class NodeType(Enum):
@@ -435,3 +438,62 @@ class WorkspaceManager:
         }
         
         return workspace
+
+
+def resolve_workspace(workspaces: Dict[str, Workspace], workspace_ref: str) -> Workspace | None:
+    """Resolve a workspace by exact id, id prefix, or exact name."""
+    if workspace_ref in workspaces:
+        return workspaces[workspace_ref]
+
+    for workspace_id, workspace in workspaces.items():
+        if str(workspace_id).startswith(workspace_ref):
+            return workspace
+        if str(getattr(workspace, "id", "")) == workspace_ref:
+            return workspace
+        if str(getattr(workspace, "name", "")) == workspace_ref:
+            return workspace
+
+    return None
+
+
+def default_workspace_root(workspace_id: str) -> Path:
+    """Return the default on-disk root for a workspace."""
+    return (DEFAULT_WORKSPACES_ROOT / f"ws_{workspace_id}").resolve()
+
+
+def ensure_workspace(
+    manager: WorkspaceManager,
+    workspace_ref: str,
+    *,
+    create_missing: bool = False,
+    init_files: bool = False,
+) -> tuple[Workspace, Path]:
+    """Resolve or create a workspace and return it with its root path."""
+    workspaces = manager.load_workspaces()
+    workspace = resolve_workspace(workspaces, workspace_ref)
+
+    if workspace is None:
+        if not create_missing:
+            raise ValueError(f"Workspace not found: {workspace_ref}")
+
+        workspace = manager.create_workspace(workspace_ref)
+        workspaces[workspace.id] = workspace
+
+    root_path = getattr(workspace, "root_path", None)
+    if root_path:
+        root = Path(root_path).expanduser().resolve()
+    elif init_files:
+        root = default_workspace_root(workspace.id)
+        workspace.root_path = str(root)
+    else:
+        raise ValueError("This workspace has no root_path yet. Run workspace init-files first.")
+
+    if init_files:
+        from miminions.workspace_fs import init_workspace
+
+        init_workspace(root)
+        manager.save_workspaces(workspaces)
+    elif not root.exists():
+        raise FileNotFoundError(f"Workspace root_path does not exist: {root}")
+
+    return workspace, root
