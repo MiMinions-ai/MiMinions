@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional
 
 from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace
-
-if TYPE_CHECKING:
-    from miminions.agent.models import ToolExecutionResult
 
 
 class WorkflowController:

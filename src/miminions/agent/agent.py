@@ -2,16 +2,11 @@
 
 import asyncio
 import inspect
-import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
-from pydantic_ai import Agent, Tool, RunContext
-from pydantic_ai.models import Model
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.models.test import TestModel
+from pydantic_ai import Agent, Tool
 from mcp import StdioServerParameters
 
 from miminions.agent.provider import ModelFactory

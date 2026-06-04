@@ -20,7 +20,7 @@ from miminions.core.gateway import (
     SessionManager,
 )
 from miminions.core.workspace import WorkspaceManager
-from miminions.interface.cli.auth import get_config_dir
+from miminions.cli.auth import get_config_dir
 
 
 @dataclass(frozen=True)
@@ -92,8 +92,17 @@ def _get_gateway_paths(workspace: Any) -> GatewayPaths:
 
 
 async def _default_cron_handler(job: CronJob) -> str | None:
-    logging.getLogger(__name__).info("Cron job requested agent turn: %s", job.name)
-    return None
+    message = (
+        "Cron job '%s' (%s) fired, but gateway cron dispatch is not configured. "
+        "Requested agent turn was not run. Message: %s"
+    )
+    logging.getLogger(__name__).warning(
+        message,
+        job.name,
+        job.id,
+        _message_preview(job.payload.message, limit=120),
+    )
+    return "no handler configured"
 
 
 def _build_cron_service(workspace: Any) -> CronService:

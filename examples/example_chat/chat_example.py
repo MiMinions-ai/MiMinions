@@ -11,9 +11,7 @@ import asyncio
 import json
 import logging
 import os
-import sys
 from pathlib import Path
-from typing import Any
 
 from miminions.agent import create_minion
 from miminions.core.workspace import Workspace
@@ -155,7 +153,6 @@ def main():
         type=str, 
         help="Resume an existing session ID"
     )
-    args = parser.add_argument_group()
     args = parser.parse_args()
     
     # Ensure OPENROUTER_API_KEY is loaded if testing locally
