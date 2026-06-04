@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from click.testing import CliRunner
 
 from miminions.core.gateway import SessionManager
-from miminions.interface.cli.main import cli
+from miminions.cli.main import cli
 
 
 class DummyManager:
@@ -23,7 +23,7 @@ def _workspace(tmp_path: Path, workspace_id: str = "ws1", name: str = "Test WS")
 def _patch_gateway_manager(monkeypatch, workspace):
     manager = DummyManager({workspace.id: workspace})
     monkeypatch.setattr(
-        "miminions.interface.cli.gateway.WorkspaceManager",
+        "miminions.cli.gateway.WorkspaceManager",
         lambda config_dir: manager,
     )
     return manager
@@ -103,8 +103,9 @@ def test_gateway_cron_list_empty(tmp_path, monkeypatch):
 def test_gateway_cron_add_every_creates_jobs_json(tmp_path, monkeypatch):
     workspace = _workspace(tmp_path)
     _patch_gateway_manager(monkeypatch, workspace)
+    runner = CliRunner()
 
-    result = _add_every(CliRunner())
+    result = _add_every(runner)
 
     assert result.exit_code == 0, result.output
     jobs_path = tmp_path / "data" / "gateway" / "cron" / "jobs.json"
