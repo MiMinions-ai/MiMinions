@@ -30,7 +30,7 @@ uv add miminions
 For full functionality, install optional dependencies:
 
 ```bash
-pip install miminions[full]
+pip install miminions[all]
 ```
 
 Or install individual components:
