@@ -54,13 +54,15 @@ When the session ends (e.g., typing `exit`), `MemoryDistiller` sends the `.jsonl
 
 For direct vector search, `SQLiteMemory` provides CRUD, keyword, and full-text search backed by `sqlite-vec`.
 
+Embeddings are generated locally with `fastembed` (the `all-MiniLM-L6-v2` model, 384-dim) — no PyTorch/CUDA required — so you store and query plain text:
+
 ```python
 from miminions.memory.sqlite import SQLiteMemory
 
 memory = SQLiteMemory("memory.db")
-memory.store("Python is a programming language", embedding=[0.1, 0.2, 0.3])
+memory.create("Python is a programming language", metadata={"tag": "tech"})
 
-results = memory.search(query_vector=[0.1, 0.2, 0.3], limit=5)
+results = memory.read("languages for coding", top_k=5)
 ```
 
 Requires the `sqlite` extra: `pip install miminions[sqlite]`

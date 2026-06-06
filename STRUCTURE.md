@@ -203,7 +203,7 @@ MiMinions/
 
 - **mcp** - Model Context Protocol client
 - **fastmcp** - Fast MCP utilities
-- **sentence-transformers** - Text embeddings
+- **fastembed** - Text embeddings (ONNX, no PyTorch/CUDA)
 - **sqlite-vec** - SQLite vector extension
 - **pdfplumber** - PDF text extraction
 - **click** - CLI framework

@@ -33,13 +33,11 @@ extra_css:
   - stylesheets/extra.css
 
 extra:
+  homepage: https://miminions.ai
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/MiMinions-ai/MiMinions
       name: MiMinions on GitHub
-    - icon: fontawesome/brands/x-twitter
-      link: https://x.com/miminions_ai
-      name: MiMinions on Twitter
 
 nav:
   - Home: index.md
