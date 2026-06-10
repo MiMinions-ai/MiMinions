@@ -11,49 +11,8 @@ import click
 from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore
-from miminions.core.workspace import WorkspaceManager
+from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.cli.auth import get_config_dir
-
-
-# ---------------------------------------------------------------------------
-# Workspace resolution
-# ---------------------------------------------------------------------------
-
-
-def _resolve_workspace(manager: Any, workspace_ref: str) -> tuple[Any, Path]:
-    """Resolve a workspace by id or name, validate its root_path, and return (workspace, root)."""
-    workspaces = manager.load_workspaces()
-
-    workspace = None
-    if workspaces:
-        if workspace_ref in workspaces:
-            workspace = workspaces[workspace_ref]
-        else:
-            for workspace_id, ws in workspaces.items():
-                if str(workspace_id) == workspace_ref:
-                    workspace = ws
-                    break
-                if getattr(ws, "id", None) is not None and str(ws.id) == workspace_ref:
-                    workspace = ws
-                    break
-                if getattr(ws, "name", None) is not None and str(ws.name) == workspace_ref:
-                    workspace = ws
-                    break
-
-    if workspace is None:
-        raise click.ClickException(f"Workspace not found: {workspace_ref}")
-
-    root_path = getattr(workspace, "root_path", None)
-    if not root_path:
-        raise click.ClickException(
-            "This workspace has no root_path yet. Run workspace init-files first."
-        )
-
-    root = Path(root_path)
-    if not root.exists():
-        raise click.ClickException(f"Workspace root_path does not exist: {root}")
-
-    return workspace, root
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +99,10 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     6. On exit, run session distillation in the finally block.
     """
     manager = WorkspaceManager(get_config_dir())
-    workspace, root = _resolve_workspace(manager, workspace_ref)
+    try:
+        workspace, root = ensure_workspace(manager, workspace_ref)
+    except (ValueError, FileNotFoundError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
     store = JsonlSessionStore(root)
 
