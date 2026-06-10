@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Simplified user module design to be leaner and more focused
+- Replaced `sentence-transformers` with `fastembed` (ONNX Runtime) for `SQLiteMemory` embeddings, removing the PyTorch/CUDA dependency. Same `all-MiniLM-L6-v2` model and 384-dim output, so existing databases need no migration.
 
 ### Deprecated
 - None

@@ -24,12 +24,12 @@ miminions = "miminions.cli.main:main"
 
 [project.optional-dependencies]
 sqlite = [
-    "sentence-transformers>=2.2.0",
+    "fastembed>=0.3.0",
     "sqlite-vec>=0.1.0",
     "pysqlite3>=0.5.0",
 ]
 all = [
-    "sentence-transformers>=2.2.0",
+    "fastembed>=0.3.0",
     "sqlite-vec>=0.1.0",
     "pysqlite3>=0.5.0",
 ]
