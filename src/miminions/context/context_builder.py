@@ -7,8 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from miminions.memory.md_store import read_memory
-from miminions.memory.sqlite import SQLiteMemory, get_global_memory_db_path
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
+
+
+def get_global_memory_db_path(create_dir: bool = True) -> str:
+    """Return canonical path for cross-workspace global memory DB."""
+    path = Path.home() / ".miminions" / "global_memory.db"
+    if create_dir:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return str(path)
 
 
 def _safe_get(obj: Any, name: str, default: Any = None) -> Any:
@@ -134,6 +141,8 @@ def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[s
     """Return top-k plain-text global insights from SQLite, or [] on any failure."""
     path = db_path or get_global_memory_db_path(create_dir=False)
     try:
+        from miminions.memory.sqlite import SQLiteMemory
+
         mem = SQLiteMemory(db_path=path)
         try:
             rows = mem.date_time_search(top_k=top_k)

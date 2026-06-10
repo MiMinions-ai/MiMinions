@@ -65,11 +65,17 @@ class RegisteredTool:
 
 class Minion:
     """
-    Minion agent implementation.
-    
-    Uses pydantic_ai infrastructure for LLM-ready tool management.
-    Currently operates in direct execution mode (no LLM) but structured
-    for easy LLM integration by replacing TestModel with a real model.
+    Minion — an LLM-powered agent built on top of pydantic_ai.
+
+    Minion owns the full agent lifecycle: model config, tool registry, and the
+    async reasoning loop.  Callers interact only with Minion — the underlying
+    pydantic_ai Agent is a private implementation detail.
+
+    Typical usage::
+
+        minion = create_minion(name="MyAgent", description="...")
+        minion.register_tool("do_thing", "Does a thing", do_thing)
+        reply = await minion.run("Please do the thing")
     """
 
     def __init__(

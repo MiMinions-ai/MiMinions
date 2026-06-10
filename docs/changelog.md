@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ### Changed
 - Simplified user module design to be leaner and more focused
+- Replaced `sentence-transformers` with `fastembed` (ONNX Runtime) for `SQLiteMemory` embeddings, removing the PyTorch/CUDA dependency. Same `all-MiniLM-L6-v2` model and 384-dim output, so existing databases need no migration.
 
 ### Removed
 - Complex user authentication and validation systems
