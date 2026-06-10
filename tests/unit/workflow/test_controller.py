@@ -115,4 +115,4 @@ def test_controller_records_failed_tool_call():
 def test_controller_requires_run_at_construction():
     agent = MockAgent()
     with pytest.raises(TypeError):
-        controller = WorkflowController(agent)
+        WorkflowController(agent)
