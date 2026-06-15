@@ -14,6 +14,7 @@ from .execution import execution_cli
 from .chat import chat_cli
 from .gateway import gateway_cli
 from .prompt import prompt_cli
+from .start import start_cli
 
 
 @click.group()
@@ -34,6 +35,7 @@ cli.add_command(execution_cli, name="execution")
 cli.add_command(chat_cli, name="chat")
 cli.add_command(gateway_cli, name="gateway")
 cli.add_command(prompt_cli, name="prompt")
+cli.add_command(start_cli, name="start")
 
 def main():
     """Entry point for the CLI."""
