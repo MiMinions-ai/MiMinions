@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from .auth import get_config_dir
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 from miminions.tools import GenericTool

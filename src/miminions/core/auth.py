@@ -26,7 +26,7 @@ def require_auth(f):
                 click.echo("⚠️  Public access mode.", err=True)
             else:
                 click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                return
+                return None
         return f(*args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper

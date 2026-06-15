@@ -4,7 +4,6 @@ Unit tests for the MiMinions CLI execution module.
 
 import pytest
 import json
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 
