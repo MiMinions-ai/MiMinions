@@ -13,6 +13,8 @@ from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.cli.auth import get_config_dir
+from miminions.cli.agent import _build_cli_extension_agent, load_agents
+from miminions.workspace_fs import init_workspace
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +90,116 @@ def chat_command(workspace_ref: str, session_id: str | None) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
+def _resolve_start_workspace(workspace_ref: str | None) -> tuple[Any, Path]:
+    """Resolve the forgiving workspace semantics used by miminions start."""
+    manager = WorkspaceManager(get_config_dir())
+    if not workspace_ref:
+        return ensure_workspace(
+            manager,
+            "default",
+            create_missing=True,
+            init_files=True,
+        )
+
+    candidate_path = Path(workspace_ref).expanduser()
+    if candidate_path.exists():
+        root = candidate_path.resolve()
+        workspaces = manager.load_workspaces()
+        for workspace in workspaces.values():
+            root_path = getattr(workspace, "root_path", None)
+            if root_path and Path(root_path).expanduser().resolve() == root:
+                init_workspace(root)
+                return workspace, root
+
+        workspace = manager.create_workspace(root.name or "workspace")
+        workspace.root_path = str(root)
+        workspaces[workspace.id] = workspace
+        init_workspace(root)
+        manager.save_workspaces(workspaces)
+        return workspace, root
+
+    try:
+        return ensure_workspace(
+            manager,
+            workspace_ref,
+            create_missing=False,
+            init_files=True,
+        )
+    except (ValueError, FileNotFoundError):
+        click.echo(
+            f"Warning: workspace '{workspace_ref}' not found; using default workspace.",
+            err=True,
+        )
+        return ensure_workspace(
+            manager,
+            "default",
+            create_missing=True,
+            init_files=True,
+        )
+
+
+def _resolve_chat_workspace(
+    workspace_ref: str | None,
+    *,
+    use_start_defaults: bool = False,
+) -> tuple[Any, Path]:
+    if use_start_defaults:
+        return _resolve_start_workspace(workspace_ref)
+
+    if workspace_ref is None:
+        raise click.ClickException("Workspace is required.")
+
+    manager = WorkspaceManager(get_config_dir())
+    try:
+        return ensure_workspace(manager, workspace_ref)
+    except (ValueError, FileNotFoundError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _find_agent_record(agent_ref: str) -> dict[str, Any] | None:
+    agents = load_agents()
+    if agent_ref in agents:
+        return agents[agent_ref]
+
+    for agent_data in agents.values():
+        if str(agent_data.get("name", "")) == agent_ref:
+            return agent_data
+
+    return None
+
+
+def _build_chat_minion(agent_ref: str | None, workspace: Any, root: Path) -> Any:
+    workspace_name = getattr(workspace, "name", getattr(workspace, "id", "unknown"))
+
+    if agent_ref:
+        agent_data = _find_agent_record(agent_ref)
+        if agent_data is not None:
+            minion = _build_cli_extension_agent(agent_data)
+            if hasattr(minion, "set_context"):
+                minion.set_context(workspace, root)
+            return minion
+
+        click.echo(
+            f"Warning: agent '{agent_ref}' not found; using default agent.",
+            err=True,
+        )
+
+    minion = create_minion(
+        name="MiMinions",
+        description=f"MiMinions agent for workspace '{workspace_name}'.",
+    )
+    minion.set_context(workspace, root)
+    return minion
+
+
+async def _chat_loop(
+    workspace_ref: str | None,
+    session_id: str | None,
+    *,
+    agent_ref: str | None = None,
+    use_start_defaults: bool = False,
+    warn_missing_session: bool = False,
+) -> None:
     """Main async chat loop.
 
     1. Resolve the workspace and build the root path.
@@ -98,24 +209,26 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     5. Loop: input → minion.run() → print reply.
     6. On exit, run session distillation in the finally block.
     """
-    manager = WorkspaceManager(get_config_dir())
-    try:
-        workspace, root = ensure_workspace(manager, workspace_ref)
-    except (ValueError, FileNotFoundError) as exc:
-        raise click.ClickException(str(exc)) from exc
+    workspace, root = _resolve_chat_workspace(
+        workspace_ref,
+        use_start_defaults=use_start_defaults,
+    )
 
     store = JsonlSessionStore(root)
+
+    if session_id and warn_missing_session and not store.path_for(session_id).exists():
+        click.echo(
+            f"Warning: session '{session_id}' not found; starting a new session.",
+            err=True,
+        )
+        session_id = None
 
     if not session_id:
         session_id = store.create_session_id()
 
     # Build the Minion once — it keeps its tools and model for the session.
     workspace_name = getattr(workspace, "name", getattr(workspace, "id", "unknown"))
-    minion = create_minion(
-        name="MiMinions",
-        description=f"MiMinions agent for workspace '{workspace_name}'.",  # TODO: make customizable per workspace
-    )
-    minion.set_context(workspace, root)
+    minion = _build_chat_minion(agent_ref, workspace, root)
 
     # If resuming a session, seed message_history from the prior JSONL so
     # the LLM has context from the previous conversation.
@@ -175,7 +288,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
                 workspace=workspace,
                 root=root,
                 session_id=session_id,
-                model=minion._model,
+                model=getattr(minion, "_model", None),
             )
         except Exception as exc:
             click.echo(f"Warning: memory distillation skipped: {exc}", err=True)
