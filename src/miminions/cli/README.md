@@ -1,9 +1,38 @@
-# MiMinions CLI & Chat Interface
+# MiMinions CLI
 
-The `interface/cli/` module contains the interactive command-line entry points for MiMinions.
+The `miminions.cli` package is the Click-based command-line interface. The entry
+point is `cli/main.py` (exposed as the `miminions` console command and via
+`python -m miminions`). State persists locally under `~/.miminions/`, and a
+default workspace + agent are bootstrapped on first run.
 
-## Features
+> Full reference: [CLI & Chat documentation](https://miminions.ai/modules/cli/).
 
-- **Async Chat Loop**: The `chat` command drops you into a fully asynchronous reasoning loop with the agent, persisting logs to `_workspace/sessions/`.
-- **Session Resumption**: By passing `--session <session_id>` to `chat start`, the CLI automatically loads the `.jsonl` transcript of that session from `JsonlSessionStore`. It converts the history back into native `pydantic_ai` messages, meaning the LLM regains complete conversational context from previous runs.
-- **Background Distillation**: When you type `exit` or close the chat, the CLI triggers the `MemoryDistiller` automatically in the background, making sure memory is extracted without forcing you to wait.
+## Command groups
+
+| Module | Command | Purpose |
+|--------|---------|---------|
+| `auth.py` | `miminions auth` | Local sign-in, public-access mode, config |
+| `agent.py` | `miminions agent` | Manage agents; run and inspect their tools |
+| `chat.py` | `miminions chat` | Interactive async chat loop |
+| `prompt.py` | `miminions prompt` | One-shot prompt to a workspace agent |
+| `task.py` | `miminions task` | Task CRUD |
+| `knowledge.py` | `miminions knowledge` | Versioned knowledge base |
+| `workspace.py` | `miminions workspace` | Workspaces, nodes, rules, on-disk files |
+| `execution.py` | `miminions execution` | Execution sessions and recorded tool runs |
+
+> `workflow.py` exists but is **not registered** in `main.py`
+> (`miminions workflow` is currently unreachable). The `--async` flag on
+> `miminions agent run` is a no-op placeholder.
+
+## Chat
+
+```bash
+miminions chat start                 # new session in the default workspace
+miminions chat start --session <id>  # resume a prior session
+```
+
+- **Session resumption** — `--session <id>` loads the `.jsonl` transcript from
+  `JsonlSessionStore` (under `<workspace_root>/sessions/`) and replays it as
+  native `pydantic_ai` messages, restoring full conversational context.
+- **Background distillation** — typing `/exit` or `/quit` ends the session and
+  runs `MemoryDistiller` to extract facts into the workspace's memory.

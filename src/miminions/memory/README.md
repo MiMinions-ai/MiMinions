@@ -2,6 +2,9 @@
 
 How MiMinions stores, evolves, and injects memory across sessions and workspaces.
 
+> Full reference: [Memory documentation](https://miminions.ai/modules/memory/),
+> including the `SQLiteMemory` vector store API.
+
 ## Three-Tier Memory
 
 Memory is split into three layers:
