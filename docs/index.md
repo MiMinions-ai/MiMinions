@@ -34,26 +34,27 @@ The open-source framework for creating, deploying, and managing agentic AI syste
     Build complex systems where multiple agents collaborate, share context, and
     coordinate to solve problems no single agent could.
 
--   :material-brain:{ .lg .middle } &nbsp; **Long-Term Memory**
+-   :material-brain:{ .lg .middle } &nbsp; **Three-Tier Memory**
 
     ---
 
-    A three-tier memory system — session logs, workspace facts, and global
-    insights — keeps agents context-aware across conversations.
+    Session logs, stable workspace facts, and a global vector store keep agents
+    context-aware across conversations and workspaces.
 
 -   :material-connection:{ .lg .middle } &nbsp; **MCP Integration**
 
     ---
 
-    Load tools directly from Model Context Protocol servers and run them
-    alongside your own custom Python functions.
+    Connect to Model Context Protocol servers and load their tools directly into
+    an agent, right alongside your own custom Python functions.
 
 -   :material-tools:{ .lg .middle } &nbsp; **Generic Tool System**
 
     ---
 
-    Define a tool once and use it across LangChain, AutoGen, and AGNO without
-    rewriting a thing.
+    Define a tool once from a typed Python function and get a framework-agnostic
+    JSON schema for free — then hand it to any agent or load tools from MCP
+    servers.
 
 -   :material-magnify:{ .lg .middle } &nbsp; **Vector Search**
 
@@ -85,6 +86,12 @@ Install the framework:
 pip install miminions
 ```
 
+The default OpenRouter backend needs an API key. Set it once in your environment:
+
+```bash
+export OPENROUTER_API_KEY="your-key-here"
+```
+
 Create your first agent:
 
 ```python
@@ -104,6 +111,10 @@ async def main():
 asyncio.run(main())
 ```
 
+!!! tip "Working offline?"
+    Pass `provider="test"` to `create_minion` to use pydantic-ai's `TestModel`
+    and run without any API key — handy for tests and experiments.
+
 Then head to the [Getting Started](getting-started.md) guide to go further.
 
 ## Architecture
@@ -115,15 +126,22 @@ Then head to the [Getting Started](getting-started.md) guide to go further.
                           │
 ┌─────────────────────────▼───────────────────────────────────┐
 │                      Minion Agent                           │
-│           (pydantic-ai + OpenRouter + MCP)                  │
-└──────────┬──────────────┬───────────────────┬───────────────┘
-           │              │                   │
-    ┌──────▼──────┐ ┌─────▼──────┐ ┌─────────▼────────┐
-    │    Tools    │ │   Memory   │ │ Context Builder  │
-    │  (Generic,  │ │ (3-tier:   │ │ (prompt assembly │
-    │  MCP, LLM)  │ │ MD+SQLite) │ │  from workspace) │
-    └─────────────┘ └────────────┘ └──────────────────┘
+│        (pydantic-ai + OpenRouter + MCP servers)             │
+└──────┬──────────────┬──────────────┬──────────────┬─────────┘
+       │              │              │              │
+ ┌─────▼─────┐ ┌──────▼─────┐ ┌──────▼──────┐ ┌─────▼──────┐
+ │   Tools   │ │   Memory   │ │   Context   │ │ Workspaces │
+ │ (Generic, │ │ (MD files  │ │   Builder   │ │  (nodes,   │
+ │   MCP)    │ │ + SQLite)  │ │ (prompts +  │ │   rules,   │
+ │           │ │            │ │  workspace) │ │   skills)  │
+ └───────────┘ └────────────┘ └─────────────┘ └────────────┘
 ```
+
+A [Minion](modules/agent.md) ties it all together: it talks to an LLM through
+pydantic-ai (OpenRouter by default), calls [tools](modules/tools.md) you define
+or load from [MCP](modules/agent.md) servers, reads and writes
+[memory](modules/memory.md), and injects [workspace](modules/workspaces.md)
+[context](modules/context.md) into every prompt.
 
 <div class="home-cta" markdown>
 
