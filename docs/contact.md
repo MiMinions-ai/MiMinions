@@ -20,7 +20,7 @@ Have questions about MiMinions? We'd love to hear from you.
 
     [github.com/MiMinions-ai](https://github.com/MiMinions-ai/MiMinions)
 
--   :fontawesome-brands-x-twitter:{ .lg .middle } &nbsp; **Twitter / X**
+-   :fontawesome-brands-x-twitter:{ .lg .middle } &nbsp; **X**
 
     ---
 
