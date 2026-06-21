@@ -1,80 +1,207 @@
 # MiMinions
 
-A Python package for MiMinions - an agentic framework for multi-agent systems with knowledge retrieval, concept relations, and web search capabilities.
+An agentic framework built on [pydantic-ai](https://ai.pydantic.dev/) with
+[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server support,
+a generic tool system, three-tier memory, and local-first workspaces.
+
+📖 **Full documentation: [miminions.ai](https://miminions.ai)**
 
 ## Features
 
-- **Generic Tool System**: Create tools once, use with multiple AI frameworks
-- **Minion Agent**: Structured results with validation and type safety
-- **Remember & Recall**: Knowledge management with vector-based storage and conversation memory
-- **Web Search**: Exploratory search using Google and DuckDuckGo
-- **Custom Tools**: Easy integration of custom tools and functions
-- **Session Management**: Conversation tracking and context management
-- **Async Support**: Full asynchronous operation support
-- **Graceful Dependencies**: Optional dependencies with graceful fallback
+- **Minion agent** — an async, LLM-powered agent on `pydantic-ai`, defaulting to
+  [OpenRouter](https://openrouter.ai/) (with OpenAI, Anthropic, Gemini, and an
+  offline test model also selectable).
+- **Generic tool system** — turn a typed Python function into an agent-callable
+  tool with an auto-derived JSON schema; no boilerplate.
+- **MCP integration** — connect to MCP servers and load their tools alongside
+  your own functions.
+- **Three-tier memory** — a chronological session log (`HISTORY.md`), stable
+  workspace facts (`MEMORY.md`), and a cross-workspace SQLite vector store, with
+  an LLM distiller that promotes insights across tiers.
+- **Vector memory** — `SQLiteMemory` with semantic, keyword, full-text,
+  metadata, regex, hybrid, and date-range search, embeddings via
+  [fastembed](https://github.com/qdrant/fastembed) (ONNX — no PyTorch/CUDA).
+- **Workspaces** — a node/rule graph plus an on-disk layout (`prompt/`,
+  `memory/`, `skills/`, `sessions/`, `data/`) that drives each agent's context.
+- **CLI** — manage agents, tasks, knowledge, workspaces, and an interactive chat
+  from the `miminions` command; state persists under `~/.miminions/`.
+- **Local data manager** — content-addressable (SHA-256) storage with
+  deduplication, a master index, and an append-only transaction log.
+- **Async-first** — full asynchronous operation throughout.
 
 ## Installation
-
-You can install MiMinions using pip:
 
 ```bash
 pip install miminions
 ```
 
-Or using `uv`:
+Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv add miminions
 ```
 
-For full functionality, install optional dependencies:
+Requires **Python 3.12+**. SQLite vector memory is an optional extra (it adds
+`fastembed`, `sqlite-vec`, and `pysqlite3`):
 
 ```bash
-pip install miminions[all]
+pip install miminions[sqlite]   # or miminions[all]
 ```
 
-Or install individual components:
+The agent uses OpenRouter by default — set your key before running:
 
 ```bash
-# For database operations (pgvector, pg_graphql)
-pip install psycopg[binary] pgvector
+export OPENROUTER_API_KEY="sk-or-..."
+```
 
-# For web search
-pip install googlesearch-python duckduckgo-search
+## Quick Start
 
-# For async support
-pip install aiohttp
+### A first agent with a custom tool
+
+```python
+import asyncio
+from miminions.agent import create_minion
+
+async def main():
+    agent = create_minion("MyAgent")
+
+    def add(a: int, b: int) -> int:
+        return a + b
+
+    agent.register_tool("add", "Add two numbers", add)
+
+    # The model decides when to call the tool.
+    reply = await agent.run("What is 3 + 7?")
+    print(reply)
+
+asyncio.run(main())
+```
+
+Want a different model? Pass a `provider` (or a `pydantic-ai` model directly):
+
+```python
+agent = create_minion("MyAgent", provider="anthropic")   # or "openai", "gemini"
+agent = create_minion("MyAgent", provider="test")          # offline, no API key
+```
+
+### An agent with vector memory
+
+```python
+from miminions.memory.sqlite import SQLiteMemory
+from miminions.agent import create_minion
+
+agent = create_minion("Assistant", memory=SQLiteMemory("agent.db"))
+
+# store_knowledge / recall_knowledge require an attached memory backend.
+agent.store_knowledge("Python is a high-level language", metadata={"topic": "python"})
+print(agent.recall_knowledge("What language is Python?"))
+```
+
+With memory attached, the agent also gains a built-in `ingest_document` tool that
+chunks and stores `.pdf`/`.txt`/`.md` files. Requires the `[sqlite]` extra.
+
+### Loading tools from an MCP server
+
+```python
+from mcp import StdioServerParameters
+from miminions.agent import create_minion
+
+agent = create_minion("MyAgent")
+await agent.connect_mcp_server(
+    "math", StdioServerParameters(command="python", args=["math_server.py"])
+)
+await agent.load_tools_from_mcp_server("math")
+# ...
+await agent.cleanup()
 ```
 
 ## CLI Usage
 
-After install, the CLI command is available as:
+After install, the `miminions` command is available (a default workspace and
+agent are created under `~/.miminions/` on first run):
 
 ```bash
 miminions --help
+python -m miminions --help        # equivalent
 ```
 
-You can also run the package directly:
+Command groups:
+
+| Group | What it does |
+|-------|--------------|
+| `chat` | Interactive chat with a workspace agent; distills memory on exit |
+| `prompt` | One-shot prompt to a workspace agent |
+| `agent` | Create/manage agents and run/inspect their tools |
+| `task` | Create and track tasks |
+| `knowledge` | A versioned knowledge base |
+| `workspace` | Manage workspaces, their nodes, rules, and on-disk files |
+| `execution` | Register tools and record tool runs in execution sessions |
+| `auth` | Local sign-in, public-access mode, and config |
 
 ```bash
-python -m miminions --help
+# Start an interactive chat (resume with --session <id>)
+miminions chat start
+
+# One-shot prompt
+miminions prompt ask "Summarize today's standup notes"
+
+# Agents
+miminions agent add --name "Researcher" --description "Finds and summarizes sources"
+miminions agent list
+
+# Workspaces
+miminions workspace add --name "Demo" --sample --init-files
+miminions workspace list
 ```
 
-## UV Deploy
+> The `workflow` command group exists in the codebase but is **not yet enabled**.
+> The `--async` flag on `miminions agent run` is currently a placeholder.
 
-Dev note: refresh your local lockfile with `uv lock` after dependency changes (`uv.lock` is gitignored).
+See the [CLI reference](https://miminions.ai/modules/cli/) for every subcommand.
 
-Build and publish with `uv`:
+## Documentation
+
+| Topic | |
+|-------|--|
+| [Getting Started](https://miminions.ai/getting-started/) | Install, first agent, and the CLI |
+| [Agent](https://miminions.ai/modules/agent/) | The `Minion` API |
+| [Memory](https://miminions.ai/modules/memory/) | Three-tier and vector memory |
+| [Context Builder](https://miminions.ai/modules/context/) | System-prompt assembly |
+| [Tools](https://miminions.ai/modules/tools/) | `@tool`, `GenericTool`, MCP |
+| [Workspaces](https://miminions.ai/modules/workspaces/) | Nodes, rules, on-disk layout |
+| [Tasks & Workflows](https://miminions.ai/modules/tasks/) | `TaskRuntime` and tracing |
+| [Data Management](https://miminions.ai/modules/data/) | `LocalDataManager` |
+| [Gateway Runtime](https://miminions.ai/modules/gateway/) | Channels, bus, cron |
+
+For a map of the source tree and module status, see [STRUCTURE.md](STRUCTURE.md).
+Runnable examples live in [`examples/`](examples/).
+
+## Development
+
+```bash
+git clone https://github.com/MiMinions-ai/MiMinions.git
+cd MiMinions
+pip install -e ".[dev]"
+```
+
+Run the tests:
+
+```bash
+pytest tests/                 # everything
+pytest tests/unit/            # unit
+pytest tests/integration/     # integration
+pytest tests/e2e/             # end-to-end
+```
+
+### Publishing
+
+`pyproject.toml` is the single source of truth for packaging. Build and publish
+with `uv`:
 
 ```bash
 uv build
 uv publish
-```
-
-For TestPyPI:
-
-```bash
-uv build
+# TestPyPI:
 uv publish --publish-url https://test.pypi.org/legacy/
 ```
 
@@ -84,333 +211,12 @@ Build a standalone CLI binary:
 bash deploy/build_cli.sh
 ```
 
-## Quick Start
-
-### Basic Agent with Custom Tools
-
-```python
-from miminions.agent import create_minion
-
-agent = create_minion(name="MyAgent")
-
-def calculator(operation, a, b):
-    if operation == "add":
-        return a + b
-    elif operation == "multiply":
-        return a * b
-    return "Unknown operation"
-
-agent.register_tool("calculator", "Perform arithmetic", calculator)
-
-result = agent.execute("calculator", operation="add", a=5, b=3)
-print(f"Status: {result.status}")  # ExecutionStatus.SUCCESS
-print(f"Result: {result.result}")  # 8
-
-await agent.cleanup()
-```
-
-### Agent with Database Operations
-
-```python
-from miminions.agent import BaseAgent
-
-# Create agent with database connection
-agent = BaseAgent(
-    name="DatabaseAgent",
-    connection_string="postgresql://user:password@localhost/database"
-)
-
-# Remember information (stores with vector embedding)
-memory_id = agent.remember(
-    content="Python is a programming language",
-    embedding=[0.1, 0.2, 0.3],  # Optional: your embedding
-    role="system"
-)
-
-# Search remembered knowledge
-results = agent.remember_search(
-    query_vector=[0.1, 0.2, 0.3],
-    limit=5
-)
-
-# Recall conversation history
-history = agent.recall(limit=10)
-
-# Recall relevant context using vector similarity
-context = agent.recall_context(
-    query_vector=[0.1, 0.2, 0.3],
-    limit=5
-)
-
-# Legacy vector search (deprecated - use remember_search instead)
-results = agent.vector_search(
-    query_vector=[0.1, 0.2, 0.3],
-    table="knowledge_base",
-    limit=5
-)
-
-# GraphQL query for concept relations
-concept_data = agent.concept_query("""
-    {
-        concepts {
-            id
-            name
-            relations {
-                target
-                type
-            }
-        }
-    }
-""")
-
-agent.close()
-
-```
-
-### Session Management
-
-```python
-from miminions.agent import BaseAgent
-
-# Create agent with specific session
-agent = BaseAgent(
-    name="SessionAgent",
-    connection_string="postgresql://user:password@localhost/database",
-    session_id="conversation_123"
-)
-
-# Remember user input
-agent.remember("Hello, how are you?", role="user")
-
-# Remember assistant response  
-agent.remember("I'm doing well, thank you!", role="assistant")
-
-# Recall entire conversation
-conversation = agent.recall()
-
-# Switch to different session
-agent.set_session("conversation_456")
-
-# Recall from specific session
-history = agent.recall(session_id="conversation_123")
-
-agent.close()
-```
-
-### Web Search Operations
-
-```python
-from miminions.agent import BaseAgent
-
-agent = BaseAgent(name="SearchAgent")
-
-# Web search
-results = agent.web_search("Python machine learning tutorial", num_results=5)
-
-# Parallel search across multiple engines
-parallel_results = await agent.parallel_search("AI research papers")
-
-agent.close()
-```
-
-### Asynchronous Operations
-
-```python
-import asyncio
-from miminions.agent import BaseAgent
-
-async def main():
-    agent = BaseAgent(name="AsyncAgent")
-    
-    # Add async tool
-    async def async_processor(data):
-        await asyncio.sleep(0.1)  # Simulate async work
-        return f"Processed: {data}"
-    
-    agent.add_tool("processor", async_processor)
-    
-    # Use async tool
-    result = await agent.execute_tool_async("processor", "test data")
-    print(result)
-    
-    # Async knowledge search
-    knowledge_results = await agent.knowledge_search_async(
-        query="artificial intelligence",
-        query_vector=[0.1, 0.2, 0.3],
-        include_web_search=True
-    )
-    
-    await agent.close_async()
-
-asyncio.run(main())
-```
-
-## API Reference
-
-### BaseAgent Class
-
-#### Constructor
-```python
-BaseAgent(connection_string=None, max_workers=4, name="BaseAgent")
-```
-
-#### Tool Management
-- `add_tool(name, tool_func)`: Add custom tool
-- `remove_tool(name)`: Remove tool
-- `list_tools()`: List available tools
-- `has_tool(name)`: Check if tool exists
-- `execute_tool(name, *args, **kwargs)`: Execute tool (sync)
-- `execute_tool_async(name, *args, **kwargs)`: Execute tool (async)
-
-#### Database Operations
-- `vector_search(query_vector, table, ...)`: Vector similarity search
-- `concept_query(query, variables=None)`: GraphQL query
-- `vector_search_async(...)`: Async vector search
-- `concept_query_async(...)`: Async GraphQL query
-
-#### Web Search
-- `web_search(query, num_results=10, prefer_engine=None)`: Web search
-- `web_search_async(...)`: Async web search
-- `parallel_search(query, num_results=10)`: Parallel multi-engine search
-
-#### Knowledge Search
-- `knowledge_search(query, ...)`: Combined knowledge and web search
-- `knowledge_search_async(...)`: Async combined search
-
-#### Agentic Tooling System
-
-```python
-from miminions.tools import tool
-from miminions.agent import Agent
-
-# Create a tool
-@tool(name="calculator", description="Simple calculator")
-def calculate(operation: str, a: int, b: int) -> int:
-    if operation == "add":
-        return a + b
-    elif operation == "subtract":
-        return a - b
-    else:
-        return 0
-
-# Create an agent and add the tool
-agent = Agent("my_agent", "A helpful agent")
-agent.add_tool(calculate)
-
-# Use the tool
-result = agent.execute_tool("calculator", operation="add", a=5, b=3)
-print(result)  # 8
-
-# Convert to different frameworks
-langchain_tools = agent.to_langchain_tools()
-autogen_tools = agent.to_autogen_tools()
-agno_tools = agent.to_agno_tools()
-```
-
-### Workspace Management
-
-Manage workspaces with nodes, rules, and state-based logic:
-
-```bash
-# List all workspaces
-miminions workspace list
-
-# Add a new workspace
-miminions workspace add --name "My Workspace" --description "Workspace description"
-
-# Add sample workspace with example nodes and rules
-miminions workspace add --name "Demo Workspace" --description "Demo workspace" --sample
-
-# Show workspace details
-miminions workspace show workspace_id
-
-# Update a workspace
-miminions workspace update workspace_id --name "New Name" --description "New description"
-
-# Remove a workspace
-miminions workspace remove workspace_id
-
-# Add a node to a workspace
-miminions workspace add-node workspace_id --name "Node Name" --type agent --properties '{"key": "value"}'
-
-# Connect two nodes in a workspace
-miminions workspace connect-nodes workspace_id node1_id node2_id
-
-# Set workspace state
-miminions workspace set-state workspace_id --key "priority" --value "high"
-
-# Evaluate workspace logic and see applicable actions
-miminions workspace evaluate workspace_id
-```
-
-#### Workspace Features
-
-- **Network of Nodes**: Create and connect nodes of different types (agent, task, workflow, knowledge, custom)
-- **Rule System**: Define rules with conditions and actions that trigger based on workspace state
-- **Rule Inheritance**: Inherit rules from parent workspaces to create hierarchical rule sets
-- **State-based Logic**: Rules evaluate against current workspace state to determine applicable actions
-- **Node Types**: Support for agent, task, workflow, knowledge, and custom node types
-- **Connections**: Bidirectional connections between nodes to represent relationships
-
-## Framework Compatibility
-
-The generic tool system is inter-transferable with:
-
-- **LangChain**: Convert to/from LangChain BaseTool
-- **AutoGen**: Convert to/from AutoGen FunctionTool
-- **AGNO**: Convert to/from AGNO Function
-
-## Documentation
-
-See `TOOLS_README.md` for detailed documentation of the tool system.
-
-## Examples
-
-See the `examples/` directory for more detailed usage examples.
-
-## Development
-
-To set up the development environment:
-
-1. Clone the repository
-2. Install development dependencies:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-3. Run tests:
-   ```bash
-   pytest tests/
-   ```
-
-### Running Tests
-
-The package includes comprehensive tests for the CLI:
-
-```bash
-# Run basic tests
-python src/tests/cli/test_runner.py
-
-# Run specific test files (if pytest is available)
-pytest src/tests/cli/test_auth.py
-pytest src/tests/cli/test_agent.py
-pytest src/tests/cli/test_e2e.py
-```
-
-### CLI Architecture
-
-The CLI is organized into modules:
-
-- `src/interface/cli/main.py` - Main CLI entry point
-- `src/interface/cli/auth.py` - Authentication commands
-- `src/interface/cli/agent.py` - Agent management commands
-- `src/interface/cli/task.py` - Task management commands
-- `src/interface/cli/workflow.py` - Workflow management commands
-- `src/interface/cli/knowledge.py` - Knowledge management commands
-- `src/interface/cli/workspace.py` - Workspace management commands
-
-Data is stored locally in JSON files in the `~/.miminions/` directory.
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). Feature work targets the `development`
+branch.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
+MIT — see [LICENSE](LICENSE).
