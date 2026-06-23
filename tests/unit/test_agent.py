@@ -1,8 +1,10 @@
 """Agent Test Suite - Core functionality tests."""
 
 import asyncio
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from miminions.agent import (
     Minion,
@@ -26,8 +28,9 @@ async def test_agent_creation():
     assert agent.description == "A test agent"
     
     state = agent.get_state()
-    assert state.tool_count == 0
+    assert state.tool_count == 1
     assert state.has_memory == False
+    assert "cli_run_command" in agent.list_tools()
     
     await agent.cleanup()
     print("PASSED")
@@ -132,6 +135,80 @@ async def test_error_handling():
     return True
 
 
+async def test_cli_run_command_tool_success():
+    """Test successful CLI command execution."""
+    print("test_cli_run_command_tool_success")
+    agent = create_minion("TestAgent")
+
+    result = agent.execute(
+        "cli_run_command",
+        arguments={"command": f"{sys.executable} --version"},
+    )
+
+    assert result.status == ExecutionStatus.SUCCESS
+    assert result.result["returncode"] == 0
+    assert "Python" in result.result["stdout"]
+    assert result.result["stderr"] == ""
+
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
+async def test_cli_run_command_tool_nonzero_exit():
+    """Test command failures return a nonzero return code without raising."""
+    print("test_cli_run_command_tool_nonzero_exit")
+    agent = create_minion("TestAgent")
+
+    result = agent.execute(
+        "cli_run_command",
+        arguments={"command": f"{sys.executable} --definitely-not-a-python-option"},
+    )
+
+    assert result.status == ExecutionStatus.SUCCESS
+    assert result.result["returncode"] != 0
+    assert "definitely-not-a-python-option" in result.result["stderr"]
+
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
+async def test_cli_run_command_tool_empty_command_error():
+    """Test empty commands are reported as tool errors."""
+    print("test_cli_run_command_tool_empty_command_error")
+    agent = create_minion("TestAgent")
+
+    result = agent.execute("cli_run_command", arguments={"command": "   "})
+
+    assert result.status == ExecutionStatus.ERROR
+    assert "must not be empty" in result.error
+
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
+async def test_cli_run_command_tool_timeout_error():
+    """Test command timeouts are reported as tool errors."""
+    print("test_cli_run_command_tool_timeout_error")
+    agent = create_minion("TestAgent")
+
+    with patch("miminions.agent.agent.subprocess.run") as mock_run:
+        mock_run.side_effect = subprocess.TimeoutExpired(["python"], timeout=1)
+        result = agent.execute(
+            "cli_run_command",
+            arguments={"command": f"{sys.executable} --version", "timeout": 1},
+        )
+
+    assert result.status == ExecutionStatus.ERROR
+    assert "timed out after 1 seconds" in result.error
+
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
 async def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
@@ -143,9 +220,9 @@ async def test_tool_schema_json():
     agent.register_tool("search", "Search for items", search)
     
     schemas = agent.get_tools_schema()
-    assert len(schemas) == 1
+    assert len(schemas) == 2
     
-    schema = schemas[0]
+    schema = next(s for s in schemas if s["name"] == "search")
     assert schema["name"] == "search"
     assert "parameters" in schema
     assert "query" in schema["parameters"]["properties"]
@@ -185,6 +262,10 @@ async def main():
         test_tool_registration,
         test_tool_execution,
         test_error_handling,
+        test_cli_run_command_tool_success,
+        test_cli_run_command_tool_nonzero_exit,
+        test_cli_run_command_tool_empty_command_error,
+        test_cli_run_command_tool_timeout_error,
         test_tool_schema_json,
         test_tool_management,
     ]
