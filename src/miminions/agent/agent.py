@@ -2,6 +2,9 @@
 
 import asyncio
 import inspect
+import shlex
+import subprocess
+import sys
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
@@ -110,6 +113,8 @@ class Minion:
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
         self._last_messages: List[Any] = []
+
+        self._register_cli_tools()
         
         if self._memory:
             self._register_memory_tools()
@@ -294,6 +299,48 @@ class Minion:
     def handle_tool_execution_request(self, request: ToolExecutionRequest) -> ToolExecutionResult:
         """Execute from a ToolExecutionRequest (for LLM integration)."""
         return self.execute(request.tool_name, request.arguments)
+
+    # cli tools
+    def _register_cli_tools(self) -> None:
+        """Register local command execution tools."""
+        self.register_tool(
+            "cli_run_command",
+            "Execute a CLI command without a shell and return stdout, stderr, and return code",
+            self._cli_run_command,
+        )
+
+    def _cli_run_command(self, command: str, timeout: int = 30) -> Dict[str, Any]:
+        """Run a command with subprocess using shell=False."""
+        if not command or not command.strip():
+            raise ValueError("Command must not be empty")
+        if timeout <= 0:
+            raise ValueError("Timeout must be greater than zero")
+
+        try:
+            args = shlex.split(command, posix=(sys.platform != "win32"))
+        except ValueError as exc:
+            raise ValueError(f"Could not parse command: {exc}") from exc
+
+        if not args:
+            raise ValueError("Command must not be empty")
+
+        try:
+            completed = subprocess.run(
+                args,
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(f"Command timed out after {timeout} seconds") from exc
+
+        return {
+            "command": command,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        }
 
     # memory
     def _register_memory_tools(self) -> None:
