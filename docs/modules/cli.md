@@ -13,8 +13,8 @@ python -m miminions --help
 !!! info "State lives under `~/.miminions/`"
     All persistent CLI state is stored as JSON under your home directory: `config.json`, `auth.json`, `agents.json`, `tasks.json`, `knowledge.json`, `sessions.json`, `interactions.json`, plus a `workspaces/` tree. On the **first** invocation of any command, MiMinions bootstraps a **`default` workspace** and a **`default` agent** so the chat/prompt commands work out of the box.
 
-!!! note "Authentication gates most commands"
-    Every command in `agent`, `task`, `knowledge`, `workspace`, and `execution` is wrapped with `require_auth`. If you are not signed in (and public access is off), the command prints a sign-in hint and exits without doing anything. Run [`miminions auth signin`](#auth) first, or enable public access. The `chat` and `prompt` commands are **not** gated.
+!!! warning "Authentication gating is provisional"
+    A `require_auth` decorator wraps the commands in `agent`, `task`, `knowledge`, `workspace`, and `execution`, but auth is **not actively enforced today** — treat the gating as **planned**, the same as the `workflow` group below. The hooks exist in the code so the behavior can be turned on later, but don't rely on commands being blocked when signed out. The `chat` and `prompt` commands are not wrapped at all.
 
 ## Command groups at a glance
 
