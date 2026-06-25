@@ -26,8 +26,9 @@ async def test_agent_creation():
     assert agent.description == "A test agent"
     
     state = agent.get_state()
-    assert state.tool_count == 0
+    assert state.tool_count == 1
     assert state.has_memory == False
+    assert "cli_run_command" in agent.list_tools()
     
     await agent.cleanup()
     print("PASSED")
@@ -143,9 +144,9 @@ async def test_tool_schema_json():
     agent.register_tool("search", "Search for items", search)
     
     schemas = agent.get_tools_schema()
-    assert len(schemas) == 1
+    assert len(schemas) == 2
     
-    schema = schemas[0]
+    schema = next(s for s in schemas if s["name"] == "search")
     assert schema["name"] == "search"
     assert "parameters" in schema
     assert "query" in schema["parameters"]["properties"]

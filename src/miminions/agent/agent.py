@@ -11,6 +11,11 @@ from mcp import StdioServerParameters
 
 from miminions.agent.provider import ModelFactory
 from ..tools import GenericTool
+from ..tools.default import (
+    CLI_RUN_COMMAND_DESCRIPTION,
+    CLI_RUN_COMMAND_NAME,
+    cli_run_command,
+)
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
 from ..utils.chunker import TextChunker
@@ -110,6 +115,12 @@ class Minion:
         self._pydantic_ai_agent: Optional[Agent] = None
         self._pydantic_ai_tools: List[Tool] = []
         self._last_messages: List[Any] = []
+
+        self.register_tool(
+            CLI_RUN_COMMAND_NAME,
+            CLI_RUN_COMMAND_DESCRIPTION,
+            cli_run_command,
+        )
         
         if self._memory:
             self._register_memory_tools()
