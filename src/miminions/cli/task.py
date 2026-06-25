@@ -5,6 +5,7 @@ Task management commands for MiMinions CLI.
 import click
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from .auth import get_config_dir
 from miminions.core.auth import require_auth
@@ -75,7 +76,7 @@ def add_task(title, description, priority, agent):
         "priority": priority,
         "status": "pending",
         "agent": agent,
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -112,8 +113,8 @@ def update_task(task_id, title, description, priority, status, agent):
     if agent:
         task["agent"] = agent
     
-    task["updated_at"] = click.get_current_context().meta.get("timestamp", "")
-    
+    task["updated_at"] = datetime.now(timezone.utc).isoformat()
+
     save_tasks(tasks)
     click.echo(f"Task '{task_id}' updated successfully")
 
@@ -156,7 +157,7 @@ def duplicate_task(task_id, title):
         original_task["title"] = f"{original_task['title']} (copy)"
     
     original_task["status"] = "pending"
-    original_task["created_at"] = click.get_current_context().meta.get("timestamp", "")
+    original_task["created_at"] = datetime.now(timezone.utc).isoformat()
     original_task["updated_at"] = None
     
     tasks[new_task_id] = original_task

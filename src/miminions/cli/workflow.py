@@ -5,6 +5,7 @@ Workflow management commands for MiMinions CLI.
 import click
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from .auth import get_config_dir
 from miminions.core.auth import require_auth
@@ -78,7 +79,7 @@ def add_workflow(name, description, agents):
         "agents": agent_list,
         "status": "stopped",
         "tasks": [],
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -109,7 +110,7 @@ def update_workflow(workflow_id, name, description, agents):
     if agents:
         workflow["agents"] = [agent.strip() for agent in agents.split(",")]
     
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' updated successfully")
@@ -154,7 +155,7 @@ def start_workflow(workflow_id):
         return
     
     workflow["status"] = "running"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' started successfully")
@@ -178,7 +179,7 @@ def pause_workflow(workflow_id):
         return
     
     workflow["status"] = "paused"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' paused successfully")
@@ -202,7 +203,7 @@ def stop_workflow(workflow_id):
         return
     
     workflow["status"] = "stopped"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' stopped successfully")

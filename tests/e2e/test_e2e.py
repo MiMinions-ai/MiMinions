@@ -365,15 +365,15 @@ class TestCLIEndToEnd:
                 entry_id
             ])
             assert result.exit_code == 0
-            assert 'v1.0' in result.output
-            assert 'v1.1' in result.output
+            assert 'v1' in result.output
+            assert 'v2' in result.output
             assert '(current)' in result.output
-            
+
             # Revert to previous version
             result = self.runner.invoke(cli, [
                 'knowledge', 'revert',
                 entry_id,
-                '--version', '1.0'
+                '--version', '1'
             ])
             assert result.exit_code == 0
             

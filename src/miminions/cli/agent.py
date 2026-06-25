@@ -11,6 +11,28 @@ from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 
 
+def _slugify(name):
+    """Turn a friendly name into a filesystem/id-safe slug.
+
+    Collapses any run of non-alphanumeric characters into a single underscore
+    so distinct-looking names don't silently diverge; falls back to "agent"
+    when a name has no usable characters.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return slug or "agent"
+
+
+def _unique_agent_id(name, agents):
+    """Derive a unique agent id from a name, suffixing on collision."""
+    base = _slugify(name)
+    agent_id = base
+    suffix = 2
+    while agent_id in agents:
+        agent_id = f"{base}_{suffix}"
+        suffix += 1
+    return agent_id
+
+
 def get_agents_file():
     """Get the agents configuration file path."""
     return get_config_dir() / "agents.json"
@@ -144,13 +166,9 @@ def list_agents():
 def add_agent(name, description, type):
     """Add a new agent."""
     agents = load_agents()
-    
-    agent_id = name.lower().replace(" ", "_")
-    
-    if agent_id in agents:
-        click.echo(f"Agent '{agent_id}' already exists.", err=True)
-        return
-    
+
+    agent_id = _unique_agent_id(name, agents)
+
     agents[agent_id] = {
         "name": name,
         "description": description,
@@ -159,7 +177,7 @@ def add_agent(name, description, type):
         "mode": "cli_extension",
         "status": "inactive",
         "goal": None,
-        "created_at": click.get_current_context().meta.get("timestamp", "")
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     save_agents(agents)

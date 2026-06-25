@@ -23,14 +23,17 @@ def get_config_file():
 
 
 def get_config():
-    """Get the configuration settings."""
+    """Get the configuration settings.
+
+    Returns the raw file contents (or {} if the file is missing) so callers
+    that mutate-and-save don't accidentally drop unrelated keys such as the
+    bootstrap-written ``default_workspace`` / ``default_agent``. Callers apply
+    their own defaults via ``.get(key, default)``.
+    """
     config_file = get_config_file()
     if not config_file.exists():
-        return {
-            "public_access": False,
-            "auth_timeout": 30
-        }
-    
+        return {}
+
     with open(config_file, "r") as f:
         return json.load(f)
 
