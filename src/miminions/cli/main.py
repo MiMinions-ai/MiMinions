@@ -4,7 +4,8 @@ MiMinions CLI - Main command line interface for the MiMinions package.
 
 import click
 from miminions import __version__
-from .auth import auth_cli
+from miminions.core.bootstrap import ensure_default_setup
+from .auth import auth_cli, get_config_dir
 from .agent import agent_cli
 from .task import task_cli
 from .workflow import workflow_cli
@@ -20,7 +21,10 @@ from .prompt import prompt_cli
 @click.version_option(version=__version__, prog_name="miminions")
 def cli():
     """MiMinions CLI - Manage AI agents, tasks, workflows and knowledge."""
-    pass
+    try:
+        ensure_default_setup(get_config_dir())
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 # Register command groups

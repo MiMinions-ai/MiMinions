@@ -12,7 +12,7 @@ from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.cli.auth import get_config_dir
+from miminions.cli.auth import get_config, get_config_dir
 
 
 # ---------------------------------------------------------------------------
@@ -69,8 +69,8 @@ def chat_cli():
 @click.option(
     "--workspace",
     "workspace_ref",
-    required=True,
-    help="Workspace id or name.",
+    default=None,
+    help="Workspace id or name. Defaults to the configured default workspace.",
 )
 @click.option(
     "--session",
@@ -78,8 +78,14 @@ def chat_cli():
     default=None,
     help="Resume an existing session id (loads prior history for LLM context).",
 )
-def chat_command(workspace_ref: str, session_id: str | None) -> None:
+def chat_command(workspace_ref: str | None, session_id: str | None) -> None:
     """Start an interactive async chat session for a workspace."""
+    if not workspace_ref:
+        workspace_ref = get_config().get("default_workspace")
+        if not workspace_ref:
+            raise click.ClickException(
+                "No --workspace given and no default workspace configured."
+            )
     asyncio.run(_chat_loop(workspace_ref, session_id))
 
 
