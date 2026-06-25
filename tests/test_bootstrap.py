@@ -4,6 +4,8 @@ Tests for the first-run default setup bootstrap.
 
 import json
 
+import pytest
+
 from miminions.core.bootstrap import ensure_default_setup
 
 
@@ -48,6 +50,13 @@ def test_second_run_is_noop(temp_config_dir):
 
     assert second == first
     assert user_md.read_text() == "# customized by user\n"
+
+
+def test_corrupt_config_raises(temp_config_dir):
+    (temp_config_dir / "config.json").write_text("{ not valid json")
+
+    with pytest.raises(ValueError):
+        ensure_default_setup(temp_config_dir)
 
 
 def test_existing_agents_are_preserved(temp_config_dir):
