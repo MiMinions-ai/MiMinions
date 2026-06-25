@@ -194,7 +194,7 @@ async def test_cli_run_command_tool_timeout_error():
     print("test_cli_run_command_tool_timeout_error")
     agent = create_minion("TestAgent")
 
-    with patch("miminions.agent.agent.subprocess.run") as mock_run:
+    with patch("miminions.tools.default.subprocess.run") as mock_run:
         mock_run.side_effect = subprocess.TimeoutExpired(["python"], timeout=1)
         result = agent.execute(
             "cli_run_command",
