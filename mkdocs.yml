@@ -49,6 +49,10 @@ nav:
           - Memory: modules/memory.md
           - Context Builder: modules/context.md
           - Tools: modules/tools.md
+          - Workspaces: modules/workspaces.md
+          - Tasks & Workflows: modules/tasks.md
+          - Data Management: modules/data.md
+          - Gateway Runtime: modules/gateway.md
           - CLI & Chat: modules/cli.md
       - Contributing: contributing.md
       - Changelog: changelog.md

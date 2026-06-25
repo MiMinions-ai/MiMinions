@@ -36,7 +36,8 @@ Thank you for contributing to MiMinions! Below is a quick-reference guide — se
 ```bash
 pytest tests/unit/        # unit tests
 pytest tests/integration/ # integration tests
-bash tests/e2e/run_all.sh # end-to-end tests
+pytest tests/e2e/         # end-to-end tests
+pytest tests/             # run everything
 ```
 
 ## Code of Conduct
