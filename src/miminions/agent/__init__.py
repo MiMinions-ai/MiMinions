@@ -30,8 +30,8 @@ Example:
     print(reply)  # "The answer is 10."
 
     # To use a different model:
-    from pydantic_ai.models.openai import OpenAIModel
-    agent = create_minion(name="MyAgent", model=OpenAIModel("gpt-4o"))
+    from pydantic_ai.models.openai import OpenAIChatModel
+    agent = create_minion(name="MyAgent", model=OpenAIChatModel("gpt-4o"))
 """
 
 from __future__ import annotations

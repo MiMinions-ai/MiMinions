@@ -1,5 +1,5 @@
 import os
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.anthropic import AnthropicModel
@@ -19,11 +19,11 @@ class ModelFactory:
                 base_url="https://openrouter.ai/api/v1",
                 api_key=os.environ.get("OPENROUTER_API_KEY", ""),
             )
-            return OpenAIModel(model_name, provider=provider)
+            return OpenAIChatModel(model_name, provider=provider)
             
         elif provider_name == "openai":
             model_name = model_name or "gpt-4o"
-            return OpenAIModel(model_name)
+            return OpenAIChatModel(model_name)
             
         elif provider_name == "anthropic":
             model_name = model_name or "claude-3-5-sonnet-latest"
