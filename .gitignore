@@ -7,6 +7,9 @@ __pycache__/
 # C extensions
 *.so
 
+# ignore database files 
+*.db
+
 # Distribution / packaging
 .Python
 build/
@@ -143,3 +146,6 @@ AGENTS.md
 .cursor
 
 *.egg-info/
+
+# macOS system files
+.DS_Store

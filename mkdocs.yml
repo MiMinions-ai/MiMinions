@@ -1,0 +1,79 @@
+site_name: MiMinions
+site_description: An agentic framework with pydantic_ai, MCP server support and vector memory
+site_url: https://miminions.ai
+repo_url: https://github.com/MiMinions-ai/MiMinions
+repo_name: MiMinions-ai/MiMinions
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Plus Jakarta Sans
+    code: false
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  homepage: https://miminions.ai
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/MiMinions-ai/MiMinions
+      name: MiMinions on GitHub
+
+nav:
+  - Home: index.md
+  - Features: features.md
+  - Documentation:
+      - Getting Started: getting-started.md
+      - Modules:
+          - Agent: modules/agent.md
+          - Memory: modules/memory.md
+          - Context Builder: modules/context.md
+          - Tools: modules/tools.md
+          - Workspaces: modules/workspaces.md
+          - Tasks & Workflows: modules/tasks.md
+          - Data Management: modules/data.md
+          - Gateway Runtime: modules/gateway.md
+          - CLI & Chat: modules/cli.md
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+  - About: about.md
+  - FAQ: faq.md
+  - Contact: contact.md
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - tables
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true

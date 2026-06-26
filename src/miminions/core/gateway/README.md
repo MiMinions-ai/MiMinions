@@ -5,6 +5,10 @@ MiMinions as a persistent, event-driven server. It is modelled after the
 [nanobot](https://github.com/HKUDS/nanobot) architecture for channel
 abstraction and message routing.
 
+> These are extensible building blocks, not a turnkey server: `BaseChannel` and
+> `GatewayOrchestrator` are abstract and no concrete channels ship built-in.
+> Full reference: [Gateway documentation](https://miminions.ai/modules/gateway/).
+
 ## Module Layout
 
 ```
@@ -135,6 +139,22 @@ await gateway.shutdown()
 | Package    | Required | Notes                                   |
 |------------|----------|-----------------------------------------|
 | `croniter` | Optional | Required for `cron`-kind schedules only |
+
+## Gateway CLI
+
+The gateway runtime is exposed through a focused CLI that avoids raw bus,
+event, and channel internals:
+
+```bash
+miminions gateway status --workspace my-ws
+miminions gateway cron list --workspace my-ws
+miminions gateway sessions list --workspace my-ws
+```
+
+Gateway storage is rooted in the workspace folder:
+
+- `sessions/gateway/` for gateway session JSONL files
+- `data/gateway/cron/jobs.json` for scheduled jobs
 
 ## Roadmap / Next Steps
 

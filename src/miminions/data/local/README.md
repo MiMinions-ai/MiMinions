@@ -270,20 +270,14 @@ The system provides comprehensive error handling:
 Run the test suite:
 
 ```bash
-# Unit tests
-python -m pytest tests/test_data_management.py -v
+# Integration tests
+python -m pytest tests/integration/test_data_management.py -v
 
 # End-to-end tests
-python -m pytest tests/test_data_management_e2e.py -v
+python -m pytest tests/e2e/test_data_management_e2e.py -v
 
 # All tests
 python -m pytest tests/ -v
-```
-
-Run the example:
-
-```bash
-python examples/data_management/basic_usage.py
 ```
 
 ## Advanced Usage

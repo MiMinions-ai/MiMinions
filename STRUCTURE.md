@@ -2,209 +2,165 @@
 
 ```
 MiMinions/
-├── 📄 README.md                    # Project documentation and quick start
+├── 📄 README.md                    # Project overview and quick start
 ├── 📄 CHANGELOG.md                 # Version history
 ├── 📄 CONTRIBUTING.md              # Contribution guidelines
 ├── 📄 CODE_OF_CONDUCT.md           # Community standards
-├── 📄 LICENSE                      # License file
-├── 📄 pyproject.toml               # Project configuration & dependencies
-├── 📄 setup.py                     # Package setup
-├── 📄 setup.cfg                    # Setup configuration
-├── 📄 requirements.txt             # Dependencies
-├── 📄 MANIFEST.in                  # Package manifest
-├── 📄 main.py                      # Entry point
-├── 📓 work_bench.ipynb             # Development notebook
+├── 📄 LICENSE                      # MIT license
+├── 📄 pyproject.toml               # Packaging & dependencies (source of truth)
+├── 📄 requirements.txt             # Dev/full dependency list (not the install contract)
+├── 📄 mkdocs.yml                   # Documentation site config
+├── 📁 docs/                        # MkDocs documentation (published to miminions.ai)
+├── 📁 deploy/                      # build_cli.sh, to_pypi.sh helpers
 │
 ├── 📁 src/
 │   └── 📁 miminions/               # Main package
-│       ├── 📄 __init__.py          # Package exports
+│       ├── 📄 __init__.py
+│       ├── 📄 __main__.py          # `python -m miminions` entry point
 │       │
-│       ├── 📁 agent/               # Agent implementations
-│       │   ├── 📄 __init__.py
-│       │   ├── 📄 base.py          # Base agent (provisioned)
-│       │   ├── 📄 simple_agent.py  # ✅ Enhanced agent with MCP & memory
-│       │   ├── 📄 README.md
-│       │   └── 📄 QUICKSTART.md
+│       ├── 📁 agent/               # ✅ Minion agent (pydantic-ai)
+│       │   ├── 📄 agent.py             # Minion + create_minion
+│       │   ├── 📄 models.py            # AgentConfig, AgentState
+│       │   └── 📄 provider.py          # ModelFactory (openrouter/openai/anthropic/gemini/test)
 │       │
-│       ├── 📁 core/                # Core workspace system
-│       │   ├── 📄 __init__.py
-│       │   ├── 📄 workspace.py     # 🚧 Workspace, Node, Rule management
-│       │   └── 📄 README.md
+│       ├── 📁 cli/                 # ✅ Click CLI (entry point: cli/main.py)
+│       │   ├── 📄 main.py              # Root group + command registration
+│       │   ├── 📄 auth.py              # signin/signout/status/config (local)
+│       │   ├── 📄 agent.py             # agent management + tool run/inspect
+│       │   ├── 📄 chat.py              # interactive chat loop
+│       │   ├── 📄 prompt.py            # one-shot prompt
+│       │   ├── 📄 task.py              # task CRUD
+│       │   ├── 📄 knowledge.py         # versioned knowledge base
+│       │   ├── 📄 workspace.py         # workspace + node/rule commands
+│       │   ├── 📄 execution.py         # execution sessions + tool runs
+│       │   └── 📄 workflow.py          # 🚧 written but NOT registered in main.py
 │       │
-│       ├── 📁 data/                # Data management
-│       │   ├── 📄 __init__.py
-│       │   ├── 📄 README.md
-│       │   └── 📁 local/           # ✅ Local file system management
-│       │       ├── 📄 __init__.py
-│       │       ├── 📄 manager.py       # Main data manager interface
-│       │       ├── 📄 storage.py       # Hash-based storage backend
-│       │       ├── 📄 index.py         # Master index for metadata
-│       │       ├── 📄 transaction_log.py # Audit trail
-│       │       ├── 📄 file_handlers.py # File type handlers
-│       │       └── 📄 README.md
+│       ├── 📁 context/             # ✅ ContextBuilder (system-prompt assembly)
+│       │   └── 📄 context_builder.py
 │       │
-│       ├── 📁 interface/           # User interfaces
-│       │   ├── 📄 __init__.py
-│       │   ├── 📄 README.md
-│       │   └── 📁 cli/             # ✅ Command line interface
-│       │       ├── 📄 __init__.py
-│       │       ├── 📄 main.py          # CLI entry point
-│       │       ├── 📄 auth.py          # Authentication commands
-│       │       ├── 📄 agent.py         # Agent management
-│       │       ├── 📄 task.py          # Task management
-│       │       ├── 📄 workflow.py      # Workflow management
-│       │       ├── 📄 knowledge.py     # Knowledge base
-│       │       └── 📄 workspace.py     # Workspace commands
+│       ├── 📁 core/                # Domain core
+│       │   ├── 📄 auth.py              # ✅ require_auth decorator
+│       │   ├── 📄 bootstrap.py         # ✅ ensure_default_setup (first-run)
+│       │   ├── 📄 workspace.py         # 🚧 Workspace/Node/Rule + WorkspaceManager (rule engine is primitive)
+│       │   └── 📁 gateway/         # ✅ server-runtime building blocks (extensible)
+│       │       ├── 📄 bus.py           # async pub/sub MessageBus
+│       │       ├── 📄 events.py        # InboundMessage / OutboundMessage
+│       │       ├── 📄 channel.py       # BaseChannel (abstract) + ChannelManager
+│       │       ├── 📄 session.py       # Session / SessionManager (JSONL)
+│       │       ├── 📄 services.py      # CronService / CronJob / CronSchedule
+│       │       └── 📄 orchestrator.py  # GatewayOrchestrator / Lifecycle / Phase
 │       │
-│       ├── 📁 memory/              # ✅ Vector memory backends
-│       │   ├── 📄 base_memory.py       # Abstract base class
-│       │   ├── 📄 sqlite.py            # SQLite + sqlite-vec
-│       │   └── 📄 md_store.py          # Markdown-backed storage helpers
+│       ├── 📁 data/               # Data management
+│       │   └── 📁 local/          # ✅ LocalDataManager
+│       │       ├── 📄 manager.py       # facade
+│       │       ├── 📄 storage.py       # hash-based content store (dedup)
+│       │       ├── 📄 index.py         # master index of FileMetadata
+│       │       ├── 📄 transaction_log.py # append-only audit trail
+│       │       └── 📄 file_handlers.py # text / markdown / csv handlers
 │       │
-│       ├── 📁 tools/               # ✅ Generic tool system
-│       │   ├── 📄 __init__.py          # GenericTool, SimpleTool, decorators
-│       │   ├── 📄 mcp_adapter.py       # MCP server integration
-│       │   └── 📄 README.md
+│       ├── 📁 memory/             # ✅ Memory backends
+│       │   ├── 📄 base_memory.py       # BaseMemory ABC
+│       │   ├── 📄 sqlite.py            # SQLiteMemory (sqlite-vec + fastembed)
+│       │   ├── 📄 md_store.py          # MEMORY.md / HISTORY.md helpers
+│       │   ├── 📄 distiller.py         # MemoryDistiller (3-tier promotion)
+│       │   ├── 📄 llm_filter.py        # create_llm_filter (LLM extractor)
+│       │   └── 📄 types.py             # MemoryEntry, MemoryQueryResult
 │       │
-│       ├── 📁 user/                # User management
-│       │   ├── 📄 __init__.py
+│       ├── 📁 session/            # ✅ JsonlSessionStore (chat transcripts)
+│       │   └── 📄 store.py
+│       │
+│       ├── 📁 task/               # ✅ Task runtime
+│       │   ├── 📄 control.py           # TaskRuntime (asyncio.TaskGroup)
+│       │   ├── 📄 model.py             # Task, AgentTask, TaskInput/Output, enums
+│       │   └── 📄 view.py              # 📦 placeholder (no symbols yet)
+│       │
+│       ├── 📁 tools/              # ✅ Generic tool system
+│       │   ├── 📄 __init__.py          # GenericTool, create_tool, @tool, ToolSchema (dataclass)
+│       │   ├── 📄 mcp_adapter.py       # MCPToolAdapter, MCPTool
+│       │   └── 📄 schemas.py           # pydantic ToolDefinition / ToolExecutionResult / enums
+│       │
+│       ├── 📁 user/               # User module
 │       │   ├── 📄 model.py             # ✅ User dataclass
-│       │   ├── 📄 controller.py        # 📦 Stubbed (not implemented)
-│       │   └── 📄 README.md
+│       │   └── 📄 controller.py        # 📦 stubbed (every method raises NotImplementedError)
 │       │
-│       └── 📁 utils/               # ✅ Utilities
-│           ├── 📄 __init__.py
-│           └── 📄 chunker.py           # Text chunking for documents
+│       ├── 📁 utils/              # ✅ Utilities
+│       │   ├── 📄 chunker.py           # TextChunker (RAG ingestion)
+│       │   ├── 📄 gen.py               # Faker-backed name/description generators
+│       │   └── 📄 session.py           # append_transcript test/seed helper
+│       │
+│       ├── 📁 workflow/           # ✅ Workflow tracing models
+│       │   ├── 📄 models.py            # WorkflowTrace, WorkflowRun, records (__init__ is empty)
+│       │   └── 📄 controller.py        # WorkflowController
+│       │
+│       └── 📁 workspace_fs/       # ✅ On-disk workspace layer
+│           ├── 📄 layout.py            # WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
+│           ├── 📄 bootstrap.py         # init_workspace (scaffolds templates)
+│           └── 📄 reader.py            # read_prompt_files, read_memory_md, list_skills
 │
-├── 📁 examples/                    # Usage examples
-│   ├── 📄 __init__.py
-│   ├── 📄 README.md
-│   ├── 📄 simple_agent_example.py      # Basic agent usage
-│   ├── 📄 agent_memory_example.py      # Agent with memory
-│   ├── 📄 document_ingestion_example.py
-│   ├── 📄 document_server_example.py
+├── 📁 examples/                   # Usage examples
+│   ├── 📄 minion_agent_example.py
 │   ├── 📄 sqlite_memory_example.py
-│   ├── 📄 sqlite_memory_search_example.py
-│   ├── 📁 example_files/               # Sample files for examples
-│   ├── 📁 servers/                     # MCP server examples
-│   │   ├── 📄 document_server.py
-│   │   └── 📄 math_server.py
-│   └── 📁 legacy/                      # Older examples
-│       ├── 📄 README.md
-│       ├── 📄 cli_demo.py
-│       ├── 📄 custom_tools_example.py
-│       ├── 📄 database_integration_example.py
-│       ├── 📄 demo.py
-│       ├── 📄 memory_management_example.py
-│       └── 📁 data_management/
+│   ├── 📄 tasks_example.py
+│   ├── 📄 document_ingestion_example.py
+│   └── 📁 example_chat/                # a seeded workspace + chat_example.py
 │
-└── 📁 tests/                       # Test suite
-    ├── 📄 __init__.py
-    ├── 📄 conftest.py                  # Pytest fixtures
-    ├── 📄 test_memory.py
-    ├── 📄 test_simple_agent.py
-    ├── 📄 test_sqlite_memory.py
-    ├── 📄 test_sqlite_memory_search.py
-    ├── 📄 document_test.py
-    ├── 📁 cli/                         # CLI tests
-    │   ├── 📄 __init__.py
-    │   ├── 📄 test_agent.py
-    │   ├── 📄 test_auth.py
-    │   ├── 📄 test_e2e.py
-    │   ├── 📄 test_runner.py
-    │   └── 📄 test_workspace.py
-    └── 📁 data/                        # Data management tests
-        ├── 📄 __init__.py
-        ├── 📄 test_data_management.py
-        └── 📄 test_data_management_e2e.py
+└── 📁 tests/                      # Test suite (pytest, asyncio_mode=auto)
+    ├── 📄 conftest.py
+    ├── 📄 test_bootstrap.py
+    ├── 📄 test_execution.py
+    ├── 📁 unit/                        # agent, mcp_adapter, task model/runtime
+    ├── 📁 integration/                 # cli, context, distiller, gateway, memory, sessions
+    ├── 📁 e2e/                         # end-to-end CLI + data management
+    └── 📁 workflow/                    # workflow controller/models
 ```
 
 ## Module Status Legend
 
-- ✅ **Complete** - Fully implemented and functional
-- 🚧 **In Progress** - Partially implemented
-- 📦 **Provisioned** - Stubbed/placeholder only
+- ✅ **Complete** — implemented and functional
+- 🚧 **Partial** — works, but with known gaps (see notes)
+- 📦 **Provisioned** — stubbed/placeholder only
 
----
+## Notes on partial / provisioned modules
 
-## ✅ Complete Modules
+- **`cli/workflow.py`** — the command group is fully written but its registration
+  is commented out in `cli/main.py`, so `miminions workflow ...` is unreachable.
+- **`core/workspace.py`** — the `Workspace`/`Node`/`Rule` model and JSON-backed
+  `WorkspaceManager` work; the rule **condition engine is primitive** (basic
+  state matching), so `evaluate_state_logic` is intentionally simple.
+- **`core/gateway/`** — complete as a runtime **toolkit**: `BaseChannel` and
+  `GatewayOrchestrator` are abstract extension points and **no concrete channels
+  ship built-in**. Cron-expression schedules need the optional `croniter` package.
+- **`task/view.py`** — module docstring only; no view functions yet.
+- **`user/controller.py`** — fully stubbed; every method (including `__init__`)
+  raises `NotImplementedError`. The `User` dataclass model is functional.
+- **`agent run --async`** — accepts the flag but is a no-op placeholder.
 
-- **Tools System** (`src/miminions/tools/`) - Generic tool abstraction with `GenericTool`, `SimpleTool`, schema extraction, and framework-agnostic design
-- **MCP Adapter** (`src/miminions/tools/mcp_adapter.py`) - Full MCP server integration - connect, load tools, execute, and convert to generic format
-- **Simple Agent** (`src/miminions/agent/simple_agent.py`) - Enhanced agent with MCP support, memory integration, document ingestion, and auto-registered CRUD tools
-- **SQLite Memory** (`src/miminions/memory/sqlite.py`) - Vector-based memory using `sqlite-vec` with CRUD, keyword search, regex, and full-text search
-- **Base Memory** (`src/miminions/memory/base_memory.py`) - Abstract base class defining memory interface
-- **Text Chunker** (`src/miminions/utils/chunker.py`) - Document chunking utility with configurable overlap
-- **Local Data Manager** (`src/miminions/data/local/`) - Full file management with master index, transaction logs, hash-based storage, and file handlers
-- **CLI - Auth** (`src/miminions/interface/cli/auth.py`) - Authentication with signin, signout, config management, public access mode
-- **CLI - Agent** (`src/miminions/interface/cli/agent.py`) - Agent management (list, add, update, remove, set-goal, activate, deactivate)
-- **CLI - Task** (`src/miminions/interface/cli/task.py`) - Task management with full CRUD and status tracking
-- **CLI - Workflow** (`src/miminions/interface/cli/workflow.py`) - Workflow management with agent assignment
-- **CLI - Knowledge** (`src/miminions/interface/cli/knowledge.py`) - Knowledge base CRUD with categories and versioning
-- **User Model** (`src/miminions/user/model.py`) - User dataclass with serialization
+## Public Import Surface
 
-## 🚧 In Progress Modules
+> ⚠️ The top-level `from miminions import ...` is currently broken (the package
+> `__init__` swallows an `ImportError`). Always import from the concrete
+> subpackages below.
 
-- **Core Workspace** (`src/miminions/core/workspace.py`) - ~70% complete - Has `Node`, `Rule`, `Workspace` dataclasses, `WorkspaceManager` with persistence. Rule evaluation and state logic need finishing
-- **CLI - Workspace** (`src/miminions/interface/cli/workspace.py`) - ~80% complete - Commands exist but rely on incomplete workspace logic
-- **Base Agent** (`src/miminions/agent/base.py`) - Minimal - only imports `pydantic_ai.Agent`, database integration mentioned in README but not implemented
-
-## 📦 Provisioned / Stubbed Modules
-
-- **User Controller** (`src/miminions/user/controller.py`) - Fully stubbed - All methods raise `NotImplementedError` (CRUD, API key generation/validation)
-
-## 🔬 Test Coverage
-
-- **Memory** - `test_memory.py`, `test_sqlite_memory.py`, `test_sqlite_memory_search.py` - Good coverage
-- **Agent** - `test_simple_agent.py` - Basic coverage
-- **CLI** - `tests/cli/` - Has auth, agent, workspace, and e2e tests
-- **Data** - `tests/data/` - Data management e2e tests
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLI Interface                           │
-│  (auth, agent, task, workflow, knowledge, workspace commands)   │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-┌─────────────────────────────▼───────────────────────────────────┐
-│                        Simple Agent                             │
-│         (MCP integration, tool execution, memory CRUD)          │
-└──────────┬──────────────────┬───────────────────┬───────────────┘
-           │                  │                   │
-┌──────────▼──────┐  ┌────────▼────────┐  ┌──────▼──────────┐
-│   Tools System  │  │  Memory System  │  │  Data Manager   │
-│  ┌───────────┐  │  │  ┌──────────┐   │  │  ┌──────────┐   │
-│  │ Generic   │  │  │  │ SQLite   │   │  │  │ Storage  │   │
-│  │ Tool      │  │  │  │ Memory   │   │  │  │ Backend  │   │
-│  └───────────┘  │  │  └──────────┘   │  │  └──────────┘   │
-│  ┌───────────┐  │  │  ┌──────────┐   │  │  ┌──────────┐   │
-│  │ MCP       │  │  │  │ SQLite   │   │  │  │ Index    │   │
-│  │ Adapter   │  │  │  │ Memory   │   │  │  └──────────┘   │
-│  └───────────┘  │  │  └──────────┘   │  │  ┌──────────┐   │
-└─────────────────┘  └─────────────────┘  │  │ Tx Log   │   │
-                                          │  └──────────┘   │
-┌─────────────────┐  ┌─────────────────┐  └─────────────────┘
-│  Core Workspace │  │  User Module    │
-│  ┌───────────┐  │  │  ┌──────────┐   │
-│  │ Nodes     │  │  │  │ Model ✅ │   │
-│  └───────────┘  │  │  └──────────┘   │
-│  ┌───────────┐  │  │  ┌──────────┐   │
-│  │ Rules     │  │  │  │Controller│   │
-│  └───────────┘  │  │  │   📦     │   │
-└─────────────────┘  │  └──────────┘   │
-                     └─────────────────┘
+```python
+from miminions.agent import create_minion, Minion
+from miminions.tools import GenericTool, create_tool, tool, ToolSchema
+from miminions.memory.sqlite import SQLiteMemory
+from miminions.memory import MemoryDistiller, create_llm_filter
+from miminions.context import ContextBuilder
+from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule
+from miminions.workspace_fs import WorkspaceLayout, init_workspace
+from miminions.data import LocalDataManager
+from miminions.task import TaskRuntime, Task, AgentTask
+from miminions.core.gateway import MessageBus, ChannelManager, CronService
 ```
 
 ## Key Dependencies
 
-- **mcp** - Model Context Protocol client
-- **fastmcp** - Fast MCP utilities
-- **sentence-transformers** - Text embeddings
-- **sqlite-vec** - SQLite vector extension
-- **pdfplumber** - PDF text extraction
-- **click** - CLI framework
-- **pydantic-ai** - AI agent framework
+**Core** (installed by `pip install miminions`): `pydantic`, `pydantic-ai`,
+`openai`, `mcp`, `click`, `numpy`, `pdfplumber`, `Faker`.
+
+**`[sqlite]` / `[all]` extra** (vector memory): `fastembed` (ONNX embeddings,
+no PyTorch/CUDA), `sqlite-vec`, `pysqlite3`.
+
+**Optional**: `croniter` (gateway cron-expression schedules), `pyinstaller`
+(`[cli-build]` standalone binary).

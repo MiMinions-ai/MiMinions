@@ -12,11 +12,25 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .base_memory import BaseMemory
 from uuid import uuid4
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 
 _DEFAULT_DB_DIR = Path(__file__).parent / ".data"
 _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "memory.db"
+
+# fastembed identifies models by their fully-qualified Hub name. Accept the
+# short sentence-transformers aliases callers may still pass.
+_MODEL_ALIASES = {
+    "all-MiniLM-L6-v2": "sentence-transformers/all-MiniLM-L6-v2",
+}
+
+
+def get_global_memory_db_path(create_dir: bool = True) -> str:
+    """Return canonical path for cross-workspace global memory DB."""
+    path = Path.home() / ".miminions" / "global_memory.db"
+    if create_dir:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return str(path)
 
 
 def _serialize_f32(vector: list) -> bytes:
@@ -50,7 +64,7 @@ class SQLiteMemory(BaseMemory):
             self.db_path = str(user_path)
         
         self.dim = dim
-        self.encoder = SentenceTransformer(model_name)
+        self.encoder = TextEmbedding(_MODEL_ALIASES.get(model_name, model_name))
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         
         # Try to load sqlite-vec extension if available
@@ -67,7 +81,15 @@ class SQLiteMemory(BaseMemory):
         
         self._register_regex_function()
         self._setup_tables()
-    
+
+    def _embed(self, text: str) -> list:
+        """Encode a single string into a list of floats.
+
+        fastembed returns float64 arrays; _serialize_f32 truncates to float32
+        when packing for sqlite-vec, which is the expected storage format.
+        """
+        return list(self.encoder.embed([text]))[0].tolist()
+
     def _register_regex_function(self):
         """Register custom REGEXP function for SQLite."""
         def regexp(pattern, text):
@@ -100,7 +122,7 @@ class SQLiteMemory(BaseMemory):
     
     def create(self, text: str, metadata: Dict[str, Any] = None) -> str:
         id = str(uuid4())
-        vector = self.encoder.encode([text])[0].tolist()
+        vector = self._embed(text)
         
         self.conn.execute(
             "INSERT INTO knowledge (id, text, metadata) VALUES (?, ?, ?)",
@@ -114,7 +136,7 @@ class SQLiteMemory(BaseMemory):
         return id
     
     def read(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        query_vec = self.encoder.encode([query])[0].tolist()
+        query_vec = self._embed(query)
         
         cursor = self.conn.execute("""
             SELECT v.id, v.distance, k.text, k.metadata
@@ -141,7 +163,7 @@ class SQLiteMemory(BaseMemory):
         if not cursor.fetchone():
             return False
         
-        new_vec = self.encoder.encode([new_text])[0].tolist()
+        new_vec = self._embed(new_text)
         
         self.conn.execute(
             "UPDATE knowledge SET text = ? WHERE id = ?",
