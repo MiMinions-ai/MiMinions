@@ -6,7 +6,6 @@ transaction logs, and hash-based storage.
 """
 
 import getpass
-import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,7 +14,7 @@ from typing import Dict, List, Optional, Any, Union
 from .storage import StorageBackend
 from .index import MasterIndex, FileMetadata
 from .transaction_log import TransactionLog, TransactionType
-from .file_handlers import FileHandlerRegistry, FileHandler
+from .file_handlers import FileHandlerRegistry
 
 
 class LocalDataManager:

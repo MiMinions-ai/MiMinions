@@ -1,6 +1,5 @@
 """Unit tests for gateway.session module."""
 import json
-import pytest
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -223,7 +222,7 @@ class TestSessionManagerInit:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "sessions"
             assert not path.exists()
-            mgr = SessionManager(path)
+            SessionManager(path)
             assert path.exists()
 
     def test_string_path(self):

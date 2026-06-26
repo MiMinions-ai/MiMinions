@@ -8,7 +8,6 @@ from miminions.core.bootstrap import ensure_default_setup
 from .auth import auth_cli, get_config_dir
 from .agent import agent_cli
 from .task import task_cli
-from .workflow import workflow_cli
 from .knowledge import knowledge_cli
 from .workspace import workspace_cli
 from .execution import execution_cli

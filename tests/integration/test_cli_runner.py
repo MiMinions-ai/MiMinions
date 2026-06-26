@@ -5,7 +5,6 @@ This can be used to run tests without pytest if needed.
 
 import sys
 import os
-import subprocess
 
 # Add src to path so we can import the modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -120,7 +119,7 @@ def main():
         else:
             failed += 1
     
-    print(f"\n--- Test Results ---")
+    print("\n--- Test Results ---")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
     

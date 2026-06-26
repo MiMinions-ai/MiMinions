@@ -1,6 +1,4 @@
 """Unit tests for gateway.bus module."""
-import pytest
-import asyncio
 
 from miminions.core.gateway.bus import MessageBus
 from miminions.core.gateway.events import InboundMessage, OutboundMessage

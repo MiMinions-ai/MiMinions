@@ -3,9 +3,7 @@ End-to-end tests for the MiMinions CLI.
 These tests simulate real user workflows and interactions.
 """
 
-import pytest
 import tempfile
-import os
 import json
 from contextlib import ExitStack
 from pathlib import Path
