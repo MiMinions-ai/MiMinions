@@ -2,11 +2,18 @@
 Pytest configuration for MiMinions CLI tests.
 """
 
+import os
 import sys
 import pytest
 import tempfile
 import shutil
 from pathlib import Path
+
+# Provide placeholder credentials so model clients (OpenAI/OpenRouter/etc.)
+# can be constructed during tests without real secrets. Newer openai SDKs
+# reject empty api keys at client construction; tests never make live calls.
+for _key in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"):
+    os.environ.setdefault(_key, "test-placeholder")
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
