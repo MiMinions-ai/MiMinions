@@ -13,7 +13,9 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 
-DEFAULT_WORKSPACES_ROOT = Path("~/.miminions/workspaces").expanduser()
+from miminions.core.paths import get_workspaces_root
+
+DEFAULT_WORKSPACES_ROOT = get_workspaces_root()
 
 
 class NodeType(Enum):

@@ -6,16 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from miminions.core.paths import get_global_memory_db_path
 from miminions.memory.md_store import read_memory
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
-
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
 
 
 def _safe_get(obj: Any, name: str, default: Any = None) -> Any:

@@ -3,11 +3,10 @@ Workflow management commands for MiMinions CLI.
 """
 
 import click
-import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 
 
@@ -18,19 +17,12 @@ def get_workflows_file():
 
 def load_workflows():
     """Load workflows from configuration."""
-    workflows_file = get_workflows_file()
-    if not workflows_file.exists():
-        return {}
-    
-    with open(workflows_file, "r") as f:
-        return json.load(f)
+    return load_json(get_workflows_file())
 
 
 def save_workflows(workflows):
     """Save workflows to configuration."""
-    workflows_file = get_workflows_file()
-    with open(workflows_file, "w") as f:
-        json.dump(workflows, f, indent=2)
+    save_json(get_workflows_file(), workflows)
 
 
 @click.group()

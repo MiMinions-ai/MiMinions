@@ -7,6 +7,7 @@ import json
 import re
 from datetime import datetime, timezone
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 
@@ -40,19 +41,12 @@ def get_agents_file():
 
 def load_agents():
     """Load agents from configuration."""
-    agents_file = get_agents_file()
-    if not agents_file.exists():
-        return {}
-    
-    with open(agents_file, "r") as f:
-        return json.load(f)
+    return load_json(get_agents_file())
 
 
 def save_agents(agents):
     """Save agents to configuration."""
-    agents_file = get_agents_file()
-    with open(agents_file, "w") as f:
-        json.dump(agents, f, indent=2)
+    save_json(get_agents_file(), agents)
 
 
 def _build_cli_extension_agent(agent_data):

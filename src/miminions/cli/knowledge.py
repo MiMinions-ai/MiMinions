@@ -6,8 +6,8 @@ import click
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 
 
@@ -18,19 +18,12 @@ def get_knowledge_file():
 
 def load_knowledge():
     """Load knowledge from configuration."""
-    knowledge_file = get_knowledge_file()
-    if not knowledge_file.exists():
-        return {}
-    
-    with open(knowledge_file, "r") as f:
-        return json.load(f)
+    return load_json(get_knowledge_file())
 
 
 def save_knowledge(knowledge):
     """Save knowledge to configuration."""
-    knowledge_file = get_knowledge_file()
-    with open(knowledge_file, "w") as f:
-        json.dump(knowledge, f, indent=2)
+    save_json(get_knowledge_file(), knowledge)
 
 
 @click.group()

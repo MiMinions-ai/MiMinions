@@ -7,17 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from miminions.core.paths import get_global_memory_db_path
 from miminions.session.store import JsonlSessionStore
 
 from .md_store import append_history, upsert_memory_section
-
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
 
 
 @dataclass

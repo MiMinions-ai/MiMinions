@@ -14,6 +14,9 @@ from .base_memory import BaseMemory
 from uuid import uuid4
 from fastembed import TextEmbedding
 
+# Re-exported so callers importing it from this module keep working.
+from miminions.core.paths import get_global_memory_db_path  # noqa: F401
+
 
 _DEFAULT_DB_DIR = Path(__file__).parent / ".data"
 _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "memory.db"
@@ -23,14 +26,6 @@ _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "memory.db"
 _MODEL_ALIASES = {
     "all-MiniLM-L6-v2": "sentence-transformers/all-MiniLM-L6-v2",
 }
-
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
 
 
 def _serialize_f32(vector: list) -> bytes:
