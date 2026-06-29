@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,8 @@ from miminions.core.paths import get_global_memory_db_path
 from miminions.session.store import JsonlSessionStore
 
 from .md_store import append_history, upsert_memory_section
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -124,6 +127,10 @@ class MemoryDistiller:
                 session_id=session_id,
             )
         except Exception as exc:
+            logger.warning(
+                "Distillation LLM filter failed for session %s: %s",
+                session_id, exc, exc_info=True,
+            )
             result.dropped_reasons.append(f"llm_filter_error: {exc}")
             return result
 
@@ -177,6 +184,10 @@ class MemoryDistiller:
                 finally:
                     sqlite_memory.close()
             except Exception as exc:
+                logger.warning(
+                    "Tier-3 global memory write failed for session %s: %s",
+                    session_id, exc, exc_info=True,
+                )
                 result.dropped_reasons.append(f"tier3_unavailable: {exc}")
 
         return result

@@ -2,6 +2,7 @@
 Pytest configuration for MiMinions CLI tests.
 """
 
+import os
 import sys
 import pytest
 import tempfile
@@ -16,6 +17,20 @@ if str(SRC) not in sys.path:
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _dummy_openrouter_key(monkeypatch):
+    """Keep the suite hermetic.
+
+    The default agent provider ("openrouter") now fails fast when
+    OPENROUTER_API_KEY is unset, so non-LLM tests that merely construct a
+    Minion would break in CI (bare `pytest`, no secret). Inject a dummy key
+    when no real one is present; tests that assert the fail-fast behavior
+    delete it again via their own monkeypatch.
+    """
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "test-dummy-key")
 
 @pytest.fixture
 def temp_config_dir():

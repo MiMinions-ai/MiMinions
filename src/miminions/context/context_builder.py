@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
@@ -9,6 +10,8 @@ from typing import Any
 from miminions.core.paths import get_global_memory_db_path
 from miminions.memory.md_store import read_memory
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_get(obj: Any, name: str, default: Any = None) -> Any:
@@ -34,6 +37,7 @@ def _normalize_mapping(obj: Any) -> dict[str, Any]:
         try:
             return asdict(obj)
         except Exception:
+            logger.debug("Could not convert dataclass %r to dict", type(obj), exc_info=True)
             return {}
 
     if hasattr(obj, "__dict__"):
@@ -143,6 +147,11 @@ def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[s
         finally:
             mem.close()
     except Exception:
+        logger.warning(
+            "Could not fetch global insights from %s; continuing without them.",
+            path,
+            exc_info=True,
+        )
         return []
 
 

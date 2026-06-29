@@ -1,5 +1,6 @@
 """Unit tests for gateway.session module."""
 import json
+import logging
 import pytest
 import tempfile
 from datetime import datetime
@@ -452,11 +453,14 @@ class TestSessionManagerListSessions:
 
             assert mgr.list_sessions() == []
 
-    def test_list_handles_corrupted_files(self):
+    def test_list_handles_corrupted_files(self, caplog):
         with tempfile.TemporaryDirectory() as tmpdir:
             mgr = SessionManager(tmpdir)
             (Path(tmpdir) / "bad.jsonl").write_text("{{invalid json")
 
-            # Should not crash, just skip
-            sessions = mgr.list_sessions()
+            # Should not crash, just skip — but the skip must be logged, not silent.
+            with caplog.at_level(logging.WARNING):
+                sessions = mgr.list_sessions()
+
             assert sessions == []
+            assert any("Skipping unreadable session file" in r.message for r in caplog.records)
