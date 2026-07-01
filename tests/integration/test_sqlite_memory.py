@@ -2,6 +2,10 @@
 
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("sqlite_vec")
+
 from miminions.memory.sqlite import SQLiteMemory
 from miminions.memory.sqlite import get_global_memory_db_path
 from miminions.agent import create_minion
