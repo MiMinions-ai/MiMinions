@@ -1,11 +1,10 @@
 """SQLite Memory Test Suite."""
 
 from pathlib import Path
+
 import pytest
 
 pytest.importorskip("sqlite_vec")
-
-import pytest
 
 from miminions.memory.sqlite import SQLiteMemory, sqlite3
 from miminions.memory.sqlite import get_global_memory_db_path
