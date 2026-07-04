@@ -8,7 +8,6 @@ Subclass ``GatewayOrchestrator`` and implement ``configure()`` to wire
 your components into the appropriate phases.
 """
 
-import asyncio
 import logging
 from abc import ABC, abstractmethod
 from enum import IntEnum

@@ -1,11 +1,9 @@
 """Unit tests for gateway.services module (CronService)."""
 import json
 import pytest
-import asyncio
 import time
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 from miminions.core.gateway.services import (
     CronJob,
@@ -602,7 +600,7 @@ class TestCronServiceListJobs:
             svc = CronService(store_path=path)
             await svc.start()
 
-            j1 = svc.add_job("enabled", CronSchedule(kind="every", every_ms=1000), "x")
+            svc.add_job("enabled", CronSchedule(kind="every", every_ms=1000), "x")
             j2 = svc.add_job("disabled", CronSchedule(kind="every", every_ms=1000), "x")
             svc.enable_job(j2.id, enabled=False)
 

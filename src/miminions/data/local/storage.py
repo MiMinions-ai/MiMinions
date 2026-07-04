@@ -9,7 +9,7 @@ import hashlib
 import os
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, BinaryIO, Union
+from typing import Optional, BinaryIO, Union
 
 
 class StorageBackend:

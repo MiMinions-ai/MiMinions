@@ -2,7 +2,7 @@
 import pytest
 import asyncio
 from datetime import datetime
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 
 from miminions.task.control import TaskRuntime
 from miminions.task.model import AgentTask, TaskStatus, TaskPriority
@@ -476,7 +476,7 @@ class TestTaskRuntimeAsyncExecution:
         
         # Run tasks - should handle exception
         with pytest.raises(Exception):
-            results = await runtime.run()
+            await runtime.run()
 
     @pytest.mark.asyncio
     async def test_get_task_status_all_tasks(self):

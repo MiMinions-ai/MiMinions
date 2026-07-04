@@ -6,7 +6,7 @@ import click
 import json
 import re
 from datetime import datetime, timezone
-from .auth import get_config_dir, is_authenticated, is_public_access_enabled
+from .auth import get_config_dir
 from miminions.agent import create_minion
 
 

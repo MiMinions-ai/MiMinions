@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
+from miminions.core.workspace import WorkspaceManager, Rule, RulePriority
 from miminions.workspace_fs import init_workspace
 
 
@@ -207,7 +207,7 @@ def update_workspace(workspace_id, name, description):
     workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
-    click.echo(f"Workspace updated successfully.")
+    click.echo("Workspace updated successfully.")
 
 
 @workspace_cli.command("remove")
@@ -250,11 +250,9 @@ def set_state(workspace_id, key, value):
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:
@@ -303,11 +301,9 @@ def add_rule(workspace_id, name, description, priority, enabled, condition, acti
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:
@@ -345,11 +341,9 @@ def remove_rule(workspace_id, rule_id_or_name):
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:

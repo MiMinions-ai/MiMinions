@@ -5,7 +5,6 @@ Workflow management commands for MiMinions CLI.
 import click
 import json
 import uuid
-from pathlib import Path
 from .auth import get_config_dir
 from miminions.core.auth import require_auth
 
