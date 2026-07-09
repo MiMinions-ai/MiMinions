@@ -112,7 +112,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output
@@ -205,7 +205,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output
