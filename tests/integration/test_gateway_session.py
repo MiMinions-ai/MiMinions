@@ -224,7 +224,7 @@ class TestSessionManagerInit:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "sessions"
             assert not path.exists()
-            mgr = SessionManager(path)
+            SessionManager(path)
             assert path.exists()
 
     def test_string_path(self):

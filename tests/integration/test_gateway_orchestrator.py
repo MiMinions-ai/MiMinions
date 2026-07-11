@@ -1,7 +1,5 @@
 """Unit tests for gateway.orchestrator module."""
 import pytest
-import asyncio
-from unittest.mock import AsyncMock
 
 from miminions.core.gateway.orchestrator import (
     GatewayOrchestrator,

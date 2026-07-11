@@ -136,6 +136,7 @@ Command groups:
 | `knowledge` | A versioned knowledge base |
 | `workspace` | Manage workspaces, their nodes, rules, and on-disk files |
 | `execution` | Register tools and record tool runs in execution sessions |
+| `gateway` | Manage local gateway runtime, cron jobs, and gateway sessions |
 | `auth` | Local sign-in, public-access mode, and config |
 
 ```bash

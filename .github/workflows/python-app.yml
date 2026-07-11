@@ -26,8 +26,8 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install -e ".[dev,sqlite]"
-    - name: Lint with flake8
-      run: flake8 src/ tests/ --exit-zero --max-line-length=127 --statistics
+    - name: Lint with ruff
+      run: ruff check --line-length=127 --statistics src tests
     - name: Test with pytest
       run: pytest
     - name: Verify build

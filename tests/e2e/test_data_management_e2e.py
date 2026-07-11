@@ -36,7 +36,7 @@ class TestDataManagementE2E(unittest.TestCase):
             tags=["test", "documentation"]
         )
         
-        markdown_id = self.manager.add_content(
+        self.manager.add_content(
             content="# Test\n\nThis is markdown content.",
             name="test.md",
             file_type="markdown",

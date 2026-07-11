@@ -2,10 +2,10 @@
 Unit tests for the MiMinions CLI agent module.
 """
 
-import pytest
 import json
 import tempfile
 import os
+import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
@@ -112,7 +112,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output
@@ -209,7 +209,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output
@@ -349,6 +349,7 @@ class TestAgentCLI:
 
             assert result.exit_code == 0
             assert "Tools for 'test_agent':" in result.output
+            assert "cli_run_command" in result.output
             assert "cli_echo" in result.output
             assert "cli_add" in result.output
 
@@ -398,6 +399,33 @@ class TestAgentCLI:
             assert "Tool: cli_add" in result.output
             assert "Status: success" in result.output
             assert "Result: 5" in result.output
+
+    def test_tool_run_cli_command_success(self):
+        """Test running the default command execution tool through the CLI."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+        arguments = json.dumps({"command": f"{sys.executable} --version"})
+
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
+
+                result = self.runner.invoke(
+                    agent_cli,
+                    ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments]
+                )
+
+            assert result.exit_code == 0
+            assert "Tool: cli_run_command" in result.output
+            assert "Status: success" in result.output
+            assert "'returncode': 0" in result.output
+            assert "Python" in result.output
 
     def test_tool_run_invalid_json(self):
         """Test running a tool with invalid JSON input."""

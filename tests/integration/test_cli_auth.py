@@ -2,7 +2,6 @@
 Unit tests for the MiMinions CLI authentication module.
 """
 
-import pytest
 import json
 import tempfile
 import os
