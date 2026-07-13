@@ -31,6 +31,7 @@ miminions init --force
 <div class="grid cards" markdown>
 
 -   :material-login: **`auth`** — local sign-in, status, and config
+-   :material-cog-outline: **`config`** — get/set top-level CLI defaults (`default_workspace`, `default_agent`)
 -   :material-robot: **`agent`** — manage agent records, run them, inspect tools
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
@@ -141,6 +142,37 @@ miminions auth config                          # show current config
 
 !!! tip "Public access bypasses the gate"
     `miminions auth config --public-access true` lets gated commands run without signing in (they print a "Public access mode." warning). Useful for local development.
+
+---
+
+## `config`
+
+Top-level configuration access for defaults used by CLI commands.
+
+```bash
+# Read one key
+miminions config get default_workspace
+miminions config get default_agent
+
+# Set one key (workspace resolves id/prefix/name to canonical id)
+miminions config set default_workspace my-project
+
+# Set default agent (must already exist in agents.json)
+miminions config set default_agent researcher
+```
+
+| Command | Description |
+| --- | --- |
+| `get <key>` | Print one value from `config.json`. |
+| `set <key> <value>` | Validate and update one value in `config.json`. |
+
+Supported keys:
+
+- `default_workspace`
+- `default_agent`
+
+!!! note "`auth config` vs `config`"
+    `miminions auth config` manages authentication flags (`public_access`, `auth_timeout`). `miminions config` manages top-level default routing (`default_workspace`, `default_agent`).
 
 ---
 

@@ -14,6 +14,7 @@ from .execution import execution_cli
 from .chat import chat_cli
 from .gateway import gateway_cli
 from .prompt import prompt_cli
+from .config import config_cli
 
 
 @click.group()
@@ -58,6 +59,7 @@ cli.add_command(execution_cli, name="execution")
 cli.add_command(chat_cli, name="chat")
 cli.add_command(gateway_cli, name="gateway")
 cli.add_command(prompt_cli, name="prompt")
+cli.add_command(config_cli, name="config")
 cli.add_command(init_cli, name="init")
 
 def main():
