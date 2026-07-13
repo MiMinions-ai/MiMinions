@@ -185,3 +185,16 @@ def test_mcp_tool_run_raises_async_only_runtime_error():
 
     with pytest.raises(RuntimeError, match="async-only"):
         tool.run(x=1)
+
+
+@pytest.mark.asyncio
+async def test_close_all_connections_closes_partially_initialized_stdio_context():
+    adapter = MCPToolAdapter()
+    stdio_context = MagicMock()
+    stdio_context.__aexit__ = AsyncMock()
+    adapter.stdio_contexts["partial"] = stdio_context
+
+    await adapter.close_all_connections()
+
+    stdio_context.__aexit__.assert_awaited_once_with(None, None, None)
+    assert adapter.stdio_contexts == {}
