@@ -207,10 +207,26 @@ def agent_cli():
 
 
 @agent_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth()
-def list_agents():
+def list_agents(as_json):
     """List all agents."""
     agents = load_agents()
+
+    if as_json:
+        payload = [
+            {
+                "id": agent_id,
+                "name": agent_data.get("name", agent_id),
+                "description": agent_data.get("description", "No description"),
+                "status": agent_data.get("status", "inactive"),
+                "type": agent_data.get("type"),
+                "goal": agent_data.get("goal"),
+            }
+            for agent_id, agent_data in agents.items()
+        ]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not agents:
         click.echo("No agents configured.")
@@ -279,8 +295,9 @@ def update_agent(agent_id, name, description, type):
 
 @agent_cli.command("show")
 @click.argument("agent_ref")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth()
-def show_agent(agent_ref):
+def show_agent(agent_ref, as_json):
     """Show one agent by id, id prefix, or exact name."""
     agents = load_agents()
     if not agents:
@@ -292,6 +309,22 @@ def show_agent(agent_ref):
         return
 
     agent = agents[agent_id]
+    payload = {
+        "id": agent_id,
+        "name": agent.get("name", agent_id),
+        "description": agent.get("description", "No description"),
+        "type": agent.get("type", "unknown"),
+        "status": agent.get("status", "inactive"),
+        "goal": agent.get("goal"),
+        "base_agent": agent.get("base_agent", "miminions.agent.Minion"),
+        "mode": agent.get("mode", "cli_extension"),
+        "created_at": agent.get("created_at", ""),
+    }
+
+    if as_json:
+        click.echo(json.dumps(payload, indent=2))
+        return
+
     click.echo(f"Agent: {agent.get('name', agent_id)}")
     click.echo(f"ID: {agent_id}")
     click.echo(f"Description: {agent.get('description', 'No description')}")

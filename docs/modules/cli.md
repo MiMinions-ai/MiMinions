@@ -255,11 +255,11 @@ miminions task remove <id>
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List all tasks with status and priority. |
+| `list` | `--json` | List all tasks with status and priority. |
 | `add` | `--title`, `--description`, `--priority`, `--agent` | Create a task. |
 | `update <id>` | `--title`, `--description`, `--priority`, `--status`, `--agent` | Update one or more fields. |
 | `duplicate <id>` | `--title` | Copy a task (reset to `pending`). |
-| `show <id>` | — | Print full task detail. |
+| `show <id>` | `--json` | Print full task detail. |
 | `remove <id>` | — | Delete a task (asks for confirmation). |
 
 - `--priority` is one of `low`, `medium` (default), `high`.
@@ -286,13 +286,13 @@ miminions knowledge remove <id>
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List entries with version, category, and status. |
+| `list` | `--json` | List entries with version, category, and status. |
 | `add` | `--title`, `--content`, `--category`, `--tags` | Create an entry at version `1.0`. |
 | `update <id>` | `--title`, `--content`, `--category`, `--tags` | Update fields; a content change bumps the version. |
 | `revert <id>` | `--version` | Restore content from a recorded version. |
 | `version <id>` | — | Show the version history. |
 | `customize <id>` | `--template`, `--format` | Apply a template and/or render as `json` / `markdown` / `plain`. |
-| `show <id>` | — | Print full entry detail. |
+| `show <id>` | `--json` | Print full entry detail. |
 | `remove <id>` | — | Delete an entry (asks for confirmation). |
 
 !!! tip "Version bumps"
@@ -320,9 +320,9 @@ Workspace references accept either a full id, an id **prefix**, or the workspace
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List workspaces with node/rule counts. |
+| `list` | `--json` | List workspaces with node/rule counts. |
 | `add` | `--name`, `--description`, `--sample`, `--init-files`, `--root-path` | Create a workspace. `--sample` seeds example nodes/rules; `--init-files` scaffolds the on-disk folder; `--root-path` overrides where files are written. |
-| `show <ref>` | — | Print full workspace detail (nodes, rules, inherited rules, state). |
+| `show <ref>` | `--json` | Print full workspace detail (nodes, rules, inherited rules, state). |
 | `update <ref>` | `--name`, `--description` | Rename or re-describe. |
 | `remove <ref>` | `--force` | Delete a workspace (confirm unless `--force`). |
 | `set-state <ref>` | `--key`, `--value` | Set a state value (value is parsed as JSON when possible). |
@@ -372,7 +372,7 @@ miminions execution session stop
 | --- | --- | --- |
 | `session start` | `--name` | Start a new session (only one active at a time). |
 | `session stop` | — | Stop the active session. |
-| `session list` | — | List all sessions with status. |
+| `session list` | `--json` | List all sessions with status. |
 
 ### Tools & runs
 
@@ -386,8 +386,8 @@ miminions execution session stop
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `interaction list` | `--session-id` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
-| `interaction show <index>` | `--session-id` | Print the full JSON of a recorded `WorkflowRun`. |
+| `interaction list` | `--session-id`, `--json` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
+| `interaction show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
 
 !!! note "Tool modules"
     `add-tool` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `add-tool` at the file.

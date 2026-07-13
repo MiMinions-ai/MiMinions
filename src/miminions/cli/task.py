@@ -32,10 +32,16 @@ def task_cli():
 
 
 @task_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def list_tasks():
+def list_tasks(as_json):
     """List all tasks."""
     tasks = load_tasks()
+
+    if as_json:
+        payload = [{"id": task_id, **task_data} for task_id, task_data in tasks.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not tasks:
         click.echo("No tasks configured.")
@@ -159,8 +165,9 @@ def duplicate_task(task_id, title):
 
 @task_cli.command("show")
 @click.argument("task_id")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def show_task(task_id):
+def show_task(task_id, as_json):
     """Show detailed information about a task."""
     tasks = load_tasks()
     
@@ -169,6 +176,11 @@ def show_task(task_id):
         return
     
     task = tasks[task_id]
+
+    if as_json:
+        payload = {"id": task_id, **task}
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     click.echo(f"Task ID: {task_id}")
     click.echo(f"Title: {task['title']}")
