@@ -1,6 +1,9 @@
 """SQLite Memory Test Suite."""
 
 from pathlib import Path
+import pytest
+
+pytest.importorskip("sqlite_vec")
 
 import pytest
 
