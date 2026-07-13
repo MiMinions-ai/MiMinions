@@ -12,6 +12,7 @@ from typing import Any
 
 from miminions.core.persistence import load_json, save_json
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
+from miminions.utils.json_io import load_json, save_json
 from miminions.workspace_fs import init_workspace
 
 DEFAULT_WORKSPACE_NAME = "default"
@@ -90,5 +91,5 @@ def ensure_default_setup(config_dir: Path, force: bool = False) -> dict[str, Any
     if not config.get("default_agent"):
         config["default_agent"] = agent_id
 
-    _save_json(config_file, config)
+    save_json(config_file, config)
     return config
