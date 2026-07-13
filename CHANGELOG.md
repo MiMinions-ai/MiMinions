@@ -22,9 +22,9 @@ Latest published release on PyPI.
 
 ### Added
 
-- **Click-based CLI** (`miminions` / `python -m miminions`) with eight command
+- **Click-based CLI** (`miminions` / `python -m miminions`) with nine command
   groups: `auth`, `agent`, `task`, `knowledge`, `workspace`, `execution`,
-  `chat`, and `prompt`. State persists locally under `~/.miminions/`.
+  `chat`, `gateway`, and `prompt`. State persists locally under `~/.miminions/`.
 - **First-run bootstrap.** `ensure_default_setup` idempotently creates a
   `default` workspace and a default agent under `~/.miminions/`, so the CLI works
   out of the box.
@@ -74,7 +74,7 @@ Latest published release on PyPI.
 > `miminions agent run` is a no-op placeholder. Both are documented as planned,
 > not present.
 
-## [0.2.2]
+## [0.2.2] - 2026-04-02
 
 Current published release on PyPI.
 
