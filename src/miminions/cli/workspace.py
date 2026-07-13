@@ -26,11 +26,28 @@ def workspace_cli():
 
 
 @workspace_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def list_workspaces():
+def list_workspaces(as_json):
     """List all workspaces."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
+
+    if as_json:
+        payload = []
+        for workspace_id, workspace in workspaces.items():
+            payload.append(
+                {
+                    "id": workspace_id,
+                    "name": workspace.name,
+                    "description": workspace.description,
+                    "created_at": workspace.created_at,
+                    "updated_at": workspace.updated_at,
+                    "network_summary": workspace.get_network_summary(),
+                }
+            )
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not workspaces:
         click.echo("No workspaces configured.")
@@ -101,8 +118,9 @@ def add_workspace(name, description, sample, init_files, root_path):
 
 @workspace_cli.command("show")
 @click.argument("workspace_id")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def show_workspace(workspace_id):
+def show_workspace(workspace_id, as_json):
     """Show workspace details."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
@@ -115,6 +133,12 @@ def show_workspace(workspace_id):
     
     if not workspace:
         click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    if as_json:
+        payload = workspace.to_dict()
+        payload["network_summary"] = workspace.get_network_summary()
+        click.echo(json.dumps(payload, indent=2))
         return
     
     click.echo(f"Workspace: {workspace.name}")
