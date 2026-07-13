@@ -26,6 +26,27 @@ def cli():
         raise click.ClickException(str(exc)) from exc
 
 
+@click.command("init")
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-run bootstrap and restore any missing default template files.",
+)
+def init_cli(force: bool):
+    """Initialize or repair the default CLI bootstrap state."""
+    try:
+        config = ensure_default_setup(get_config_dir(), force=force)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Default workspace: {config.get('default_workspace')}")
+    click.echo(f"Default agent: {config.get('default_agent')}")
+    if force:
+        click.echo("Bootstrap repair complete.")
+    else:
+        click.echo("Bootstrap initialization complete.")
+
+
 # Register command groups
 cli.add_command(auth_cli, name="auth")
 cli.add_command(agent_cli, name="agent")
@@ -37,6 +58,7 @@ cli.add_command(execution_cli, name="execution")
 cli.add_command(chat_cli, name="chat")
 cli.add_command(gateway_cli, name="gateway")
 cli.add_command(prompt_cli, name="prompt")
+cli.add_command(init_cli, name="init")
 
 def main():
     """Entry point for the CLI."""

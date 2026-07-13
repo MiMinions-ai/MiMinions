@@ -68,3 +68,18 @@ def test_existing_agents_are_preserved(temp_config_dir):
     assert config["default_agent"] == "mybot"
     agents = json.loads(agents_file.read_text())
     assert list(agents) == ["mybot"]
+
+
+def test_force_repairs_missing_templates_without_overwrite(temp_config_dir):
+    config = ensure_default_setup(temp_config_dir)
+    root = _workspace_root(temp_config_dir, config)
+
+    tools_md = root / "prompt" / "TOOLS.md"
+    user_md = root / "prompt" / "USER.md"
+    user_md.write_text("# customized by user\n")
+    tools_md.unlink()
+
+    ensure_default_setup(temp_config_dir, force=True)
+
+    assert tools_md.exists()
+    assert user_md.read_text() == "# customized by user\n"

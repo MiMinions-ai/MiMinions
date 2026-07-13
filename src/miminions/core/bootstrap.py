@@ -83,22 +83,32 @@ def _ensure_default_agent(config_dir: Path) -> str:
     return DEFAULT_AGENT_ID
 
 
-def ensure_default_setup(config_dir: Path) -> dict[str, Any]:
+def ensure_default_setup(config_dir: Path, force: bool = False) -> dict[str, Any]:
     """
-    Ensure a new user has a working default setup.
+    Ensure a user has a working default setup.
 
     On first run this creates the default workspace (prompt, skills, memory,
     sessions, and data templates included), seeds a default agent, and records
     both in config.json. Later runs cost a single config read.
+
+    If force=True, bootstrap/repair logic is re-run even when defaults already
+    exist so missing workspace template files can be restored.
     """
     config_file = config_dir / "config.json"
     config = _load_json(config_file)
 
-    if config.get("default_workspace"):
+    if config.get("default_workspace") and not force:
         return config
 
     config_dir.mkdir(parents=True, exist_ok=True)
-    config["default_workspace"] = _ensure_default_workspace(config_dir)
-    config["default_agent"] = _ensure_default_agent(config_dir)
+
+    workspace_id = _ensure_default_workspace(config_dir)
+    agent_id = _ensure_default_agent(config_dir)
+
+    if not config.get("default_workspace"):
+        config["default_workspace"] = workspace_id
+    if not config.get("default_agent"):
+        config["default_agent"] = agent_id
+
     _save_json(config_file, config)
     return config
