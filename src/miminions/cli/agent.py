@@ -6,7 +6,7 @@ import click
 import json
 import re
 from datetime import datetime, timezone
-from .auth import get_config_dir
+from .auth import get_config, get_config_dir
 from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
@@ -80,8 +80,22 @@ def _register_default_cli_tools(runtime_agent):
     runtime_agent.register_tool("cli_now_utc", "Get current UTC timestamp", cli_now_utc)
 
 
-def _get_agent_record_or_error(agent_id):
-    """Load one persisted CLI agent record by id with user-facing errors."""
+def _resolve_agent_id(agent_id: str | None) -> str | None:
+    """Return agent_id, falling back to default_agent from config when None."""
+    if agent_id:
+        return agent_id
+    default = get_config().get("default_agent")
+    if not default:
+        raise click.ClickException(
+            "No agent id given and no default_agent configured. "
+            "Pass an agent id or run 'miminions agent add' first."
+        )
+    return default
+
+
+def _get_agent_record_or_error(agent_id: str | None):
+    """Resolve and load one persisted CLI agent record with user-facing errors."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
@@ -252,34 +266,36 @@ def remove_agent(agent_id):
 
 
 @agent_cli.command("set-goal")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--goal", prompt="Goal", help="Goal for the agent")
 @require_auth()
 def set_goal(agent_id, goal):
-    """Set a goal for an agent."""
+    """Set a goal for an agent (defaults to the configured default agent)."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
-    
+
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
-    
+
     agents[agent_id]["goal"] = goal
     save_agents(agents)
     click.echo(f"Goal set for agent '{agent_id}': {goal}")
 
 
 @agent_cli.command("run")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
 @require_auth()
 def run_agent(agent_id, async_run):
-    """Run an agent."""
+    """Run an agent (defaults to the configured default agent)."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
-    
+
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
-    
+
     agent = agents[agent_id]
     
     if not agent.get("goal"):
@@ -309,11 +325,11 @@ def run_agent(agent_id, async_run):
 
 
 @agent_cli.command("ask")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--prompt", required=True, help="Prompt to send to the agent.")
 @require_auth()
 def ask_agent(agent_id, prompt):
-    """Ask an agent for a one-off response without mutating its stored goal."""
+    """Ask an agent for a one-off response (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -325,10 +341,10 @@ def ask_agent(agent_id, prompt):
 
 
 @agent_cli.command("tool-list")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @require_auth()
 def list_agent_tools(agent_id):
-    """List available tools for an agent runtime."""
+    """List available tools for an agent runtime (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -347,11 +363,11 @@ def list_agent_tools(agent_id):
 
 
 @agent_cli.command("tool-info")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name")
 @require_auth()
 def show_agent_tool_info(agent_id, tool_name):
-    """Show detailed tool information for one tool."""
+    """Show detailed tool information for one tool (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -369,11 +385,11 @@ def show_agent_tool_info(agent_id, tool_name):
 
 
 @agent_cli.command("tool-search")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("query")
 @require_auth()
 def search_agent_tools(agent_id, query):
-    """Search tools by name or description."""
+    """Search tools by name or description (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -390,7 +406,7 @@ def search_agent_tools(agent_id, query):
 
 
 @agent_cli.command("tool-run")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name")
 @click.option(
     "--arguments",

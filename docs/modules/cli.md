@@ -111,6 +111,29 @@ The command builds a workspace context string via [`ContextBuilder`](context.md)
 
 ---
 
+## `init`
+
+Initialize the MiMinions data structure and default configurations under `~/.miminions/`. Running `init` is equivalent to the automatic bootstrap that happens on the first invocation of any command, but it can be called explicitly to reset or pre-create the layout before any other command is run.
+
+```bash
+miminions init
+```
+
+`init` performs the following steps in order:
+
+1. Creates `~/.miminions/` (and any missing parent directories).
+2. Seeds a **`default` workspace** with the standard on-disk scaffolding (`prompt/`, `memory/`, `skills/`, `sessions/`, `data/`).
+3. Seeds a **`default` agent** record linked to that workspace.
+4. Writes the resulting ids to `~/.miminions/config.json` so subsequent commands resolve defaults without re-running the bootstrap.
+
+!!! note "Idempotent"
+    If `~/.miminions/config.json` already contains a `default_workspace` entry, `init` is a no-op — it returns immediately without overwriting anything. It is safe to run more than once.
+
+!!! tip "When to use `init`"
+    Useful in CI/CD pipelines, container entrypoints, or provisioning scripts where you want to guarantee the directory layout exists before running `chat`, `prompt`, or any other command.
+
+---
+
 ## `auth`
 
 Local authentication and configuration.
@@ -145,13 +168,17 @@ miminions auth config                          # show current config
 
 Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, pre-loaded with a small default toolset (`cli_echo`, `cli_add`, `cli_now_utc`).
 
+All commands that take an agent id accept it as an optional positional argument. When omitted, the `default_agent` from `~/.miminions/config.json` is used.
+
 ```bash
 miminions agent list
 miminions agent add --name "Researcher" --description "Finds things" --type assistant
 miminions agent update researcher --description "Updated"
 miminions agent set-goal researcher --goal "Summarize today's notes"
 miminions agent run researcher
+miminions agent run                            # uses default_agent
 miminions agent ask researcher --prompt "what time is it in UTC?"
+miminions agent ask --prompt "what time is it in UTC?"  # uses default_agent
 miminions agent remove researcher
 ```
 
@@ -163,12 +190,12 @@ miminions agent remove researcher
 | `add` | `--name`, `--description`, `--type` | Create a record (id is the slugified name; a `_2`, `_3`, … suffix is appended if the id is already taken). All three are prompted if omitted. |
 | `update <id>` | `--name`, `--description`, `--type` | Update fields on an existing record. |
 | `remove <id>` | — | Delete a record (asks for confirmation). |
-| `set-goal <id>` | `--goal` | Store a goal used by `run`. |
-| `run <id>` | `--async` | Build the runtime and execute the stored goal. Requires a goal to be set. |
-| `ask <id>` | `--prompt` | One-off prompt to the agent without mutating its stored goal. |
+| `set-goal [id]` | `--goal` | Store a goal used by `run`. `id` defaults to `default_agent`. |
+| `run [id]` | `--async` | Build the runtime and execute the stored goal. `id` defaults to `default_agent`. Requires a goal to be set. |
+| `ask [id]` | `--prompt` | One-off prompt to the agent without mutating its stored goal. `id` defaults to `default_agent`. |
 
 !!! warning "`run --async` is not functional"
-    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run <id>` for real execution.
+    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.
 
 ### Inspecting and running tools
 
@@ -176,14 +203,16 @@ These commands build the agent's runtime and operate on its registered tools.
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `tool-list <id>` | — | List the agent's tool names and descriptions. |
-| `tool-info <id> <tool>` | — | Show a tool's description and JSON parameter schema. |
-| `tool-search <id> <query>` | — | Search tools by name/description (substring). |
-| `tool-run <id> <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). |
+| `tool-list [id]` | — | List the agent's tool names and descriptions. `id` defaults to `default_agent`. |
+| `tool-info [id] <tool>` | — | Show a tool's description and JSON parameter schema. `id` defaults to `default_agent`. |
+| `tool-search [id] <query>` | — | Search tools by name/description (substring). `id` defaults to `default_agent`. |
+| `tool-run [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). `id` defaults to `default_agent`. |
 
 ```bash
 miminions agent tool-list researcher
+miminions agent tool-list                            # uses default_agent
 miminions agent tool-run researcher cli_add --arguments '{"a": 2, "b": 3}'
+miminions agent tool-run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
 
 ---
