@@ -191,6 +191,7 @@ All commands that take an agent id accept it as an optional positional argument.
 
 ```bash
 miminions agent list
+miminions agent show researcher
 miminions agent add --name "Researcher" --description "Finds things" --type assistant
 miminions agent update researcher --description "Updated"
 miminions agent set-goal researcher --goal "Summarize today's notes"
@@ -206,12 +207,15 @@ miminions agent remove researcher
 | Command | Options | Description |
 | --- | --- | --- |
 | `list` | — | List all agent records with status and description. |
+| `show <ref>` | — | Show full details for one agent by id, id prefix, or exact name. |
 | `add` | `--name`, `--description`, `--type` | Create a record (id is the slugified name; a `_2`, `_3`, … suffix is appended if the id is already taken). All three are prompted if omitted. |
 | `update <id>` | `--name`, `--description`, `--type` | Update fields on an existing record. |
 | `remove <id>` | — | Delete a record (asks for confirmation). |
 | `set-goal [id]` | `--goal` | Store a goal used by `run`. `id` defaults to `default_agent`. |
 | `run [id]` | `--async` | Build the runtime and execute the stored goal. `id` defaults to `default_agent`. Requires a goal to be set. |
 | `ask [id]` | `--prompt` | One-off prompt to the agent without mutating its stored goal. `id` defaults to `default_agent`. |
+
+`show <ref>` accepts an exact id, an id prefix, or an exact agent name.
 
 !!! warning "`run --async` is not functional"
     The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.

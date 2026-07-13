@@ -103,6 +103,35 @@ def _get_agent_record_or_error(agent_id: str | None):
     return agents[agent_id]
 
 
+def _resolve_agent_ref_or_error(agent_ref: str, agents: dict) -> str | None:
+    """Resolve an agent by exact id, id prefix, or exact name."""
+    if agent_ref in agents:
+        return agent_ref
+
+    matches = []
+
+    for current_id in agents:
+        if str(current_id).startswith(agent_ref):
+            matches.append(current_id)
+
+    for current_id, data in agents.items():
+        if str(data.get("name", "")) == agent_ref and current_id not in matches:
+            matches.append(current_id)
+
+    if not matches:
+        click.echo(f"Agent '{agent_ref}' not found.", err=True)
+        return None
+
+    if len(matches) > 1:
+        click.echo(
+            f"Agent reference '{agent_ref}' is ambiguous: {', '.join(matches)}",
+            err=True,
+        )
+        return None
+
+    return matches[0]
+
+
 def _extract_first_two_ints(text):
     """Extract first two integers from text for simple arithmetic routing."""
     values = [int(v) for v in re.findall(r"-?\d+", text)]
@@ -246,6 +275,32 @@ def update_agent(agent_id, name, description, type):
     
     save_agents(agents)
     click.echo(f"Agent '{agent_id}' updated successfully")
+
+
+@agent_cli.command("show")
+@click.argument("agent_ref")
+@require_auth()
+def show_agent(agent_ref):
+    """Show one agent by id, id prefix, or exact name."""
+    agents = load_agents()
+    if not agents:
+        click.echo("No agents configured.")
+        return
+
+    agent_id = _resolve_agent_ref_or_error(agent_ref, agents)
+    if not agent_id:
+        return
+
+    agent = agents[agent_id]
+    click.echo(f"Agent: {agent.get('name', agent_id)}")
+    click.echo(f"ID: {agent_id}")
+    click.echo(f"Description: {agent.get('description', 'No description')}")
+    click.echo(f"Type: {agent.get('type', 'unknown')}")
+    click.echo(f"Status: {agent.get('status', 'inactive')}")
+    click.echo(f"Goal: {agent.get('goal')}")
+    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.agent.Minion')}")
+    click.echo(f"Mode: {agent.get('mode', 'cli_extension')}")
+    click.echo(f"Created: {agent.get('created_at', '')}")
 
 
 @agent_cli.command("remove")
