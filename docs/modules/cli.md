@@ -32,6 +32,7 @@ miminions init --force
 
 -   :material-login: **`auth`** — local sign-in, status, and config
 -   :material-cog-outline: **`config`** — get/set top-level CLI defaults (`default_workspace`, `default_agent`)
+-   :material-database-export-outline: **`export`/`import`** — backup and restore agents/tasks/knowledge JSON data
 -   :material-robot: **`agent`** — manage agent records, run them, inspect tools
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
@@ -173,6 +174,31 @@ Supported keys:
 
 !!! note "`auth config` vs `config`"
     `miminions auth config` manages authentication flags (`public_access`, `auth_timeout`). `miminions config` manages top-level default routing (`default_workspace`, `default_agent`).
+
+---
+
+## `export` / `import`
+
+Backup and restore CLI record stores for cross-machine migration.
+
+```bash
+# Export agents/tasks/knowledge to one backup file
+miminions export --output ./miminions-backup.json
+
+# Import and merge with existing records
+miminions import --input ./miminions-backup.json --mode merge
+
+# Import and replace existing records
+miminions import --input ./miminions-backup.json --mode replace
+```
+
+| Command | Options | Description |
+| --- | --- | --- |
+| `export` | `--output <path>` | Export `agents.json`, `tasks.json`, and `knowledge.json` into one backup JSON file. |
+| `import` | `--input <path>`, `--mode merge\|replace` | Restore backup data into `agents.json`, `tasks.json`, and `knowledge.json`. |
+
+`--mode merge` keeps existing records and overlays imported ids.
+`--mode replace` replaces each target store with imported data.
 
 ---
 

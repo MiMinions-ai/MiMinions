@@ -15,6 +15,7 @@ from .chat import chat_cli
 from .gateway import gateway_cli
 from .prompt import prompt_cli
 from .config import config_cli
+from .transfer import export_data, import_data
 
 
 @click.group()
@@ -61,6 +62,8 @@ cli.add_command(gateway_cli, name="gateway")
 cli.add_command(prompt_cli, name="prompt")
 cli.add_command(config_cli, name="config")
 cli.add_command(init_cli, name="init")
+cli.add_command(export_data, name="export")
+cli.add_command(import_data, name="import")
 
 def main():
     """Entry point for the CLI."""
