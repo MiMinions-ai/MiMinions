@@ -76,7 +76,8 @@ class MCPToolAdapter:
 
     async def close_all_connections(self) -> None:
         """Close all MCP server connections."""
-        for server_name in list(self.sessions.keys()):
+        server_names = set(self.sessions) | set(self.stdio_contexts)
+        for server_name in list(server_names):
             await self.disconnect_server(server_name)
 
     async def get_tools_from_server(self, server_name: str) -> List[Any]:
