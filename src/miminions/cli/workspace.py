@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Rule, RulePriority
+from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority, default_workspace_root
 from miminions.workspace_fs import init_workspace
 
 
@@ -80,7 +80,7 @@ def add_workspace(name, description, sample, init_files, root_path):
         if root_path:
             rp = Path(root_path).expanduser().resolve()
         else:
-            rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+            rp = default_workspace_root(workspace.id)
         result = init_workspace(rp)
         workspace.root_path = str(rp)
         click.echo(f"Initialized workspace files at: {workspace.root_path}")
@@ -396,7 +396,7 @@ def init_files_workspace(workspace_id, custom_path):
     if custom_path:
         rp = Path(custom_path).expanduser().resolve()
     else:
-        rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+        rp = default_workspace_root(workspace.id)
 
     result = init_workspace(rp)
     workspace.root_path = str(rp)

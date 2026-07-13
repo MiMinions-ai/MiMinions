@@ -3,9 +3,10 @@ Task management commands for MiMinions CLI.
 """
 
 import click
-import json
 import uuid
+from datetime import datetime, timezone
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 
 
@@ -16,19 +17,12 @@ def get_tasks_file():
 
 def load_tasks():
     """Load tasks from configuration."""
-    tasks_file = get_tasks_file()
-    if not tasks_file.exists():
-        return {}
-    
-    with open(tasks_file, "r") as f:
-        return json.load(f)
+    return load_json(get_tasks_file())
 
 
 def save_tasks(tasks):
     """Save tasks to configuration."""
-    tasks_file = get_tasks_file()
-    with open(tasks_file, "w") as f:
-        json.dump(tasks, f, indent=2)
+    save_json(get_tasks_file(), tasks)
 
 
 @click.group()
@@ -74,7 +68,7 @@ def add_task(title, description, priority, agent):
         "priority": priority,
         "status": "pending",
         "agent": agent,
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -111,8 +105,8 @@ def update_task(task_id, title, description, priority, status, agent):
     if agent:
         task["agent"] = agent
     
-    task["updated_at"] = click.get_current_context().meta.get("timestamp", "")
-    
+    task["updated_at"] = datetime.now(timezone.utc).isoformat()
+
     save_tasks(tasks)
     click.echo(f"Task '{task_id}' updated successfully")
 
@@ -155,7 +149,7 @@ def duplicate_task(task_id, title):
         original_task["title"] = f"{original_task['title']} (copy)"
     
     original_task["status"] = "pending"
-    original_task["created_at"] = click.get_current_context().meta.get("timestamp", "")
+    original_task["created_at"] = datetime.now(timezone.utc).isoformat()
     original_task["updated_at"] = None
     
     tasks[new_task_id] = original_task

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
 from miminions.tools import GenericTool
@@ -32,10 +33,10 @@ def _interactions_file() -> Path:
     return get_config_dir() / "interactions.json"
 
 def _load(path: Path) -> Any:
-    return json.loads(path.read_text()) if path.exists() else {}
+    return load_json(path)
 
 def _save(path: Path, data: Any) -> None:
-    path.write_text(json.dumps(data, indent=2))
+    save_json(path, data)
 
 def _active_session():
     """Return (id, session) for the current active session, else (None, None)."""
