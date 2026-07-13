@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from miminions.memory.sqlite import SQLiteMemory
+import pytest
+
+from miminions.memory.sqlite import SQLiteMemory, sqlite3
 from miminions.memory.sqlite import get_global_memory_db_path
 from miminions.agent import create_minion
 from miminions.tools.schemas import ExecutionStatus
@@ -115,6 +117,33 @@ def test_execution_timing():
     
     memory.close()
     print("PASSED")
+
+
+def test_context_manager_closes_connection():
+    """`with SQLiteMemory(...)` should work inside the block and close on exit."""
+    with SQLiteMemory(db_path=":memory:") as memory:
+        entry_id = memory.create("Context managers are neat", metadata={"source": "test"})
+        assert memory.get_by_id(entry_id)["text"] == "Context managers are neat"
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        memory.conn.execute("SELECT 1")
+
+
+def test_context_manager_propagates_exceptions():
+    """Exceptions inside the block must not be suppressed, and still close."""
+    with pytest.raises(ValueError, match="boom"):
+        with SQLiteMemory(db_path=":memory:") as memory:
+            raise ValueError("boom")
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        memory.conn.execute("SELECT 1")
+
+
+def test_double_close_is_noop():
+    """Calling close() twice (e.g. explicit close + __exit__) must not raise."""
+    memory = SQLiteMemory(db_path=":memory:")
+    memory.close()
+    memory.close()
 
 
 def test_get_global_memory_db_path_uses_home(monkeypatch, tmp_path):

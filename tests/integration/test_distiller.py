@@ -23,6 +23,12 @@ class _FakeSQLiteMemory:
     def close(self) -> None:
         return None
 
+    def __enter__(self) -> "_FakeSQLiteMemory":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
 
 def test_distillation_result_defaults():
     result = DistillationResult()
