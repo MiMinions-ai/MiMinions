@@ -303,7 +303,13 @@ class SQLiteMemory(BaseMemory):
     
     def close(self):
         self.conn.close()
-    
+
+    def __enter__(self) -> "SQLiteMemory":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
     def __del__(self):
         if hasattr(self, 'conn'):
             self.conn.close()

@@ -140,12 +140,9 @@ def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[s
     try:
         from miminions.memory.sqlite import SQLiteMemory
 
-        mem = SQLiteMemory(db_path=path)
-        try:
+        with SQLiteMemory(db_path=path) as mem:
             rows = mem.date_time_search(top_k=top_k)
             return [r["text"] for r in rows if r.get("text")]
-        finally:
-            mem.close()
     except Exception:
         logger.warning(
             "Could not fetch global insights from %s; continuing without them.",
