@@ -392,6 +392,31 @@ class TestAgentCLI:
             assert result.exit_code == 0
             assert 'ID: research_agent' in result.output
 
+    def test_agent_list_and_show_json_output(self):
+        """List/show should return valid JSON when --json is used."""
+        agents = {
+            "research_agent": {
+                "name": "Research Agent",
+                "description": "Finds facts",
+                "type": "assistant",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.cli.agent.load_agents', return_value=agents):
+            list_result = self.runner.invoke(agent_cli, ['list', '--json'])
+            show_result = self.runner.invoke(agent_cli, ['show', 'research_agent', '--json'])
+
+        assert list_result.exit_code == 0
+        assert show_result.exit_code == 0
+
+        list_payload = json.loads(list_result.output)
+        show_payload = json.loads(show_result.output)
+
+        assert list_payload[0]['id'] == 'research_agent'
+        assert show_payload['id'] == 'research_agent'
+        assert show_payload['name'] == 'Research Agent'
+
 
 
     def test_tool_list_success(self):

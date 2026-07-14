@@ -30,10 +30,15 @@ Add machine-readable JSON output for list/show command surfaces to support scrip
 ## Generated/Implemented
 
 - Updated CLI command modules listed above.
-- Added tests in `tests/integration/test_cli_json_output.py`.
+- Added tests in domain files:
+  - `tests/integration/test_cli_agent.py`
+  - `tests/integration/test_cli_task.py`
+  - `tests/integration/test_cli_knowledge.py`
+  - `tests/integration/test_cli_workspace_commands.py`
+  - `tests/integration/test_cli_execution.py`
 - Updated docs in `docs/modules/cli.md` command tables.
 
 ## Verification
 
-- Ran: `pytest -q tests/integration/test_cli_json_output.py tests/integration/test_cli_agent.py`
+- Ran: `pytest -q tests/integration/test_cli_agent.py tests/integration/test_cli_task.py tests/integration/test_cli_knowledge.py tests/integration/test_cli_execution.py tests/integration/test_cli_workspace_commands.py tests/integration/test_cli_workflow.py tests/integration/test_cli_config.py`
 - Result: 30 passed, 1 warning (existing pytest config warning).
