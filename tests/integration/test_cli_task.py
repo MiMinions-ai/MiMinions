@@ -98,3 +98,33 @@ def test_task_update_rejects_unknown_agent(temp_config_dir):
 
     tasks = _read(temp_config_dir / "tasks.json")
     assert tasks["task1"]["agent"] == "known"
+
+
+def test_task_list_and_show_json_output():
+    runner = CliRunner()
+    tasks = {
+        "task01": {
+            "title": "Write docs",
+            "description": "Update CLI docs",
+            "priority": "high",
+            "status": "pending",
+            "agent": "research_agent",
+            "created_at": "2026-07-13T00:00:00+00:00",
+            "updated_at": None,
+        }
+    }
+
+    with _patch_auth_enabled():
+        with patch("miminions.cli.task.load_tasks", return_value=tasks):
+            list_result = runner.invoke(task_cli, ["list", "--json"])
+            show_result = runner.invoke(task_cli, ["show", "task01", "--json"])
+
+    assert list_result.exit_code == 0
+    assert show_result.exit_code == 0
+
+    list_payload = json.loads(list_result.output)
+    show_payload = json.loads(show_result.output)
+
+    assert list_payload[0]["id"] == "task01"
+    assert show_payload["id"] == "task01"
+    assert show_payload["title"] == "Write docs"
