@@ -46,6 +46,7 @@ miminions init --force
 
 !!! warning "`workflow` is not yet enabled"
     A `workflow` command group exists in the code but is **commented out of the CLI registration** ("not yet implemented"). `miminions workflow ...` will not run today — treat it as **planned**. The workflow tracing *models* are, however, used internally by `execution` (see below) and by the [Tasks & Workflows](tasks.md) module.
+    When enabled, workflow commands validate referenced agent ids (`--agents`) and reject unknown ids.
 
 ---
 
@@ -283,6 +284,7 @@ miminions task remove <id>
 
 - `--priority` is one of `low`, `medium` (default), `high`.
 - `--status` is one of `pending`, `in_progress`, `completed`, `cancelled`.
+- `--agent` must reference an existing agent id; unknown ids are rejected.
 
 !!! note "CLI tasks vs. the task runtime"
     These commands manage lightweight *task records* in JSON. They are distinct from the programmatic concurrent [`TaskRuntime`](tasks.md) (which runs agent-bound tasks via `asyncio.TaskGroup`).

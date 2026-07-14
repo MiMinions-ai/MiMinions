@@ -31,6 +31,28 @@ def save_tasks(tasks):
         json.dump(tasks, f, indent=2)
 
 
+def _load_agents():
+    """Load agents from configuration for cross-reference checks."""
+    agents_file = get_config_dir() / "agents.json"
+    if not agents_file.exists():
+        return {}
+
+    with open(agents_file, "r") as f:
+        return json.load(f)
+
+
+def _validate_agent_reference_or_error(agent_id: str | None) -> bool:
+    """Return True when agent reference is empty or exists; else print error."""
+    if not agent_id:
+        return True
+
+    agents = _load_agents()
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return False
+    return True
+
+
 @click.group()
 def task_cli():
     """Task management commands."""
@@ -70,6 +92,9 @@ def list_tasks(as_json):
 @require_auth
 def add_task(title, description, priority, agent):
     """Add a new task."""
+    if not _validate_agent_reference_or_error(agent):
+        return
+
     tasks = load_tasks()
     
     task_id = str(uuid.uuid4())[:8]
@@ -115,6 +140,8 @@ def update_task(task_id, title, description, priority, status, agent):
     if status:
         task["status"] = status
     if agent:
+        if not _validate_agent_reference_or_error(agent):
+            return
         task["agent"] = agent
     
     task["updated_at"] = click.get_current_context().meta.get("timestamp", "")
