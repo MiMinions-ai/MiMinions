@@ -5,15 +5,18 @@ import subprocess
 import sys
 from typing import Any, Dict
 
+import click
+
 
 CLI_RUN_COMMAND_NAME = "cli_run_command"
 CLI_RUN_COMMAND_DESCRIPTION = (
-    "Execute a CLI command without a shell and return stdout, stderr, and return code"
+    "Execute an approved CLI command without a shell and return stdout, stderr, "
+    "and return code"
 )
 
 
 def cli_run_command(command: str, timeout: int = 30) -> Dict[str, Any]:
-    """Run a command with subprocess using shell=False."""
+    """Ask for approval, then run a command with subprocess using shell=False."""
     if not command or not command.strip():
         raise ValueError("Command must not be empty")
     if timeout <= 0:
@@ -26,6 +29,17 @@ def cli_run_command(command: str, timeout: int = 30) -> Dict[str, Any]:
 
     if not args:
         raise ValueError("Command must not be empty")
+
+    try:
+        approved = click.confirm(
+            f"Execute command: {command}",
+            default=False,
+        )
+    except (click.Abort, EOFError) as exc:
+        raise PermissionError("Command execution was not approved") from exc
+
+    if not approved:
+        raise PermissionError("Command execution was not approved")
 
     try:
         completed = subprocess.run(
