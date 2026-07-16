@@ -79,6 +79,67 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     assert '"content": "assistant reply"' in contents, f"Expected 'content: assistant reply' in contents, but got: {contents}"
 
 
+def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
+    init_workspace(tmp_path)
+
+    workspace = SimpleNamespace(
+        id="ws1",
+        name="Test WS",
+        root_path=str(tmp_path),
+        nodes=[],
+        rules=[],
+        state={},
+    )
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
+
+    captured_kwargs = {}
+
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            return "assistant reply"
+
+    def _capturing_create_minion(*args, **kwargs):
+        captured_kwargs.update(kwargs)
+        return MockMinion()
+
+    monkeypatch.setattr(
+        "miminions.cli.chat.WorkspaceManager",
+        lambda config_dir: manager,
+    )
+    monkeypatch.setattr(
+        "miminions.cli.chat.create_minion",
+        _capturing_create_minion,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1", "--verbose"],
+        input="/quit\n",
+    )
+
+    assert result.exit_code == 0
+    assert callable(captured_kwargs["on_tool_call"])
+    assert callable(captured_kwargs["on_turn_end"])
+
+    captured_kwargs.clear()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1"],
+        input="/quit\n",
+    )
+
+    assert result.exit_code == 0
+    assert captured_kwargs["on_tool_call"] is None
+    assert captured_kwargs["on_turn_end"] is None
+
+
 def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
     init_workspace(tmp_path)
 

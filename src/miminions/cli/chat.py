@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any
 
 import click
+from pydantic_ai.usage import RunUsage
 
 from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
@@ -75,15 +77,23 @@ def chat_cli():
     default=None,
     help="Resume an existing session id (loads prior history for LLM context).",
 )
-def chat_command(workspace_ref: str | None, session_id: str | None) -> None:
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Show tool calls, token usage and latency per turn.",
+)
+def chat_command(workspace_ref: str | None, session_id: str | None, verbose: bool) -> None:
     """Start an interactive async chat session for a workspace."""
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
     if not workspace_ref:
         workspace_ref = get_config().get("default_workspace")
         if not workspace_ref:
             raise click.ClickException(
                 "No --workspace given and no default workspace configured."
             )
-    asyncio.run(_chat_loop(workspace_ref, session_id))
+    asyncio.run(_chat_loop(workspace_ref, session_id, verbose))
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +101,22 @@ def chat_command(workspace_ref: str | None, session_id: str | None) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
+def _print_tool_call(name: str, args: dict[str, Any]) -> None:
+    """Verbose-mode hook: show each tool invocation on stderr."""
+    click.secho(f"  [tool] {name} {args}", dim=True, err=True)
+
+
+def _print_turn_end(usage: RunUsage, latency: float) -> None:
+    """Verbose-mode hook: show token usage and latency on stderr."""
+    click.secho(
+        f"  [turn] {usage.input_tokens or 0} in / {usage.output_tokens or 0} out tokens, "
+        f"{usage.tool_calls} tool call(s), {latency:.1f}s",
+        dim=True,
+        err=True,
+    )
+
+
+async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool = False) -> None:
     """Main async chat loop.
 
     1. Resolve the workspace and build the root path.
@@ -117,6 +142,8 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     minion = create_minion(
         name="MiMinions",
         description=f"MiMinions agent for workspace '{workspace_name}'.",  # TODO: make customizable per workspace
+        on_tool_call=_print_tool_call if verbose else None,
+        on_turn_end=_print_turn_end if verbose else None,
     )
     minion.set_context(workspace, root)
 
