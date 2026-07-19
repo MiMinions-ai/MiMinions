@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 from pathlib import Path
 
 from pydantic_ai import Agent, Tool
@@ -552,6 +552,40 @@ class Minion:
             except Exception:
                 logger.exception("on_turn_end callback failed")
         return result.output if hasattr(result, "output") else str(result.data)
+
+    async def run_stream(
+        self, prompt: str, message_history: Optional[List[Any]] = None
+    ) -> AsyncIterator[str]:
+        """Stream the LLM reply as text deltas.
+
+        Mirrors :meth:`run` but yields the reply incrementally. Tool calls
+        still execute (and fire ``on_tool_call``); ``on_turn_end`` fires once
+        the stream completes. ``_last_messages`` is updated only when the
+        stream is fully consumed.
+
+        Unlike :meth:`run` there is no automatic retry: deltas already
+        yielded cannot be withdrawn, so errors propagate immediately.
+        ``request_timeout`` still bounds each HTTP request.
+
+        The stream must be consumed to completion — breaking out of the
+        loop early abandons the underlying HTTP stream, and its deferred
+        cleanup can raise ``RuntimeError`` at generator close.
+        """
+        self._rebuild_pydantic_ai_agent()
+        start = time.monotonic()
+        async with self._pydantic_ai_agent.run_stream(
+            prompt,
+            message_history=message_history or None,
+            event_stream_handler=self._make_event_stream_handler(),
+        ) as result:
+            async for delta in result.stream_text(delta=True):
+                yield delta
+            self._last_messages = result.all_messages()
+            if self._on_turn_end is not None:
+                try:
+                    self._on_turn_end(result.usage, time.monotonic() - start)
+                except Exception:
+                    logger.exception("on_turn_end callback failed")
 
     def set_context(self, workspace: Any, root_path: str | Path) -> None:
         """Attach workspace context so ContextBuilder feeds the system prompt.
