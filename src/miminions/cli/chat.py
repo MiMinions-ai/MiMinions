@@ -12,7 +12,7 @@ from pydantic_ai.usage import RunUsage
 
 from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
-from miminions.session.store import JsonlSessionStore
+from miminions.session.store import JsonlSessionStore, trim_message_history
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.cli.auth import get_config, get_config_dir
 
@@ -123,7 +123,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool =
     2. Create the Minion once — it lives for the entire session.
     3. Wire workspace context via set_context() so the LLM sees it.
     4. If resuming a session, load prior JSONL as pydantic_ai messages.
-    5. Loop: input → minion.run() → print reply.
+    5. Loop: input → minion.run_stream() → print deltas as they arrive.
     6. On exit, run session distillation in the finally block.
     """
     manager = WorkspaceManager(get_config_dir())
@@ -181,15 +181,29 @@ async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool =
                 meta={"source": "cli-chat"},
             )
 
+            # Bound the LLM context for long sessions; the JSONL transcript
+            # on disk stays complete.
+            message_history = trim_message_history(message_history)
+
+            reply_parts: list[str] = []
             try:
-                reply = await minion.run(
+                click.echo("")
+                async for delta in minion.run_stream(
                     user_text,
                     message_history=message_history,
-                )
+                ):
+                    click.echo(delta, nl=False)
+                    reply_parts.append(delta)
+                click.echo("\n")
+                reply = "".join(reply_parts)
                 # Update history so the LLM remembers prior turns.
                 message_history = minion._last_messages
             except Exception as exc:
-                reply = f"[error] {type(exc).__name__}: {exc}"
+                error_text = f"[error] {type(exc).__name__}: {exc}"
+                click.echo(f"\n{error_text}\n")
+                # Keep the transcript faithful to what was shown on screen:
+                # persist any partial reply alongside the error marker.
+                reply = "\n".join(filter(None, ["".join(reply_parts), error_text]))
 
             store.append(
                 session_id,
@@ -197,8 +211,6 @@ async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool =
                 reply,
                 meta={"source": "cli-chat"},
             )
-
-            click.echo(f"\n{reply}\n")
     finally:
         try:
             _run_session_distillation(

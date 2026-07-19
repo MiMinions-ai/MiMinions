@@ -45,8 +45,8 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
             self._model = None
         def set_context(self, *args, **kwargs):
             pass
-        async def run(self, *args, **kwargs):
-            return "assistant reply"
+        async def run_stream(self, *args, **kwargs):
+            yield "assistant reply"
 
     monkeypatch.setattr(
         "miminions.cli.chat.WorkspaceManager",
@@ -79,6 +79,101 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
     assert '"content": "assistant reply"' in contents, f"Expected 'content: assistant reply' in contents, but got: {contents}"
 
 
+def test_chat_cli_streams_deltas_incrementally(tmp_path: Path, monkeypatch):
+    init_workspace(tmp_path)
+
+    workspace = SimpleNamespace(
+        id="ws1",
+        name="Test WS",
+        root_path=str(tmp_path),
+        nodes=[],
+        rules=[],
+        state={},
+    )
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
+
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run_stream(self, *args, **kwargs):
+            yield "foo"
+            yield "bar"
+
+    monkeypatch.setattr(
+        "miminions.cli.chat.WorkspaceManager",
+        lambda config_dir: manager,
+    )
+    monkeypatch.setattr(
+        "miminions.cli.chat.create_minion",
+        lambda *args, **kwargs: MockMinion()
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1"],
+        input="hello\n/quit\n",
+    )
+
+    assert result.exit_code == 0
+    assert "foobar" in result.output
+
+    contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
+    assert '"content": "foobar"' in contents
+
+
+def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, monkeypatch):
+    init_workspace(tmp_path)
+
+    workspace = SimpleNamespace(
+        id="ws1",
+        name="Test WS",
+        root_path=str(tmp_path),
+        nodes=[],
+        rules=[],
+        state={},
+    )
+    manager = MagicMock()
+    manager.load_workspaces.return_value = {workspace.id: workspace}
+
+    class MockMinion:
+        def __init__(self, *args, **kwargs):
+            self._last_messages = []
+            self._model = None
+        def set_context(self, *args, **kwargs):
+            pass
+        async def run_stream(self, *args, **kwargs):
+            yield "partial text"
+            raise RuntimeError("stream died")
+
+    monkeypatch.setattr(
+        "miminions.cli.chat.WorkspaceManager",
+        lambda config_dir: manager,
+    )
+    monkeypatch.setattr(
+        "miminions.cli.chat.create_minion",
+        lambda *args, **kwargs: MockMinion()
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        chat_command,
+        ["--workspace", "ws1"],
+        input="hello\n/quit\n",
+    )
+
+    assert result.exit_code == 0
+    assert "[error] RuntimeError: stream died" in result.output
+
+    contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
+    assert "partial text" in contents
+    assert "[error] RuntimeError: stream died" in contents
+
+
 def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
     init_workspace(tmp_path)
 
@@ -101,8 +196,8 @@ def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
             self._model = None
         def set_context(self, *args, **kwargs):
             pass
-        async def run(self, *args, **kwargs):
-            return "assistant reply"
+        async def run_stream(self, *args, **kwargs):
+            yield "assistant reply"
 
     def _capturing_create_minion(*args, **kwargs):
         captured_kwargs.update(kwargs)
@@ -162,8 +257,8 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
             self._model = None
         def set_context(self, *args, **kwargs):
             pass
-        async def run(self, *args, **kwargs):
-            return "assistant reply"
+        async def run_stream(self, *args, **kwargs):
+            yield "assistant reply"
 
     monkeypatch.setattr(
         "miminions.cli.chat.WorkspaceManager",
@@ -212,8 +307,8 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
             self._model = None
         def set_context(self, *args, **kwargs):
             pass
-        async def run(self, *args, **kwargs):
-            return "assistant reply"
+        async def run_stream(self, *args, **kwargs):
+            yield "assistant reply"
 
     monkeypatch.setattr(
         "miminions.cli.chat.WorkspaceManager",
