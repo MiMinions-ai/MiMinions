@@ -1,9 +1,11 @@
 """Built-in tools available to every Minion."""
 
+from dataclasses import dataclass
+from enum import Enum
 import shlex
 import subprocess
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 import click
 
@@ -15,8 +17,88 @@ CLI_RUN_COMMAND_DESCRIPTION = (
 )
 
 
-def cli_run_command(command: str, timeout: int = 30) -> Dict[str, Any]:
-    """Ask for approval, then run a command with subprocess using shell=False."""
+class PermissionDecision(str, Enum):
+    """Possible outcomes when evaluating permission to execute a command."""
+
+    ALLOW = "allow"
+    DENY = "deny"
+    ASK = "ask"
+
+
+CommandPrefix = Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CommandPermissionPolicy:
+    """Immutable allow, deny, and prompt policy for parsed command arguments."""
+
+    allow_prefixes: Tuple[CommandPrefix, ...] = ()
+    deny_prefixes: Tuple[CommandPrefix, ...] = ()
+    default: PermissionDecision = PermissionDecision.ASK
+
+    def __init__(
+        self,
+        allow_prefixes: Iterable[Sequence[str]] = (),
+        deny_prefixes: Iterable[Sequence[str]] = (),
+        default: PermissionDecision = PermissionDecision.ASK,
+    ) -> None:
+        object.__setattr__(
+            self,
+            "allow_prefixes",
+            self._validate_prefixes(allow_prefixes, "allow_prefixes"),
+        )
+        object.__setattr__(
+            self,
+            "deny_prefixes",
+            self._validate_prefixes(deny_prefixes, "deny_prefixes"),
+        )
+        if not isinstance(default, PermissionDecision):
+            raise TypeError("default must be a PermissionDecision")
+        object.__setattr__(self, "default", default)
+
+    @staticmethod
+    def _validate_prefixes(
+        prefixes: Iterable[Sequence[str]],
+        name: str,
+    ) -> Tuple[CommandPrefix, ...]:
+        try:
+            normalized = tuple(tuple(prefix) for prefix in prefixes)
+        except TypeError as exc:
+            raise TypeError(f"{name} must be an iterable of argument sequences") from exc
+
+        for prefix in normalized:
+            if not prefix:
+                raise ValueError(f"{name} must not contain an empty prefix")
+            if any(not isinstance(argument, str) or not argument for argument in prefix):
+                raise ValueError(
+                    f"{name} prefixes must contain only non-empty strings"
+                )
+        return normalized
+
+    @staticmethod
+    def _matches(args: Sequence[str], prefix: CommandPrefix) -> bool:
+        return len(args) >= len(prefix) and tuple(args[:len(prefix)]) == prefix
+
+    def evaluate(self, args: Sequence[str]) -> PermissionDecision:
+        """Return the permission decision for already-parsed command arguments."""
+        if not args:
+            raise ValueError("Command arguments must not be empty")
+        if any(not isinstance(argument, str) or not argument for argument in args):
+            raise ValueError("Command arguments must contain only non-empty strings")
+
+        if any(self._matches(args, prefix) for prefix in self.deny_prefixes):
+            return PermissionDecision.DENY
+        if any(self._matches(args, prefix) for prefix in self.allow_prefixes):
+            return PermissionDecision.ALLOW
+        return self.default
+
+
+def cli_run_command(
+    command: str,
+    timeout: int = 30,
+    policy: Optional[CommandPermissionPolicy] = None,
+) -> Dict[str, Any]:
+    """Run a command without a shell after applying a permission policy."""
     if not command or not command.strip():
         raise ValueError("Command must not be empty")
     if timeout <= 0:
@@ -30,16 +112,24 @@ def cli_run_command(command: str, timeout: int = 30) -> Dict[str, Any]:
     if not args:
         raise ValueError("Command must not be empty")
 
-    try:
-        approved = click.confirm(
-            f"Execute command: {command}",
-            default=False,
-        )
-    except (click.Abort, EOFError) as exc:
-        raise PermissionError("Command execution was not approved") from exc
+    active_policy = policy if policy is not None else CommandPermissionPolicy()
+    if not isinstance(active_policy, CommandPermissionPolicy):
+        raise TypeError("policy must be a CommandPermissionPolicy")
+    decision = active_policy.evaluate(args)
 
-    if not approved:
+    if decision is PermissionDecision.DENY:
         raise PermissionError("Command execution was not approved")
+    if decision is PermissionDecision.ASK:
+        try:
+            approved = click.confirm(
+                f"Execute command: {command}",
+                default=False,
+            )
+        except (click.Abort, EOFError) as exc:
+            raise PermissionError("Command execution was not approved") from exc
+
+        if not approved:
+            raise PermissionError("Command execution was not approved")
 
     try:
         completed = subprocess.run(
@@ -58,3 +148,8 @@ def cli_run_command(command: str, timeout: int = 30) -> Dict[str, Any]:
         "stdout": completed.stdout,
         "stderr": completed.stderr,
     }
+
+
+def cli_run_command_tool(command: str, timeout: int = 30) -> Dict[str, Any]:
+    """Agent-facing command tool that always uses the default permission policy."""
+    return cli_run_command(command=command, timeout=timeout)

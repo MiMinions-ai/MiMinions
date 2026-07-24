@@ -14,7 +14,7 @@ from ..tools import GenericTool
 from ..tools.default import (
     CLI_RUN_COMMAND_DESCRIPTION,
     CLI_RUN_COMMAND_NAME,
-    cli_run_command,
+    cli_run_command_tool,
 )
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
@@ -119,7 +119,7 @@ class Minion:
         self.register_tool(
             CLI_RUN_COMMAND_NAME,
             CLI_RUN_COMMAND_DESCRIPTION,
-            cli_run_command,
+            cli_run_command_tool,
         )
         
         if self._memory:
