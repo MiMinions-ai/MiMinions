@@ -158,6 +158,24 @@ async def test_tool_schema_json():
     return True
 
 
+async def test_command_tool_schema_hides_permission_policy():
+    """The model-facing command tool cannot provide its own policy."""
+    agent = create_minion("TestAgent")
+
+    schema = next(
+        item for item in agent.get_tools_schema()
+        if item["name"] == "cli_run_command"
+    )
+    properties = schema["parameters"]["properties"]
+    assert "command" in properties
+    assert "timeout" in properties
+    assert "policy" not in properties
+
+    await agent.cleanup()
+    print("PASSED")
+    return True
+
+
 async def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
@@ -187,6 +205,7 @@ async def main():
         test_tool_execution,
         test_error_handling,
         test_tool_schema_json,
+        test_command_tool_schema_hides_permission_policy,
         test_tool_management,
     ]
     
