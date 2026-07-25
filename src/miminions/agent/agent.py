@@ -1,12 +1,13 @@
 """Minion Agent Implementation"""
 
 import asyncio
+from functools import wraps
 import inspect
 import time
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
-from pydantic_ai import Agent, Tool
+from pydantic_ai import Agent, ModelRetry, Tool
 from mcp import StdioServerParameters
 
 from miminions.agent.provider import ModelFactory
@@ -64,8 +65,12 @@ class RegisteredTool:
         return self.func(**kwargs)
 
     async def execute_async(self, **kwargs) -> Any:
-        result = self.func(**kwargs)
-        return await result if asyncio.iscoroutine(result) else result
+        if inspect.iscoroutinefunction(self.func):
+            return await self.func(**kwargs)
+
+        # Keep blocking synchronous tools off the agent's event loop.
+        result = await asyncio.to_thread(self.func, **kwargs)
+        return await result if inspect.isawaitable(result) else result
 
 
 class Minion:
@@ -186,7 +191,24 @@ class Minion:
         
         self._tools[name] = RegisteredTool(definition=definition, func=func)
         
-        pydantic_ai_tool = Tool(func, name=name, description=description, takes_ctx=False)
+        @wraps(func)
+        async def _llm_tool_adapter(**kwargs) -> Any:
+            try:
+                return await self._tools[name].execute_async(**kwargs)
+            except ModelRetry:
+                # Preserve pydantic_ai's existing correction/retry behavior.
+                raise
+            except Exception as exc:
+                # Make terminal failures visible to the model without
+                # cancelling other calls in the same parallel batch.
+                return {"status": "error", "error": str(exc)}
+
+        pydantic_ai_tool = Tool(
+            _llm_tool_adapter,
+            name=name,
+            description=description,
+            takes_ctx=False,
+        )
         self._pydantic_ai_tools.append(pydantic_ai_tool)
         
         return definition
@@ -280,6 +302,22 @@ class Minion:
             return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
         except Exception as e:
             return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+
+    async def execute_many_async(
+        self,
+        requests: List[ToolExecutionRequest],
+    ) -> List[ToolExecutionResult]:
+        """Execute tools concurrently and return results in request order.
+
+        Each request captures its own failure, so one failed tool does not
+        cancel the other executions in the batch.
+        """
+        return list(await asyncio.gather(
+            *(
+                self.execute_async(request.tool_name, request.arguments)
+                for request in requests
+            )
+        ))
 
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
         """Execute tool and return raw result (raises exceptions on error)."""
