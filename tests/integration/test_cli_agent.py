@@ -328,6 +328,95 @@ class TestAgentCLI:
                     assert 'Goal set for agent \'test_agent\': Complete the task' in result.output
                     mock_save.assert_called_once()
 
+    def test_show_agent_by_exact_id(self):
+        """Show should resolve by exact agent id."""
+        existing_agents = {
+            "research_agent": {
+                "name": "Research Agent",
+                "description": "Finds information",
+                "type": "assistant",
+                "status": "inactive",
+                "goal": "summarize docs",
+                "created_at": "2026-07-01T00:00:00+00:00",
+            }
+        }
+
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
+
+                result = self.runner.invoke(agent_cli, ['show', 'research_agent'])
+
+            assert result.exit_code == 0
+            assert 'Agent: Research Agent' in result.output
+            assert 'ID: research_agent' in result.output
+            assert 'Description: Finds information' in result.output
+
+    def test_show_agent_by_id_prefix(self):
+        """Show should resolve by id prefix."""
+        existing_agents = {
+            "research_agent": {
+                "name": "Research Agent",
+                "description": "Finds information",
+                "type": "assistant",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
+
+                result = self.runner.invoke(agent_cli, ['show', 'rese'])
+
+            assert result.exit_code == 0
+            assert 'ID: research_agent' in result.output
+
+    def test_show_agent_by_name(self):
+        """Show should resolve by exact agent name."""
+        existing_agents = {
+            "research_agent": {
+                "name": "Research Agent",
+                "description": "Finds information",
+                "type": "assistant",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                mock_load.return_value = existing_agents
+
+                result = self.runner.invoke(agent_cli, ['show', 'Research Agent'])
+
+            assert result.exit_code == 0
+            assert 'ID: research_agent' in result.output
+
+    def test_agent_list_and_show_json_output(self):
+        """List/show should return valid JSON when --json is used."""
+        agents = {
+            "research_agent": {
+                "name": "Research Agent",
+                "description": "Finds facts",
+                "type": "assistant",
+                "status": "inactive",
+            }
+        }
+
+        with patch('miminions.cli.agent.load_agents', return_value=agents):
+            list_result = self.runner.invoke(agent_cli, ['list', '--json'])
+            show_result = self.runner.invoke(agent_cli, ['show', 'research_agent', '--json'])
+
+        assert list_result.exit_code == 0
+        assert show_result.exit_code == 0
+
+        list_payload = json.loads(list_result.output)
+        show_payload = json.loads(show_result.output)
+
+        assert list_payload[0]['id'] == 'research_agent'
+        assert show_payload['id'] == 'research_agent'
+        assert show_payload['name'] == 'Research Agent'
+
 
 
     def test_tool_list_success(self):

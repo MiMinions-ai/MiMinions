@@ -5,11 +5,19 @@ All notable changes to MiMinions are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
 !!! tip "Current version"
-    The latest published release is **0.2.2** (requires Python &ge; 3.12). Install it with `pip install miminions`, or `pip install miminions[sqlite]` to add SQLite vector memory. See [Getting Started](getting-started.md) for the full matrix.
+    The latest published release is **0.3.0** (requires Python &ge; 3.12). Install it with `pip install miminions`, or `pip install miminions[sqlite]` to add SQLite vector memory. See [Getting Started](getting-started.md) for the full matrix.
 
 ## [Unreleased]
 
 Work in progress toward the next release. Everything below is on `main` but not yet cut into a versioned tag.
+
+### Added
+
+- TBD
+
+## [0.3.0]
+
+Latest published release on PyPI.
 
 ### Added
 
@@ -64,8 +72,9 @@ Initial release.
 ## Version history
 
 | Version | Notes |
-|---------|-------|
-| **Unreleased** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
+| ------- | ----- |
+| **Unreleased** | TBD |
+| **0.3.0** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
 | **0.2.2** | Current published release &mdash; agent, vector memory, tools, local data |
 | **0.1.0** | Initial release with core functionality |
 

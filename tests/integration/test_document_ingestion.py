@@ -4,6 +4,9 @@ import asyncio
 from pathlib import Path
 from miminions.agent import create_minion
 from miminions.tools.schemas import ExecutionStatus
+import pytest
+
+pytest.importorskip("sqlite_vec")
 from miminions.memory.sqlite import SQLiteMemory
 
 
