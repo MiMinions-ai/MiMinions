@@ -3,9 +3,10 @@ Workflow management commands for MiMinions CLI.
 """
 
 import click
-import json
 import uuid
+from datetime import datetime, timezone
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 
 
@@ -16,19 +17,12 @@ def get_workflows_file():
 
 def load_workflows():
     """Load workflows from configuration."""
-    workflows_file = get_workflows_file()
-    if not workflows_file.exists():
-        return {}
-    
-    with open(workflows_file, "r") as f:
-        return json.load(f)
+    return load_json(get_workflows_file())
 
 
 def save_workflows(workflows):
     """Save workflows to configuration."""
-    workflows_file = get_workflows_file()
-    with open(workflows_file, "w") as f:
-        json.dump(workflows, f, indent=2)
+    save_json(get_workflows_file(), workflows)
 
 
 def _load_agents():
@@ -111,7 +105,7 @@ def add_workflow(name, description, agents):
         "agents": agent_list,
         "status": "stopped",
         "tasks": [],
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -145,7 +139,7 @@ def update_workflow(workflow_id, name, description, agents):
             return
         workflow["agents"] = parsed_agents
     
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' updated successfully")
@@ -190,7 +184,7 @@ def start_workflow(workflow_id):
         return
     
     workflow["status"] = "running"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' started successfully")
@@ -214,7 +208,7 @@ def pause_workflow(workflow_id):
         return
     
     workflow["status"] = "paused"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' paused successfully")
@@ -238,7 +232,7 @@ def stop_workflow(workflow_id):
         return
     
     workflow["status"] = "stopped"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' stopped successfully")

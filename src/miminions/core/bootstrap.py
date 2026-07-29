@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from miminions.core.persistence import load_json, save_json
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 from miminions.utils.json_io import load_json, save_json
 from miminions.workspace_fs import init_workspace
@@ -81,14 +82,7 @@ def ensure_default_setup(config_dir: Path, force: bool = False) -> dict[str, Any
         return config
 
     config_dir.mkdir(parents=True, exist_ok=True)
-
-    workspace_id = _ensure_default_workspace(config_dir)
-    agent_id = _ensure_default_agent(config_dir)
-
-    if not config.get("default_workspace"):
-        config["default_workspace"] = workspace_id
-    if not config.get("default_agent"):
-        config["default_agent"] = agent_id
-
+    config["default_workspace"] = _ensure_default_workspace(config_dir)
+    config["default_agent"] = _ensure_default_agent(config_dir)
     save_json(config_file, config)
     return config

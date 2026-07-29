@@ -17,12 +17,20 @@ class TestAuthFunctions:
 
     def test_get_config_dir_creates_directory(self):
         """Test that get_config_dir creates the config directory."""
-        with patch('pathlib.Path.home') as mock_home:
-            mock_home.return_value = Path('/tmp/test_home')
-            with patch('pathlib.Path.mkdir') as mock_mkdir:
-                config_dir = get_config_dir()
-                assert config_dir == Path('/tmp/test_home/.miminions')
-                mock_mkdir.assert_called_once_with(exist_ok=True)
+        with patch.dict(os.environ, {}, clear=False) as _env:
+            os.environ.pop('MIMINIONS_HOME', None)
+            with patch('pathlib.Path.home') as mock_home:
+                mock_home.return_value = Path('/tmp/test_home')
+                with patch('pathlib.Path.mkdir') as mock_mkdir:
+                    config_dir = get_config_dir()
+                    assert config_dir == Path('/tmp/test_home/.miminions')
+                    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+    def test_get_config_dir_honors_miminions_home_env(self):
+        """MIMINIONS_HOME overrides the default ~/.miminions location."""
+        with patch.dict(os.environ, {'MIMINIONS_HOME': '/tmp/custom_home'}):
+            with patch('pathlib.Path.mkdir'):
+                assert get_config_dir() == Path('/tmp/custom_home')
 
     def test_get_auth_file(self):
         """Test that get_auth_file returns correct path."""
