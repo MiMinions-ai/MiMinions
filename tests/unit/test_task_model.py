@@ -1,5 +1,4 @@
 """Unit tests for task.model module."""
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
 

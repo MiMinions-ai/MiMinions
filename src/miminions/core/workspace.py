@@ -6,14 +6,19 @@ and structured logic based on internal state.
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 
-DEFAULT_WORKSPACES_ROOT = Path("~/.miminions/workspaces").expanduser()
+from miminions.core.paths import get_workspaces_root
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_WORKSPACES_ROOT = get_workspaces_root()
 
 
 class NodeType(Enum):
@@ -340,6 +345,13 @@ class WorkspaceManager:
             
             return workspaces
         except Exception:
+            logger.warning(
+                "Could not read workspaces from %s; treating as empty. "
+                "If the file is corrupt it will be overwritten on the next save; "
+                "if it is unreadable (e.g. permissions), fix access before saving.",
+                self.workspaces_file,
+                exc_info=True,
+            )
             return {}
     
     def save_workspaces(self, workspaces: Dict[str, Workspace]) -> None:

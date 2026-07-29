@@ -3,9 +3,7 @@ End-to-end tests for the MiMinions CLI.
 These tests simulate real user workflows and interactions.
 """
 
-import pytest
 import tempfile
-import os
 import json
 from contextlib import ExitStack
 from pathlib import Path
@@ -365,15 +363,15 @@ class TestCLIEndToEnd:
                 entry_id
             ])
             assert result.exit_code == 0
-            assert 'v1.0' in result.output
-            assert 'v1.1' in result.output
+            assert 'v1' in result.output
+            assert 'v2' in result.output
             assert '(current)' in result.output
-            
+
             # Revert to previous version
             result = self.runner.invoke(cli, [
                 'knowledge', 'revert',
                 entry_id,
-                '--version', '1.0'
+                '--version', '1'
             ])
             assert result.exit_code == 0
             

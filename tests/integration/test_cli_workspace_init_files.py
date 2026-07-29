@@ -95,6 +95,6 @@ def test_workspace_init_files_sets_root_path_for_existing_workspace(tmp_path, mo
     root = Path(workspace_data["root_path"])
     assert root.exists(), f"Expected root path '{root}' to exist, but it does not."
     assert root.name == f"ws_{workspace_id}", f"Expected root path name to be 'ws_{workspace_id}', but got {root.name}"
-    assert (root / "prompt" / "AGENTS.md").exists(), f"Expected 'AGENTS.md' in the prompt folder, but it was missing."
-    assert (root / "memory" / "MEMORY.md").exists(), f"Expected 'MEMORY.md' in the memory folder, but it was missing."
-    assert (root / "sessions").exists(), f"Expected a 'sessions' folder in the root directory, but it was not found."
+    assert (root / "prompt" / "AGENTS.md").exists(), "Expected 'AGENTS.md' in the prompt folder, but it was missing."
+    assert (root / "memory" / "MEMORY.md").exists(), "Expected 'MEMORY.md' in the memory folder, but it was missing."
+    assert (root / "sessions").exists(), "Expected a 'sessions' folder in the root directory, but it was not found."

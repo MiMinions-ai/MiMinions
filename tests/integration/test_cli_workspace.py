@@ -89,7 +89,7 @@ def test_node_management():
         assert task_node.id in workspace.nodes
         
         # Test node connections
-        assert workspace.connect_nodes(agent_node.id, task_node.id) == True
+        assert workspace.connect_nodes(agent_node.id, task_node.id) is True
         assert task_node.id in workspace.nodes[agent_node.id].connections
         assert agent_node.id in workspace.nodes[task_node.id].connections
         
@@ -269,7 +269,7 @@ def main():
         else:
             failed += 1
     
-    print(f"\n--- Test Results ---")
+    print("\n--- Test Results ---")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
     

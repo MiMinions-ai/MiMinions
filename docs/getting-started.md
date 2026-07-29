@@ -133,7 +133,7 @@ miminions --help
 ```
 
 Registered command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`,
-`execution`, `chat`, `prompt`.
+`execution`, `chat`, `gateway`, `prompt`.
 
 ### Chat
 

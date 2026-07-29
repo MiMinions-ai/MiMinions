@@ -123,6 +123,7 @@ def test_execution_timing():
 
 def test_get_global_memory_db_path_uses_home(monkeypatch, tmp_path):
     """Global DB helper should resolve under ~/.miminions."""
+    monkeypatch.delenv("MIMINIONS_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     path = Path(get_global_memory_db_path(create_dir=False))
 
@@ -131,6 +132,7 @@ def test_get_global_memory_db_path_uses_home(monkeypatch, tmp_path):
 
 def test_get_global_memory_db_path_creates_parent(monkeypatch, tmp_path):
     """Global DB helper should create parent directory by default."""
+    monkeypatch.delenv("MIMINIONS_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     path = Path(get_global_memory_db_path())
 

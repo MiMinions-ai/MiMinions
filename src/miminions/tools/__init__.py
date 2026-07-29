@@ -48,13 +48,13 @@ class GenericTool:
                 param_type = str  # Default to string if no annotation
 
             # Convert Python types to JSON schema types
-            if param_type == int:
+            if param_type is int:
                 schema_type = "integer"
-            elif param_type == float:
+            elif param_type is float:
                 schema_type = "number"
-            elif param_type == bool:
+            elif param_type is bool:
                 schema_type = "boolean"
-            elif param_type == str:
+            elif param_type is str:
                 schema_type = "string"
             else:
                 schema_type = "string"

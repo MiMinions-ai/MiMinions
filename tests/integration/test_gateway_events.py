@@ -1,5 +1,4 @@
 """Unit tests for gateway.events module."""
-import pytest
 from datetime import datetime
 
 from miminions.core.gateway.events import InboundMessage, OutboundMessage

@@ -2,7 +2,6 @@
 Unit tests for the MiMinions CLI agent module.
 """
 
-import pytest
 import json
 import tempfile
 import os
@@ -113,7 +112,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output
@@ -166,8 +165,8 @@ class TestAgentCLI:
                     assert 'Agent \'Test Agent\' added successfully' in result.output
                     mock_save.assert_called_once()
 
-    def test_add_agent_duplicate(self):
-        """Test adding agent with duplicate ID."""
+    def test_add_agent_duplicate_id_gets_unique_suffix(self):
+        """A name whose slug already exists gets a unique suffixed ID."""
         existing_agents = {
             "test_agent": {
                 "name": "Existing Agent",
@@ -176,21 +175,25 @@ class TestAgentCLI:
                 "status": "inactive"
             }
         }
-        
+
         with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
             with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = existing_agents
-                
-                result = self.runner.invoke(agent_cli, [
-                    'add',
-                    '--name', 'Test Agent',  # This will create ID "test_agent"
-                    '--description', 'A test agent',
-                    '--type', 'general'
-                ])
-                
-                assert result.exit_code == 0
-                assert 'already exists' in result.output
+                with patch('miminions.cli.agent.save_agents') as mock_save:
+                    mock_is_auth.return_value = True
+                    mock_load.return_value = existing_agents
+
+                    result = self.runner.invoke(agent_cli, [
+                        'add',
+                        '--name', 'Test Agent',  # slug "test_agent" already exists
+                        '--description', 'A test agent',
+                        '--type', 'general'
+                    ])
+
+                    assert result.exit_code == 0
+                    assert 'ID: test_agent_2' in result.output
+                    saved = mock_save.call_args[0][0]
+                    assert 'test_agent_2' in saved
+                    assert 'test_agent' in saved  # original preserved
 
     def test_add_agent_not_authenticated(self):
         """Test adding agent when not authenticated."""
@@ -206,7 +209,7 @@ class TestAgentCLI:
             
             assert result.exit_code == 0
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
-            # src/miminions/interface/cli/agent.py::require_auth (temporary no-op).
+            # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
             # Re-enable once the real auth guard is restored.
             # assert 'Please sign in first' in result.output

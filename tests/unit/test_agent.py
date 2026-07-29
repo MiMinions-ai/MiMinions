@@ -2,10 +2,8 @@
 
 import asyncio
 import sys
-from pathlib import Path
 
 from miminions.agent import (
-    Minion,
     create_minion,
 )
 from miminions.tools.schemas import (
@@ -27,7 +25,7 @@ async def test_agent_creation():
     
     state = agent.get_state()
     assert state.tool_count == 1
-    assert state.has_memory == False
+    assert state.has_memory is False
     assert "cli_run_command" in agent.list_tools()
     
     await agent.cleanup()
@@ -56,7 +54,7 @@ async def test_tool_registration():
     # Verify schema extraction
     a_param = next(p for p in add_def.schema_def.parameters if p.name == "a")
     assert a_param.type == ParameterType.INTEGER
-    assert a_param.required == True
+    assert a_param.required is True
     
     tools = agent.list_tools()
     assert "add" in tools
@@ -170,9 +168,9 @@ async def test_tool_management():
     math_tools = agent.search_tools("math")
     assert len(math_tools) == 2
     
-    assert agent.unregister_tool("math_add") == True
+    assert agent.unregister_tool("math_add") is True
     assert "math_add" not in agent.list_tools()
-    assert agent.unregister_tool("nonexistent") == False
+    assert agent.unregister_tool("nonexistent") is False
     
     await agent.cleanup()
     print("PASSED")

@@ -173,7 +173,7 @@ def test_distill_session_stores_global_insights_as_plain_text(tmp_path, monkeypa
     assert result.dropped_reasons == []
 
 
-def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypatch):
+def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypatch, caplog):
     class _BrokenSQLiteMemory:
         def __init__(self, _db_path: str):
             raise RuntimeError("sqlite unavailable")
@@ -190,13 +190,34 @@ def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypa
         global_db_path=str(tmp_path / "global.db"),
     )
 
-    result = distiller.distill_session(
-        workspace=SimpleNamespace(id="ws-3", name="MiMinions"),
-        root_path=str(tmp_path),
-        session_id=session_id,
-    )
+    with caplog.at_level(logging.WARNING):
+        result = distiller.distill_session(
+            workspace=SimpleNamespace(id="ws-3", name="MiMinions"),
+            root_path=str(tmp_path),
+            session_id=session_id,
+        )
 
     assert result.promoted_counts["tier1"] == 1
     assert result.promoted_counts["tier2"] == 1
     assert result.promoted_counts["tier3"] == 0
     assert any("tier3_unavailable" in reason for reason in result.dropped_reasons)
+    # The failure must be observable, not just recorded in dropped_reasons.
+    assert any("Tier-3" in r.message for r in caplog.records)
+
+
+def test_distill_session_warns_when_llm_filter_raises(tmp_path, caplog):
+    def _exploding_filter(**_kwargs):
+        raise RuntimeError("model exploded")
+
+    session_id = append_transcript(tmp_path)
+    distiller = MemoryDistiller(_exploding_filter, global_db_path=str(tmp_path / "global.db"))
+
+    with caplog.at_level(logging.WARNING):
+        result = distiller.distill_session(
+            workspace=SimpleNamespace(id="ws-4", name="MiMinions"),
+            root_path=str(tmp_path),
+            session_id=session_id,
+        )
+
+    assert any("llm_filter_error" in reason for reason in result.dropped_reasons)
+    assert any("LLM filter failed" in r.message for r in caplog.records)
