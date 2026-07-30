@@ -1,6 +1,6 @@
 """Unit tests for session memory distillation pipeline."""
 
-import logging
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -22,6 +22,14 @@ class _FakeSQLiteMemory:
 
     def close(self) -> None:
         return None
+
+
+def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
+    monkeypatch.setitem(
+        sys.modules,
+        "miminions.memory.sqlite",
+        SimpleNamespace(SQLiteMemory=sqlite_memory_cls),
+    )
 
 
 def test_distillation_result_defaults():
@@ -81,7 +89,7 @@ def test_distill_session_accepts_partial_llm_output_with_permissive_defaults(tmp
 
 def test_distill_session_promotes_history_and_workspace_memory(tmp_path, monkeypatch):
     _FakeSQLiteMemory.created = []
-    monkeypatch.setattr("miminions.memory.sqlite.SQLiteMemory", _FakeSQLiteMemory)
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
 
     session_id = append_transcript(tmp_path)
 
@@ -121,7 +129,7 @@ def test_distill_session_promotes_history_and_workspace_memory(tmp_path, monkeyp
 
 def test_distill_session_stores_global_insights_as_plain_text(tmp_path, monkeypatch):
     _FakeSQLiteMemory.created = []
-    monkeypatch.setattr("miminions.memory.sqlite.SQLiteMemory", _FakeSQLiteMemory)
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
 
     session_id = append_transcript(tmp_path)
 
@@ -170,7 +178,7 @@ def test_distill_session_continues_when_sqlite_is_unavailable(tmp_path, monkeypa
         def __init__(self, _db_path: str):
             raise RuntimeError("sqlite unavailable")
 
-    monkeypatch.setattr("miminions.memory.sqlite.SQLiteMemory", _BrokenSQLiteMemory)
+    _patch_sqlite_memory(monkeypatch, _BrokenSQLiteMemory)
     session_id = append_transcript(tmp_path)
 
     distiller = MemoryDistiller(
