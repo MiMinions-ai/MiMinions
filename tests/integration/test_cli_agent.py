@@ -7,7 +7,7 @@ import tempfile
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 from click.testing import CliRunner
 
 from miminions.cli.agent import agent_cli, load_agents, save_agents, get_agents_file
@@ -450,8 +450,8 @@ class TestAgentCLI:
             assert result.exit_code == 0
             assert "Invalid JSON for --arguments." in result.output
 
-    def test_ask_agent_uses_tool_fallback_for_addition(self):
-        """Ask should use cli_add fallback when prompt requests arithmetic."""
+    def test_ask_agent_sends_keyword_collision_prompts_to_runtime(self):
+        """Ask sends prompts to the model even when they mention demo tool keywords."""
         existing_agents = {
             "test_agent": {
                 "name": "Test Agent",
@@ -461,39 +461,68 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.core.auth.is_authenticated', return_value=True):
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_load.return_value = existing_agents
+        prompts = [
+            "what time works best for the demo?",
+            "Please add 4 and 9 for me",
+            "echo this phrase",
+        ]
 
-                result = self.runner.invoke(
-                    agent_cli,
-                    ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
-                )
+        for prompt in prompts:
+            runtime_agent = MagicMock()
+            runtime_agent.run = AsyncMock(return_value="model response")
+
+            with patch('miminions.core.auth.is_authenticated', return_value=True):
+                with patch('miminions.cli.agent.load_agents', return_value=existing_agents):
+                    with patch(
+                        'miminions.cli.agent._build_cli_extension_agent',
+                        return_value=runtime_agent,
+                    ):
+                        result = self.runner.invoke(
+                            agent_cli,
+                            ['ask', 'test_agent', '--prompt', prompt]
+                        )
 
             assert result.exit_code == 0
-            assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output
-            assert "Agent response: Used tool cli_add -> 13" in result.output
+            assert f"Asking agent 'test_agent': {prompt}" in result.output
+            assert "Agent response: model response" in result.output
+            runtime_agent.run.assert_awaited_once_with(prompt)
+            runtime_agent.execute.assert_not_called()
 
-    def test_run_agent_uses_tool_fallback_for_addition_goal(self):
-        """Run should use cli_add fallback for arithmetic goals."""
+    def test_run_agent_sends_complete_goal_to_runtime(self):
+        """Synchronous run sends the stored goal through the model runtime."""
+        goal = "Add 10 and 5, then tell me what time works for the demo"
         existing_agents = {
             "test_agent": {
                 "name": "Test Agent",
                 "description": "A test agent",
                 "type": "general",
                 "status": "inactive",
-                "goal": "Add 10 and 5",
+                "goal": goal,
             }
         }
+
+        runtime_agent = MagicMock()
+        runtime_agent.run = AsyncMock(return_value="model response")
+        runtime_agent.get_state.return_value = MagicMock(
+            tool_count=4,
+            has_memory=False,
+            connected_servers=[],
+        )
 
         with patch('miminions.core.auth.is_authenticated', return_value=True):
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_load.return_value = existing_agents
+                    with patch(
+                        'miminions.cli.agent._build_cli_extension_agent',
+                        return_value=runtime_agent,
+                    ):
+                        mock_load.return_value = existing_agents
 
-                    result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
+                        result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
 
-                    assert result.exit_code == 0
-                    assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output
-                    assert "Agent response: Used tool cli_add -> 15" in result.output
-                    mock_save.assert_called_once()
+        assert result.exit_code == 0
+        assert f"Running agent 'test_agent' with goal: {goal}" in result.output
+        assert "Agent response: model response" in result.output
+        runtime_agent.run.assert_awaited_once_with(goal)
+        runtime_agent.execute.assert_not_called()
+        mock_save.assert_called_once()
