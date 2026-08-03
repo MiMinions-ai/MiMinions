@@ -2,6 +2,7 @@
 Agent management commands for MiMinions CLI.
 """
 
+import asyncio
 import click
 import json
 import re
@@ -89,43 +90,9 @@ def _get_agent_record_or_error(agent_id):
     return agents[agent_id]
 
 
-def _extract_first_two_ints(text):
-    """Extract first two integers from text for simple arithmetic routing."""
-    values = [int(v) for v in re.findall(r"-?\d+", text)]
-    if len(values) >= 2:
-        return values[0], values[1]
-    return None
-
-
-def _execute_prompt_with_tool_fallback(runtime_agent, prompt):
-    """Run prompt via model, then fallback to deterministic tool routing if needed."""
-    lower = prompt.lower()
-
-    if "add" in lower or "sum" in lower or "plus" in lower:
-        pair = _extract_first_two_ints(prompt)
-        if pair:
-            tool_result = runtime_agent.execute("cli_add", arguments={"a": pair[0], "b": pair[1]})
-            if tool_result.error:
-                return f"Tool error: {tool_result.error}"
-            return f"Used tool cli_add -> {tool_result.result}"
-
-    if "time" in lower or "utc" in lower or "now" in lower:
-        tool_result = runtime_agent.execute("cli_now_utc")
-        if tool_result.error:
-            return f"Tool error: {tool_result.error}"
-        return f"Used tool cli_now_utc -> {tool_result.result}"
-
-    if lower.startswith("echo "):
-        payload = prompt[5:]
-        tool_result = runtime_agent.execute("cli_echo", arguments={"text": payload})
-        if tool_result.error:
-            return f"Tool error: {tool_result.error}"
-        return f"Used tool cli_echo -> {tool_result.result}"
-
-    import asyncio
-    output = asyncio.run(runtime_agent.run(prompt))
-
-    return output
+def _execute_prompt(runtime_agent, prompt):
+    """Send the complete prompt through the model-backed agent runtime."""
+    return asyncio.run(runtime_agent.run(prompt))
 
 
 # TODO: require_auth disabled until auth is fully implemented
@@ -303,7 +270,7 @@ def run_agent(agent_id, async_run):
             f"(tools={state.tool_count}, has_memory={state.has_memory}, servers={len(state.connected_servers)})"
         )
 
-        output = _execute_prompt_with_tool_fallback(runtime_agent, agent["goal"])
+        output = _execute_prompt(runtime_agent, agent["goal"])
         click.echo(f"Agent response: {output}")
         click.echo("Agent execution completed")
 
@@ -320,7 +287,7 @@ def ask_agent(agent_id, prompt):
 
     runtime_agent = _build_cli_extension_agent(agent_data)
     click.echo(f"Asking agent '{agent_id}': {prompt}")
-    output = _execute_prompt_with_tool_fallback(runtime_agent, prompt)
+    output = _execute_prompt(runtime_agent, prompt)
     click.echo(f"Agent response: {output}")
 
 
