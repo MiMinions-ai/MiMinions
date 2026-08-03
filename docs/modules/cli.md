@@ -138,6 +138,8 @@ miminions auth config                          # show current config
 
 Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, pre-loaded with a small default toolset (`cli_echo`, `cli_add`, `cli_now_utc`).
 
+Prompts submitted through `run` and `ask` always go through the model-backed agent runtime. The model may choose from the registered tools; use `tool-run` when you want to invoke a specific tool directly and deterministically.
+
 ```bash
 miminions agent list
 miminions agent add --name "Researcher" --description "Finds things" --type assistant
