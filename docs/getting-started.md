@@ -112,10 +112,12 @@ from pydantic_ai.models.openai import OpenAIModel
 agent = create_minion("MyAgent", model=OpenAIModel("gpt-4o"))
 ```
 
-!!! warning "Auth happens at call time"
-    A `Minion` builds fine without a key, but `await agent.run(...)` will raise
-    an auth/network error from the provider if the relevant key is missing. Use
-    `provider="test"` to exercise your tools and wiring without any credentials.
+!!! warning "When missing keys surface"
+    With the default `openrouter` provider, a missing `OPENROUTER_API_KEY` fails
+    **fast**: `create_minion(...)` raises `ValueError` at construction. The other
+    real providers build fine without a key and instead raise an auth/network
+    error at `await agent.run(...)` time. Use `provider="test"` to exercise your
+    tools and wiring without any credentials.
 
 Next steps from here: attach [Memory](modules/memory.md), wire in
 [Workspaces](modules/workspaces.md) and [Context](modules/context.md), or expose
@@ -126,7 +128,8 @@ external tools over [MCP](modules/agent.md). See the
 
 Installing the package registers a `miminions` console command (you can also run
 `python -m miminions`). On first run it bootstraps a `default` workspace and a
-default agent under `~/.miminions/`, where all CLI state persists.
+default agent under `~/.miminions/`, where all CLI state persists (set
+`MIMINIONS_HOME` to relocate it).
 
 ```bash
 miminions --help
@@ -138,8 +141,8 @@ Registered command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`,
 ### Chat
 
 Start an interactive async chat session. It runs against the default workspace
-unless you pass `--workspace`, and each reply is printed when the Minion finishes
-responding.
+unless you pass `--workspace`, and each reply streams to the terminal as it is
+generated.
 
 ```bash
 # Interactive session against the default workspace
@@ -150,6 +153,9 @@ miminions chat start --workspace "Demo"
 
 # Resume a prior session — its history is reloaded into LLM context
 miminions chat start --session <session_id>
+
+# Show tool calls and per-turn token usage / latency
+miminions chat start --verbose
 ```
 
 Type `/exit` or `/quit` to end the session.
