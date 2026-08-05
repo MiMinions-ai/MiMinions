@@ -21,6 +21,8 @@ python -m miminions --help
 <div class="grid cards" markdown>
 
 -   :material-login: **`auth`** — local sign-in, status, and config
+-   :material-cog-outline: **`config`** — get/set top-level CLI defaults (`default_workspace`, `default_agent`)
+-   :material-database-export-outline: **`export`/`import`** — backup and restore agents/tasks/knowledge JSON data
 -   :material-robot: **`agent`** — manage agent records, run them, inspect tools
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
@@ -34,6 +36,7 @@ python -m miminions --help
 
 !!! warning "`workflow` is not yet enabled"
     A `workflow` command group exists in the code but is **commented out of the CLI registration** ("not yet implemented"). `miminions workflow ...` will not run today — treat it as **planned**. The workflow tracing *models* are, however, used internally by `execution` (see below) and by the [Tasks & Workflows](tasks.md) module.
+    When enabled, workflow commands validate referenced agent ids (`--agents`) and reject unknown ids.
 
 ---
 
@@ -141,17 +144,78 @@ miminions auth config                          # show current config
 
 ---
 
+## `config`
+
+Top-level configuration access for defaults used by CLI commands.
+
+```bash
+# Read one key
+miminions config get default_workspace
+miminions config get default_agent
+
+# Set one key (workspace resolves id/prefix/name to canonical id)
+miminions config set default_workspace my-project
+
+# Set default agent (must already exist in agents.json)
+miminions config set default_agent researcher
+```
+
+| Command | Description |
+| --- | --- |
+| `get <key>` | Print one value from `config.json`. |
+| `set <key> <value>` | Validate and update one value in `config.json`. |
+
+Supported keys:
+
+- `default_workspace`
+- `default_agent`
+
+!!! note "`auth config` vs `config`"
+    `miminions auth config` manages authentication flags (`public_access`, `auth_timeout`). `miminions config` manages top-level default routing (`default_workspace`, `default_agent`).
+
+---
+
+## `export` / `import`
+
+Backup and restore CLI record stores for cross-machine migration.
+
+```bash
+# Export agents/tasks/knowledge to one backup file
+miminions export --output ./miminions-backup.json
+
+# Import and merge with existing records
+miminions import --input ./miminions-backup.json --mode merge
+
+# Import and replace existing records
+miminions import --input ./miminions-backup.json --mode replace
+```
+
+| Command | Options | Description |
+| --- | --- | --- |
+| `export` | `--output <path>` | Export `agents.json`, `tasks.json`, and `knowledge.json` into one backup JSON file. |
+| `import` | `--input <path>`, `--mode merge\|replace` | Restore backup data into `agents.json`, `tasks.json`, and `knowledge.json`. |
+
+`--mode merge` keeps existing records and overlays imported ids.
+`--mode replace` replaces each target store with imported data.
+
+---
+
 ## `agent`
 
 Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, pre-loaded with a small default toolset (`cli_echo`, `cli_add`, `cli_now_utc`).
 
+All commands that take an agent id accept it as an optional positional argument. When omitted, the `default_agent` from `~/.miminions/config.json` is used.
+
 ```bash
 miminions agent list
+miminions agent show researcher
 miminions agent add --name "Researcher" --description "Finds things" --type assistant
 miminions agent update researcher --description "Updated"
 miminions agent set-goal researcher --goal "Summarize today's notes"
 miminions agent run researcher
+miminions agent run                            # uses default_agent
 miminions agent ask researcher --prompt "what time is it in UTC?"
+miminions agent ask --prompt "what time is it in UTC?"  # uses default_agent
 miminions agent remove researcher
 ```
 
@@ -163,12 +227,14 @@ miminions agent remove researcher
 | `add` | `--name`, `--description`, `--type` | Create a record (id is the slugified name; a `_2`, `_3`, … suffix is appended if the id is already taken). All three are prompted if omitted. |
 | `update <id>` | `--name`, `--description`, `--type` | Update fields on an existing record. |
 | `remove <id>` | — | Delete a record (asks for confirmation). |
-| `set-goal <id>` | `--goal` | Store a goal used by `run`. |
-| `run <id>` | `--async` | Build the runtime and execute the stored goal. Requires a goal to be set. |
-| `ask <id>` | `--prompt` | One-off prompt to the agent without mutating its stored goal. |
+| `set-goal [id]` | `--goal` | Store a goal used by `run`. `id` defaults to `default_agent`. |
+| `run [id]` | `--async` | Build the runtime and execute the stored goal. `id` defaults to `default_agent`. Requires a goal to be set. |
+| `ask [id]` | `--prompt` | One-off prompt to the agent without mutating its stored goal. `id` defaults to `default_agent`. |
+
+`show <ref>` accepts an exact id, an id prefix, or an exact agent name.
 
 !!! warning "`run --async` is not functional"
-    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run <id>` for real execution.
+    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.
 
 ### Inspecting and running tools
 
@@ -176,14 +242,16 @@ These commands build the agent's runtime and operate on its registered tools.
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `tool-list <id>` | — | List the agent's tool names and descriptions. |
-| `tool-info <id> <tool>` | — | Show a tool's description and JSON parameter schema. |
-| `tool-search <id> <query>` | — | Search tools by name/description (substring). |
-| `tool-run <id> <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). |
+| `tool-list [id]` | — | List the agent's tool names and descriptions. `id` defaults to `default_agent`. |
+| `tool-info [id] <tool>` | — | Show a tool's description and JSON parameter schema. `id` defaults to `default_agent`. |
+| `tool-search [id] <query>` | — | Search tools by name/description (substring). `id` defaults to `default_agent`. |
+| `tool-run [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). `id` defaults to `default_agent`. |
 
 ```bash
 miminions agent tool-list researcher
+miminions agent tool-list                            # uses default_agent
 miminions agent tool-run researcher cli_add --arguments '{"a": 2, "b": 3}'
+miminions agent tool-run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
 
 ---
@@ -203,15 +271,16 @@ miminions task remove <id>
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List all tasks with status and priority. |
+| `list` | `--json` | List all tasks with status and priority. |
 | `add` | `--title`, `--description`, `--priority`, `--agent` | Create a task. |
 | `update <id>` | `--title`, `--description`, `--priority`, `--status`, `--agent` | Update one or more fields. |
 | `duplicate <id>` | `--title` | Copy a task (reset to `pending`). |
-| `show <id>` | — | Print full task detail. |
+| `show <id>` | `--json` | Print full task detail. |
 | `remove <id>` | — | Delete a task (asks for confirmation). |
 
 - `--priority` is one of `low`, `medium` (default), `high`.
 - `--status` is one of `pending`, `in_progress`, `completed`, `cancelled`.
+- `--agent` must reference an existing agent id; unknown ids are rejected.
 
 !!! note "CLI tasks vs. the task runtime"
     These commands manage lightweight *task records* in JSON. They are distinct from the programmatic concurrent [`TaskRuntime`](tasks.md) (which runs agent-bound tasks via `asyncio.TaskGroup`).
@@ -234,13 +303,13 @@ miminions knowledge remove <id>
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List entries with version, category, and status. |
+| `list` | `--json` | List entries with version, category, and status. |
 | `add` | `--title`, `--content`, `--category`, `--tags` | Create an entry at version `1.0`. |
 | `update <id>` | `--title`, `--content`, `--category`, `--tags` | Update fields; a content change bumps the version. |
 | `revert <id>` | `--version` | Restore content from a recorded version. |
 | `version <id>` | — | Show the version history. |
 | `customize <id>` | `--template`, `--format` | Apply a template and/or render as `json` / `markdown` / `plain`. |
-| `show <id>` | — | Print full entry detail. |
+| `show <id>` | `--json` | Print full entry detail. |
 | `remove <id>` | — | Delete an entry (asks for confirmation). |
 
 !!! tip "Version bumps"
@@ -268,9 +337,9 @@ Workspace references accept either a full id, an id **prefix**, or the workspace
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `list` | — | List workspaces with node/rule counts. |
+| `list` | `--json` | List workspaces with node/rule counts. |
 | `add` | `--name`, `--description`, `--sample`, `--init-files`, `--root-path` | Create a workspace. `--sample` seeds example nodes/rules; `--init-files` scaffolds the on-disk folder; `--root-path` overrides where files are written. |
-| `show <ref>` | — | Print full workspace detail (nodes, rules, inherited rules, state). |
+| `show <ref>` | `--json` | Print full workspace detail (nodes, rules, inherited rules, state). |
 | `update <ref>` | `--name`, `--description` | Rename or re-describe. |
 | `remove <ref>` | `--force` | Delete a workspace (confirm unless `--force`). |
 | `set-state <ref>` | `--key`, `--value` | Set a state value (value is parsed as JSON when possible). |
@@ -320,7 +389,7 @@ miminions execution session stop
 | --- | --- | --- |
 | `session start` | `--name` | Start a new session (only one active at a time). |
 | `session stop` | — | Stop the active session. |
-| `session list` | — | List all sessions with status. |
+| `session list` | `--json` | List all sessions with status. |
 
 ### Tools & runs
 
@@ -334,8 +403,8 @@ miminions execution session stop
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `interaction list` | `--session-id` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
-| `interaction show <index>` | `--session-id` | Print the full JSON of a recorded `WorkflowRun`. |
+| `interaction list` | `--session-id`, `--json` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
+| `interaction show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
 
 !!! note "Tool modules"
     `add-tool` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `add-tool` at the file.

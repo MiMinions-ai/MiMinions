@@ -13,6 +13,12 @@
   --md-code-font: "Fira Code", "Monaco", "Consolas", monospace;
 }
 
+/* Light scheme: the light brand teal is unreadable as a link color on white,
+   so links use teal-700 from the same Tailwind family (passes WCAG AA) */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #0f766e;
+}
+
 /* Dark (slate) scheme — yellow accent matches the site's hover/CTA accent */
 [data-md-color-scheme="slate"] {
   --md-primary-fg-color:        #2DD4BF;
@@ -22,15 +28,17 @@
   --md-accent-fg-color--transparent: #FDE04710;
 }
 
-/* Code blocks — match the site's dark code panel (#1f2937 bg, #e5e7eb text) */
+/* Code blocks — light scheme keeps Material's light code styling so the
+   Pygments tokens (colored for a light background) stay readable */
 .md-typeset code,
 .md-typeset pre {
   font-family: var(--md-code-font);
 }
 
-.md-typeset pre > code {
-  background-color: #1f2937;
-  color: #e5e7eb;
+/* Dark scheme only: match the site's dark code panel (#1f2937 bg, #e5e7eb text) */
+[data-md-color-scheme="slate"] {
+  --md-code-bg-color: #1f2937;
+  --md-code-fg-color: #e5e7eb;
 }
 
 /* Nav header gradient — mirrors the site's CTA gradient */
@@ -38,10 +46,12 @@
   background: linear-gradient(135deg, #2DD4BF 0%, #0EA5E9 100%);
 }
 
-/* Active nav tabs */
+/* Active nav tabs — yellow text on the teal tab bar is unreadable (~1.4:1),
+   so keep white text and carry the yellow accent as an underline instead */
 .md-tabs__link--active,
 .md-tabs__link:hover {
-  color: #FDE047;
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 #FDE047;
 }
 
 /* ── Homepage hero ───────────────────────────────────────────── */
