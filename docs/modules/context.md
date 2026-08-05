@@ -155,10 +155,11 @@ builder = ContextBuilder(global_top_k=5, global_db_path="/path/to/global.db")
     *and* the lookup returns at least one insight. With `global_top_k=0`, both the
     section and the SQLite lookup are skipped. Global insights are stored by the
     [`MemoryDistiller`](memory.md); reading them requires the `[sqlite]` extra
-    (`pip install miminions[sqlite]`). Any error during the lookup is swallowed —
-    the section is omitted rather than failing the build.
+    (`pip install miminions[sqlite]`). Any error during the lookup is logged as a
+    warning and swallowed — the section is omitted rather than failing the build.
 
-The default database path is `~/.miminions/global_memory.db`.
+The default database path is `~/.miminions/global_memory.db` (resolved via
+`miminions.core.paths`, so it honors the `MIMINIONS_HOME` environment variable).
 
 ## API Reference
 

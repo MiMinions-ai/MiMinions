@@ -9,7 +9,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
-Work in progress toward the next release. Everything below is on `main` but not yet cut into a versioned tag.
+Work in progress toward the next release.
+
+### Added
+
+- **Streaming replies.** `Minion.run_stream()` yields the LLM reply as incremental text deltas; the CLI `chat` loop now streams every reply to the terminal. See [Agent](modules/agent.md#streaming-replies).
+- **Retries, timeouts, and observability hooks.** `create_minion` accepts `request_timeout` (per-HTTP-request, default 60 s), `max_retries` (default 2) with exponential backoff on transient provider errors (429/5xx, connection failures), and optional `on_tool_call` / `on_turn_end` callbacks. `miminions chat start --verbose` uses them to show tool calls, token usage, and latency per turn.
+- **Message-history trimming.** `trim_message_history` caps the LLM context for long chat sessions at 40 messages, cutting only at user-turn boundaries so tool call/return pairs are never split; the on-disk transcript stays complete.
+- **Workspace schema versioning.** Persisted workspace records carry a `schema_version` field (currently 1) with a migration hook at load time; unversioned records are treated as v1 and stamped on the next save.
+- **`SQLiteMemory` as a context manager.** `with SQLiteMemory(...) as mem:` closes the connection automatically.
+- **Centralized path resolution** (`miminions.core.paths`). All persistent state resolves through `get_config_dir()`, honoring a new `MIMINIONS_HOME` environment variable to relocate `~/.miminions`. `get_global_memory_db_path` moved here (still re-exported from `miminions.memory.sqlite`).
+
+### Changed
+
+- **Atomic JSON persistence.** Shared `load_json` / `save_json` helpers (`miminions.core.persistence`) write all CLI/JSON stores atomically and fail loudly on corrupt files.
+- **Fail-fast OpenRouter key check.** With the default `openrouter` provider, a missing `OPENROUTER_API_KEY` now raises `ValueError` at `create_minion(...)` construction instead of failing later at call time.
+- `miminions agent add` derives unique agent ids: a name collision gets a `_2`, `_3`, … suffix instead of an error, and `created_at` is now a real UTC timestamp.
+- Chat errors preserve any partially streamed reply in the session transcript alongside the `[error]` marker.
+
+## [0.3.0] - 2026-07-02
 
 ### Added
 
@@ -45,8 +63,6 @@ Latest published release on PyPI.
 
 ## [0.2.2] - 2026-04-02
 
-Current published release on PyPI.
-
 ### Added
 
 - Agent layer built on `pydantic_ai`: `create_minion` / `Minion` with a tool registry, optional vector memory (auto-registering seven memory + ingestion tools), and an async `run()` reasoning loop.
@@ -72,10 +88,10 @@ Initial release.
 ## Version history
 
 | Version | Notes |
-| ------- | ----- |
-| **Unreleased** | TBD |
-| **0.3.0** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
-| **0.2.2** | Current published release &mdash; agent, vector memory, tools, local data |
+|---------|-------|
+| **Unreleased** | Streaming replies, retries + timeouts + hooks, history trimming, workspace schema versioning, `MIMINIONS_HOME`, atomic JSON persistence |
+| **0.3.0** | Current published release &mdash; CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
+| **0.2.2** | Agent, vector memory, tools, local data |
 | **0.1.0** | Initial release with core functionality |
 
 ---

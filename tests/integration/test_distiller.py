@@ -23,6 +23,12 @@ class _FakeSQLiteMemory:
     def close(self) -> None:
         return None
 
+    def __enter__(self) -> "_FakeSQLiteMemory":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
 
 def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
     monkeypatch.setitem(

@@ -65,6 +65,22 @@ print(same_ws.get_network_summary())
     `resolve_workspace(workspaces, ref)`, where `ref` is an exact id, an id prefix,
     or the exact name.
 
+### Persistence & schema versioning
+
+`save_workspaces()` writes `workspaces.json` **atomically** (a temp file swapped
+into place), so an interrupted save can't corrupt the store. Each persisted
+record is stamped with a `schema_version` field (currently `1`):
+
+- Records **without** a version predate versioning and are treated as v1 — they
+  get stamped on the next save.
+- Records with a **newer** version than the running code supports are loaded
+  best-effort with a logged warning.
+- Future breaking changes to the record shape will dispatch on this version in
+  a migration step at load time.
+
+If `workspaces.json` is missing or unreadable, `load_workspaces()` logs a
+warning and returns `{}` rather than raising.
+
 ## The Graph Model
 
 A workspace aggregates three things: a dict of `Node`s, a dict of `Rule`s (plus a
@@ -287,7 +303,8 @@ default agent in `agents.json`, and records both ids in `config.json`.
 ## CLI
 
 The same operations are available from the `miminions workspace` command group, which
-stores everything under `~/.miminions/`.
+stores everything under `~/.miminions/` (override the location with the
+`MIMINIONS_HOME` environment variable).
 
 ```bash
 # Create a workspace and scaffold its folder
@@ -323,8 +340,8 @@ See the [CLI reference](cli.md) for the full command set.
 
 | Method | Description |
 |--------|-------------|
-| `load_workspaces() -> dict[str, Workspace]` | Read `workspaces.json`; returns `{}` if missing or unreadable |
-| `save_workspaces(workspaces)` | Write the dict back to `workspaces.json` |
+| `load_workspaces() -> dict[str, Workspace]` | Read `workspaces.json` (migrating each record to the current schema version); returns `{}` if missing or unreadable |
+| `save_workspaces(workspaces)` | Atomically write the dict back to `workspaces.json` |
 | `create_workspace(name, description="")` | Build a new in-memory `Workspace` (not persisted) |
 | `create_sample_workspace()` | Build a demo workspace with example nodes, rules, and state |
 
