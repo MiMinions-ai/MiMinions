@@ -48,23 +48,51 @@ def _build_cli_extension_agent(agent_data):
     return runtime_agent
 
 
-async def _run_with_agent_runtime(agent_data, action):
+async def _execute_agent_action(runtime_agent, operation, **params):
+    """Execute one supported CLI operation against a prepared agent runtime."""
+    if operation == "run":
+        state = runtime_agent.get_state()
+        click.echo(
+            "Initialized core Minion runtime "
+            f"(tools={state.tool_count}, has_memory={state.has_memory}, "
+            f"servers={len(state.connected_servers)})"
+        )
+        return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
+    if operation == "ask":
+        return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
+    if operation == "tool-list":
+        return [
+            (name, runtime_agent.get_tool_info(name))
+            for name in runtime_agent.list_tools()
+        ]
+    if operation == "tool-info":
+        return runtime_agent.get_tool_info(params["tool_name"])
+    if operation == "tool-search":
+        return runtime_agent.search_tools(params["query"])
+    if operation == "tool-run":
+        return await runtime_agent.execute_async(
+            params["tool_name"], arguments=params["arguments"]
+        )
+    raise ValueError(f"Unsupported agent runtime operation: {operation}")
+
+
+async def _run_with_agent_runtime(agent_data, operation, **params):
     """Build an agent, attach its configured MCP servers, and always clean up."""
     runtime_agent = _build_cli_extension_agent(agent_data)
     try:
         for server_name, config in agent_data.get("mcp_servers", {}).items():
             try:
-                params = StdioServerParameters(
+                server_params = StdioServerParameters(
                     command=config["command"],
                     args=list(config.get("args", [])),
                 )
-                await runtime_agent.connect_mcp_server(server_name, params)
+                await runtime_agent.connect_mcp_server(server_name, server_params)
                 await runtime_agent.load_tools_from_mcp_server(server_name)
             except Exception as exc:
                 raise click.ClickException(
                     f"Failed to load MCP server '{server_name}': {exc}"
                 ) from exc
-        return await action(runtime_agent)
+        return await _execute_agent_action(runtime_agent, operation, **params)
     finally:
         await runtime_agent.cleanup(rebuild=False)
 
@@ -367,14 +395,9 @@ def run_agent(agent_id, async_run):
         click.echo("TODO: Async CLI execution path should stream model output and session events.")
     else:
         click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
-        async def action(runtime_agent):
-            state = runtime_agent.get_state()
-            click.echo(
-                "Initialized core Minion runtime "
-                f"(tools={state.tool_count}, has_memory={state.has_memory}, servers={len(state.connected_servers)})"
-            )
-            return await _execute_prompt_with_tool_fallback(runtime_agent, agent["goal"])
-        output = asyncio.run(_run_with_agent_runtime(agent, action))
+        output = asyncio.run(
+            _run_with_agent_runtime(agent, "run", prompt=agent["goal"])
+        )
         click.echo(f"Agent response: {output}")
         click.echo("Agent execution completed")
 
@@ -390,9 +413,9 @@ def ask_agent(agent_id, prompt):
         return
 
     click.echo(f"Asking agent '{agent_id}': {prompt}")
-    async def action(runtime_agent):
-        return await _execute_prompt_with_tool_fallback(runtime_agent, prompt)
-    output = asyncio.run(_run_with_agent_runtime(agent_data, action))
+    output = asyncio.run(
+        _run_with_agent_runtime(agent_data, "ask", prompt=prompt)
+    )
     click.echo(f"Agent response: {output}")
 
 
@@ -405,9 +428,7 @@ def list_agent_tools(agent_id):
     if not agent_data:
         return
 
-    async def action(runtime_agent):
-        return [(name, runtime_agent.get_tool_info(name)) for name in runtime_agent.list_tools()]
-    tools = asyncio.run(_run_with_agent_runtime(agent_data, action))
+    tools = asyncio.run(_run_with_agent_runtime(agent_data, "tool-list"))
     if not tools:
         click.echo(f"No tools available for agent '{agent_id}'.")
         return
@@ -428,9 +449,9 @@ def show_agent_tool_info(agent_id, tool_name):
     if not agent_data:
         return
 
-    async def action(runtime_agent):
-        return runtime_agent.get_tool_info(tool_name)
-    info = asyncio.run(_run_with_agent_runtime(agent_data, action))
+    info = asyncio.run(
+        _run_with_agent_runtime(agent_data, "tool-info", tool_name=tool_name)
+    )
     if not info:
         click.echo(f"Tool '{tool_name}' not found for agent '{agent_id}'.", err=True)
         return
@@ -451,9 +472,9 @@ def search_agent_tools(agent_id, query):
     if not agent_data:
         return
 
-    async def action(runtime_agent):
-        return runtime_agent.search_tools(query)
-    matches = asyncio.run(_run_with_agent_runtime(agent_data, action))
+    matches = asyncio.run(
+        _run_with_agent_runtime(agent_data, "tool-search", query=query)
+    )
     if not matches:
         click.echo(f"No tools matched '{query}' for agent '{agent_id}'.")
         return
@@ -488,9 +509,14 @@ def run_agent_tool(agent_id, tool_name, arguments):
         click.echo("--arguments must be a JSON object.", err=True)
         return
 
-    async def action(runtime_agent):
-        return await runtime_agent.execute_async(tool_name, arguments=parsed_arguments)
-    result = asyncio.run(_run_with_agent_runtime(agent_data, action))
+    result = asyncio.run(
+        _run_with_agent_runtime(
+            agent_data,
+            "tool-run",
+            tool_name=tool_name,
+            arguments=parsed_arguments,
+        )
+    )
 
     click.echo(f"Tool: {result.tool_name}")
     click.echo(f"Status: {result.status.value}")
@@ -505,8 +531,3 @@ def run_agent_tool(agent_id, tool_name, arguments):
 # - memory-attach --backend {sqlite,md}
 # - memory-store / memory-recall / memory-update / memory-delete
 # - ingest-document
-#
-# TODO(cli-agent): Add MCP server integration commands:
-# - mcp-connect
-# - mcp-load-tools
-# - mcp-disconnect
