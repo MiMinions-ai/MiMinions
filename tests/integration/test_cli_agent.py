@@ -16,6 +16,7 @@ from miminions.cli.agent import (
     load_agents,
     save_agents,
     get_agents_file,
+    _execute_agent_action,
     _run_with_agent_runtime,
 )
 
@@ -96,19 +97,23 @@ class TestAgentFunctions:
         runtime.connect_mcp_server = AsyncMock()
         runtime.load_tools_from_mcp_server = AsyncMock()
         runtime.cleanup = AsyncMock()
-        action = AsyncMock(return_value="done")
         agent_data = {"mcp_servers": {
             "files": {"command": "python", "args": ["-m", "files_server"]}
         }}
 
         with patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime):
-            result = await _run_with_agent_runtime(agent_data, action)
+            with patch(
+                'miminions.cli.agent._execute_agent_action',
+                new=AsyncMock(return_value="done"),
+            ) as action:
+                result = await _run_with_agent_runtime(agent_data, "tool-list")
 
         assert result == "done"
         params = runtime.connect_mcp_server.await_args.args[1]
         assert params.command == "python"
         assert params.args == ["-m", "files_server"]
         runtime.load_tools_from_mcp_server.assert_awaited_once_with("files")
+        action.assert_awaited_once_with(runtime, "tool-list")
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
 
     @pytest.mark.asyncio
@@ -121,10 +126,15 @@ class TestAgentFunctions:
             with pytest.raises(Exception, match="Failed to load MCP server 'files'"):
                 await _run_with_agent_runtime(
                     {"mcp_servers": {"files": {"command": "python", "args": []}}},
-                    AsyncMock(),
+                    "tool-list",
                 )
 
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
+
+    @pytest.mark.asyncio
+    async def test_runtime_action_dispatch_rejects_unknown_operation(self):
+        with pytest.raises(ValueError, match="Unsupported agent runtime operation"):
+            await _execute_agent_action(MagicMock(), "unknown")
 
 
 class TestAgentCLI:
