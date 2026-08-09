@@ -263,7 +263,10 @@ class Minion:
             result = tool.execute(**args)
             if asyncio.iscoroutine(result):
                 return ToolExecutionResult.from_error(tool_name, "Async tool - use execute_async()")
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
             return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
 
@@ -277,7 +280,10 @@ class Minion:
         start = time.time()
         try:
             result = await tool.execute_async(**args)
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
             return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
 
