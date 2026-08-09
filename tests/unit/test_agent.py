@@ -17,7 +17,12 @@ from miminions.tools.schemas import (
 )
 
 
-async def test_agent_creation():
+def _cleanup(agent):
+    """Close an agent without requiring an async pytest plugin."""
+    asyncio.run(agent.cleanup())
+
+
+def test_agent_creation():
     """Test basic agent creation."""
     print("test_agent_creation")
     agent = create_minion("TestAgent", "A test agent")
@@ -30,12 +35,11 @@ async def test_agent_creation():
     assert state.has_memory == False
     assert "cli_run_command" in agent.list_tools()
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_registration():
+def test_tool_registration():
     """Test tool registration and schema extraction."""
     print("test_tool_registration")
     agent = create_minion("TestAgent")
@@ -62,12 +66,11 @@ async def test_tool_registration():
     assert "add" in tools
     assert "greet" in tools
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_execution():
+def test_tool_execution():
     """Test tool execution styles."""
     print("test_tool_execution")
     agent = create_minion("TestAgent")
@@ -96,12 +99,11 @@ async def test_tool_execution():
     result3 = agent.handle_tool_execution_request(request)
     assert result3.result == 14.0
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_error_handling():
+def test_error_handling():
     """Test error handling."""
     print("test_error_handling")
     agent = create_minion("TestAgent")
@@ -128,12 +130,11 @@ async def test_error_handling():
     except RuntimeError:
         pass
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_schema_json():
+def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
     agent = create_minion("TestAgent")
@@ -153,12 +154,11 @@ async def test_tool_schema_json():
     assert "query" in schema["parameters"]["required"]
     assert "max_results" not in schema["parameters"]["required"]
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_command_tool_schema_hides_permission_policy():
+def test_command_tool_schema_hides_permission_policy():
     """The model-facing command tool cannot provide its own policy."""
     agent = create_minion("TestAgent")
 
@@ -171,12 +171,29 @@ async def test_command_tool_schema_hides_permission_policy():
     assert "timeout" in properties
     assert "policy" not in properties
 
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_management():
+def test_command_tool_uses_subprocess_reported_timing():
+    """Command approval time is not included in the agent execution duration."""
+    agent = create_minion("TestAgent")
+
+    class TimedResult(dict):
+        execution_time_ms = 12.5
+
+    agent._tools["cli_run_command"].func = lambda **kwargs: TimedResult(
+        returncode=0,
+        stdout="",
+        stderr="",
+    )
+    result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.execution_time_ms == 12.5
+    _cleanup(agent)
+
+
+def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
     agent = create_minion("TestAgent")
@@ -192,12 +209,11 @@ async def test_tool_management():
     assert "math_add" not in agent.list_tools()
     assert agent.unregister_tool("nonexistent") == False
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def main():
+def main():
     print("Agent Tests")
     tests = [
         test_agent_creation,
@@ -206,14 +222,15 @@ async def main():
         test_error_handling,
         test_tool_schema_json,
         test_command_tool_schema_hides_permission_policy,
+        test_command_tool_uses_subprocess_reported_timing,
         test_tool_management,
     ]
     
     passed = 0
     for test in tests:
         try:
-            if await test():
-                passed += 1
+            test()
+            passed += 1
         except Exception as e:
             print(f"FAILED: {e}")
             import traceback
@@ -224,4 +241,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(main())
