@@ -5,6 +5,7 @@ from enum import Enum
 import shlex
 import subprocess
 import sys
+import time
 from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 import click
@@ -26,6 +27,14 @@ class PermissionDecision(str, Enum):
 
 
 CommandPrefix = Tuple[str, ...]
+
+
+class _TimedCommandResult(dict):
+    """Dictionary result carrying subprocess-only timing for the tool runner."""
+
+    def __init__(self, *args: Any, execution_time_ms: float, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.execution_time_ms = execution_time_ms
 
 
 @dataclass(frozen=True)
@@ -131,6 +140,7 @@ def cli_run_command(
         if not approved:
             raise PermissionError("Command execution was not approved")
 
+    execution_started = time.perf_counter()
     try:
         completed = subprocess.run(
             args,
@@ -141,13 +151,17 @@ def cli_run_command(
         )
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError(f"Command timed out after {timeout} seconds") from exc
+    execution_time_ms = (time.perf_counter() - execution_started) * 1000
 
-    return {
-        "command": command,
-        "returncode": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
-    }
+    return _TimedCommandResult(
+        {
+            "command": command,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        },
+        execution_time_ms=execution_time_ms,
+    )
 
 
 def cli_run_command_tool(command: str, timeout: int = 30) -> Dict[str, Any]:
