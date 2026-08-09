@@ -175,3 +175,24 @@ def test_invalid_permission_prefixes_are_rejected(kwargs):
     """Empty and non-string rule arguments are invalid."""
     with pytest.raises(ValueError):
         CommandPermissionPolicy(**kwargs)
+
+
+def test_command_result_reports_subprocess_only_timing():
+    """Permission prompt time is excluded from the reported tool duration."""
+    completed = subprocess.CompletedProcess(
+        args=[sys.executable, "--version"],
+        returncode=0,
+        stdout="Python test\n",
+        stderr="",
+    )
+
+    with patch("miminions.tools.default.click.confirm", return_value=True):
+        with patch("miminions.tools.default.subprocess.run", return_value=completed):
+            with patch(
+                "miminions.tools.default.time.perf_counter",
+                side_effect=[10.0, 10.025],
+            ):
+                result = cli_run_command(f"{sys.executable} --version")
+
+    assert result.execution_time_ms == pytest.approx(25.0)
+    assert "execution_time_ms" not in result
