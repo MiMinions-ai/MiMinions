@@ -23,8 +23,8 @@ miminions init --force
 
 `init` is an explicit, user-facing bootstrap/repair command over the same default setup logic used on first command run. The `--force` option re-runs bootstrap repair so missing default workspace template files are recreated without overwriting existing customized files.
 
-!!! warning "Authentication gating is provisional"
-    A `require_auth` decorator wraps the commands in `agent`, `task`, `knowledge`, `workspace`, and `execution`, but auth is **not actively enforced today** — treat the gating as **planned**, the same as the `workflow` group below. The hooks exist in the code so the behavior can be turned on later, but don't rely on commands being blocked when signed out. The `chat` and `prompt` commands are not wrapped at all.
+!!! warning "Authentication gating is uneven"
+    A `require_auth` decorator gates the commands in `task`, `knowledge`, `workspace`, and `execution`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat` and `prompt` commands are not wrapped at all — don't rely on those being blocked when signed out.
 
 ## Command groups at a glance
 

@@ -1,6 +1,6 @@
 """Unit tests for session memory distillation pipeline."""
 
-import logging
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -28,6 +28,14 @@ class _FakeSQLiteMemory:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
+
+
+def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
+    monkeypatch.setitem(
+        sys.modules,
+        "miminions.memory.sqlite",
+        SimpleNamespace(SQLiteMemory=sqlite_memory_cls),
+    )
 
 
 def test_distillation_result_defaults():
