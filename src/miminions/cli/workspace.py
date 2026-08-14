@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority
+from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority, default_workspace_root
 from miminions.workspace_fs import init_workspace
 
 
@@ -26,11 +26,28 @@ def workspace_cli():
 
 
 @workspace_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def list_workspaces():
+def list_workspaces(as_json):
     """List all workspaces."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
+
+    if as_json:
+        payload = []
+        for workspace_id, workspace in workspaces.items():
+            payload.append(
+                {
+                    "id": workspace_id,
+                    "name": workspace.name,
+                    "description": workspace.description,
+                    "created_at": workspace.created_at,
+                    "updated_at": workspace.updated_at,
+                    "network_summary": workspace.get_network_summary(),
+                }
+            )
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not workspaces:
         click.echo("No workspaces configured.")
@@ -80,7 +97,7 @@ def add_workspace(name, description, sample, init_files, root_path):
         if root_path:
             rp = Path(root_path).expanduser().resolve()
         else:
-            rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+            rp = default_workspace_root(workspace.id)
         result = init_workspace(rp)
         workspace.root_path = str(rp)
         click.echo(f"Initialized workspace files at: {workspace.root_path}")
@@ -101,8 +118,9 @@ def add_workspace(name, description, sample, init_files, root_path):
 
 @workspace_cli.command("show")
 @click.argument("workspace_id")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def show_workspace(workspace_id):
+def show_workspace(workspace_id, as_json):
     """Show workspace details."""
     manager = get_workspace_manager()
     workspaces = manager.load_workspaces()
@@ -115,6 +133,12 @@ def show_workspace(workspace_id):
     
     if not workspace:
         click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    if as_json:
+        payload = workspace.to_dict()
+        payload["network_summary"] = workspace.get_network_summary()
+        click.echo(json.dumps(payload, indent=2))
         return
     
     click.echo(f"Workspace: {workspace.name}")
@@ -207,7 +231,7 @@ def update_workspace(workspace_id, name, description):
     workspace.updated_at = datetime.now(timezone.utc).isoformat()
     
     manager.save_workspaces(workspaces)
-    click.echo(f"Workspace updated successfully.")
+    click.echo("Workspace updated successfully.")
 
 
 @workspace_cli.command("remove")
@@ -250,11 +274,9 @@ def set_state(workspace_id, key, value):
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:
@@ -303,11 +325,9 @@ def add_rule(workspace_id, name, description, priority, enabled, condition, acti
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:
@@ -345,11 +365,9 @@ def remove_rule(workspace_id, rule_id_or_name):
     workspaces = manager.load_workspaces()
     
     workspace = None
-    workspace_key = None
     for ws_id, ws in workspaces.items():
         if ws_id.startswith(workspace_id) or ws.name == workspace_id:
             workspace = ws
-            workspace_key = ws_id
             break
     
     if not workspace:
@@ -402,7 +420,7 @@ def init_files_workspace(workspace_id, custom_path):
     if custom_path:
         rp = Path(custom_path).expanduser().resolve()
     else:
-        rp = (Path("~/.miminions/workspaces").expanduser() / f"ws_{workspace.id}").resolve()
+        rp = default_workspace_root(workspace.id)
 
     result = init_workspace(rp)
     workspace.root_path = str(rp)

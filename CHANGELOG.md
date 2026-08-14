@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-The latest published release is **0.2.2** (requires Python ≥ 3.12). Install with
+The latest published release is **0.3.0** (requires Python ≥ 3.12). Install with
 `pip install miminions`, or `pip install miminions[sqlite]` for SQLite vector memory.
 
 ## [Unreleased]
@@ -14,9 +14,17 @@ Work in progress toward the next release.
 
 ### Added
 
-- **Click-based CLI** (`miminions` / `python -m miminions`) with eight command
+- TBD
+
+## [0.3.0]
+
+Latest published release on PyPI.
+
+### Added
+
+- **Click-based CLI** (`miminions` / `python -m miminions`) with nine command
   groups: `auth`, `agent`, `task`, `knowledge`, `workspace`, `execution`,
-  `chat`, and `prompt`. State persists locally under `~/.miminions/`.
+  `chat`, `gateway`, and `prompt`. State persists locally under `~/.miminions/`.
 - **First-run bootstrap.** `ensure_default_setup` idempotently creates a
   `default` workspace and a default agent under `~/.miminions/`, so the CLI works
   out of the box.
@@ -66,7 +74,7 @@ Work in progress toward the next release.
 > `miminions agent run` is a no-op placeholder. Both are documented as planned,
 > not present.
 
-## [0.2.2]
+## [0.2.2] - 2026-04-02
 
 Current published release on PyPI.
 
@@ -101,8 +109,9 @@ Initial release.
 ## Version History
 
 | Version | Notes |
-|---------|-------|
-| **Unreleased** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
+| ------- | ----- |
+| **Unreleased** | TBD |
+| **0.3.0** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
 | **0.2.2** | Current published release — agent, vector memory, tools, local data |
 | **0.1.0** | Initial release with core functionality |
 

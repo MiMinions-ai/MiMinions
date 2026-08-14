@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from miminions.agent import (
-    Minion,
     create_minion,
 )
 from miminions.tools.schemas import (
@@ -16,6 +15,7 @@ from miminions.tools.schemas import (
     ExecutionStatus,
     ParameterType,
 )
+from miminions.tools.mcp_adapter import MCPTool
 
 
 def _cleanup(agent):
@@ -33,7 +33,7 @@ def test_agent_creation():
     
     state = agent.get_state()
     assert state.tool_count == 1
-    assert state.has_memory == False
+    assert state.has_memory is False
     assert "cli_run_command" in agent.list_tools()
     
     _cleanup(agent)
@@ -61,7 +61,7 @@ def test_tool_registration():
     # Verify schema extraction
     a_param = next(p for p in add_def.schema_def.parameters if p.name == "a")
     assert a_param.type == ParameterType.INTEGER
-    assert a_param.required == True
+    assert a_param.required is True
     
     tools = agent.list_tools()
     assert "add" in tools
@@ -219,15 +219,46 @@ def test_tool_management():
     math_tools = agent.search_tools("math")
     assert len(math_tools) == 2
     
-    assert agent.unregister_tool("math_add") == True
+    assert agent.unregister_tool("math_add") is True
     assert "math_add" not in agent.list_tools()
-    assert agent.unregister_tool("nonexistent") == False
+    assert agent.unregister_tool("nonexistent") is False
     
     _cleanup(agent)
     print("PASSED")
 
 
-def main():
+async def test_async_generic_tool_registration_uses_async_execution_and_schema():
+    """Async-backed GenericTools such as MCP tools must not use sync run()."""
+    agent = create_minion("TestAgent")
+
+    async def greet(**kwargs):
+        return f"Hello, {kwargs['name']}!"
+
+    tool = MCPTool(
+        name="greet",
+        description="Return a greeting.",
+        func=greet,
+        mcp_schema={
+            "inputSchema": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+    )
+    agent.add_tool(tool)
+
+    result = await agent.execute_async("greet", arguments={"name": "MiMinions"})
+
+    assert result.status == ExecutionStatus.SUCCESS
+    assert result.result == "Hello, MiMinions!"
+    info = agent.get_tool_info("greet")
+    assert info["parameters"]["properties"]["name"]["type"] == "string"
+    assert "name" in info["parameters"]["required"]
+    await agent.cleanup()
+
+
+async def main():
     print("Agent Tests")
     tests = [
         test_agent_creation,

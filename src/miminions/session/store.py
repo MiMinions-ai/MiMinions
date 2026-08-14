@@ -10,6 +10,35 @@ from miminions.workspace_fs.layout import WorkspaceLayout
 
 JsonDict = Dict[str, Any]
 
+DEFAULT_MAX_HISTORY_MESSAGES = 40
+
+
+def trim_message_history(
+    messages: list, max_messages: int = DEFAULT_MAX_HISTORY_MESSAGES
+) -> list:
+    """Cap pydantic_ai message history without breaking request/response pairing.
+
+    Cuts only at a turn boundary — a ``ModelRequest`` containing a
+    ``UserPromptPart`` — so the result never starts mid-tool-exchange (a
+    ``ModelRequest`` holding only a ``ToolReturnPart`` whose matching tool
+    call was dropped would be rejected by providers). If no clean boundary
+    exists within the tail, the history is returned unchanged rather than
+    corrupted.
+    """
+    if max_messages <= 0 or len(messages) <= max_messages:
+        return messages
+
+    from pydantic_ai.messages import ModelRequest, UserPromptPart
+
+    for i in range(len(messages) - max_messages, len(messages)):
+        message = messages[i]
+        if isinstance(message, ModelRequest) and any(
+            isinstance(part, UserPromptPart) for part in message.parts
+        ):
+            return messages[i:]
+    return messages
+
+
 def create_session_id() -> str:
     """Create a readable unique session id.
 

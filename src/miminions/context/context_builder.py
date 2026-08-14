@@ -1,21 +1,17 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from miminions.core.paths import get_global_memory_db_path
 from miminions.memory.md_store import read_memory
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
 
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
+logger = logging.getLogger(__name__)
 
 
 def _safe_get(obj: Any, name: str, default: Any = None) -> Any:
@@ -41,6 +37,7 @@ def _normalize_mapping(obj: Any) -> dict[str, Any]:
         try:
             return asdict(obj)
         except Exception:
+            logger.debug("Could not convert dataclass %r to dict", type(obj), exc_info=True)
             return {}
 
     if hasattr(obj, "__dict__"):
@@ -143,13 +140,15 @@ def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[s
     try:
         from miminions.memory.sqlite import SQLiteMemory
 
-        mem = SQLiteMemory(db_path=path)
-        try:
+        with SQLiteMemory(db_path=path) as mem:
             rows = mem.date_time_search(top_k=top_k)
             return [r["text"] for r in rows if r.get("text")]
-        finally:
-            mem.close()
     except Exception:
+        logger.warning(
+            "Could not fetch global insights from %s; continuing without them.",
+            path,
+            exc_info=True,
+        )
         return []
 
 

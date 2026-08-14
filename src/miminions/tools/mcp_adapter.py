@@ -4,6 +4,7 @@ MCP Tool Adapter
 Connects to MCP servers and converts their tools into MiMinions GenericTool objects.
 """
 
+import asyncio
 from typing import Any, Dict, List
 
 from mcp import ClientSession, StdioServerParameters
@@ -48,35 +49,58 @@ class MCPToolAdapter:
 
     def __init__(self):
         self.sessions: Dict[str, ClientSession] = {}
-        self.stdio_contexts: Dict[str, Any] = {}
+        self._connection_tasks: Dict[str, asyncio.Task] = {}
+        self._stop_events: Dict[str, asyncio.Event] = {}
 
     async def connect_to_server(
         self, server_name: str, server_params: StdioServerParameters
     ) -> None:
         """Connect to an MCP server."""
-        stdio_ctx = stdio_client(server_params)
-        read, write = await stdio_ctx.__aenter__()
-        self.stdio_contexts[server_name] = stdio_ctx
+        if server_name in self._connection_tasks:
+            raise ValueError(f"Server '{server_name}' already connected")
 
-        session = ClientSession(read, write)
-        await session.__aenter__()
-        await session.initialize()
+        ready = asyncio.get_running_loop().create_future()
+        stop_event = asyncio.Event()
 
-        self.sessions[server_name] = session
+        async def run_connection() -> None:
+            try:
+                async with stdio_client(server_params) as (read, write):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        self.sessions[server_name] = session
+                        ready.set_result(None)
+                        await stop_event.wait()
+            except BaseException as exc:
+                if not ready.done():
+                    ready.set_exception(exc)
+                else:
+                    raise
+            finally:
+                self.sessions.pop(server_name, None)
+
+        task = asyncio.create_task(run_connection())
+        self._connection_tasks[server_name] = task
+        self._stop_events[server_name] = stop_event
+        try:
+            await ready
+        except BaseException:
+            self._connection_tasks.pop(server_name, None)
+            self._stop_events.pop(server_name, None)
+            await task
+            raise
 
     async def disconnect_server(self, server_name: str) -> None:
         """Disconnect from a specific MCP server."""
-        session = self.sessions.pop(server_name, None)
-        stdio_ctx = self.stdio_contexts.pop(server_name, None)
-
-        if session:
-            await session.__aexit__(None, None, None)
-        if stdio_ctx:
-            await stdio_ctx.__aexit__(None, None, None)
+        stop_event = self._stop_events.pop(server_name, None)
+        task = self._connection_tasks.pop(server_name, None)
+        if stop_event:
+            stop_event.set()
+        if task:
+            await task
 
     async def close_all_connections(self) -> None:
         """Close all MCP server connections."""
-        for server_name in list(self.sessions.keys()):
+        for server_name in list(self._connection_tasks):
             await self.disconnect_server(server_name)
 
     async def get_tools_from_server(self, server_name: str) -> List[Any]:

@@ -6,36 +6,17 @@ seeds a default agent, and records both in config.json so commands can
 fall back to them when no explicit target is given.
 """
 
-import json
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from miminions.core.persistence import load_json, save_json
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
+from miminions.utils.json_io import load_json, save_json
 from miminions.workspace_fs import init_workspace
 
 DEFAULT_WORKSPACE_NAME = "default"
 DEFAULT_AGENT_ID = "default"
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    """Load a JSON file, returning {} if missing and failing clearly if corrupt."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
-
-
-def _save_json(path: Path, data: dict[str, Any]) -> None:
-    """Write JSON atomically so an interrupted write can't leave a corrupt file."""
-    tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    os.replace(tmp, path)
 
 
 def _ensure_default_workspace(config_dir: Path) -> str:
@@ -65,7 +46,7 @@ def _ensure_default_workspace(config_dir: Path) -> str:
 def _ensure_default_agent(config_dir: Path) -> str:
     """Seed a default agent record if no agents exist; return the default agent id."""
     agents_file = config_dir / "agents.json"
-    agents = _load_json(agents_file)
+    agents = load_json(agents_file)
     if agents:
         return DEFAULT_AGENT_ID if DEFAULT_AGENT_ID in agents else next(iter(agents))
 
@@ -79,26 +60,29 @@ def _ensure_default_agent(config_dir: Path) -> str:
         "goal": None,
         "created_at": datetime.now(UTC).isoformat(),
     }
-    _save_json(agents_file, agents)
+    save_json(agents_file, agents)
     return DEFAULT_AGENT_ID
 
 
-def ensure_default_setup(config_dir: Path) -> dict[str, Any]:
+def ensure_default_setup(config_dir: Path, force: bool = False) -> dict[str, Any]:
     """
-    Ensure a new user has a working default setup.
+    Ensure a user has a working default setup.
 
     On first run this creates the default workspace (prompt, skills, memory,
     sessions, and data templates included), seeds a default agent, and records
     both in config.json. Later runs cost a single config read.
+
+    If force=True, bootstrap/repair logic is re-run even when defaults already
+    exist so missing workspace template files can be restored.
     """
     config_file = config_dir / "config.json"
-    config = _load_json(config_file)
+    config = load_json(config_file)
 
-    if config.get("default_workspace"):
+    if config.get("default_workspace") and not force:
         return config
 
     config_dir.mkdir(parents=True, exist_ok=True)
     config["default_workspace"] = _ensure_default_workspace(config_dir)
     config["default_agent"] = _ensure_default_agent(config_dir)
-    _save_json(config_file, config)
+    save_json(config_file, config)
     return config

@@ -7,8 +7,10 @@ Run:
   pytest -vv -s tests/test_mcp_adapter.py
 """
 
+import asyncio
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from miminions.tools.mcp_adapter import MCPToolAdapter, MCPTool
 
@@ -185,3 +187,33 @@ def test_mcp_tool_run_raises_async_only_runtime_error():
 
     with pytest.raises(RuntimeError, match="async-only"):
         tool.run(x=1)
+
+
+@pytest.mark.asyncio
+async def test_connection_contexts_open_and_close_in_their_owner_task():
+    adapter = MCPToolAdapter()
+    owner_tasks = []
+
+    stdio_context = MagicMock()
+    stdio_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+    stdio_context.__aexit__ = AsyncMock(
+        side_effect=lambda *args: owner_tasks.append(asyncio.current_task())
+    )
+    session = MagicMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(
+        side_effect=lambda *args: owner_tasks.append(asyncio.current_task())
+    )
+    session.initialize = AsyncMock(
+        side_effect=lambda: owner_tasks.append(asyncio.current_task())
+    )
+
+    with patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context):
+        with patch('miminions.tools.mcp_adapter.ClientSession', return_value=session):
+            await adapter.connect_to_server("serverA", MagicMock())
+            await adapter.close_all_connections()
+
+    assert len(owner_tasks) == 3
+    assert len(set(owner_tasks)) == 1
+    assert adapter.sessions == {}
+    assert adapter._connection_tasks == {}

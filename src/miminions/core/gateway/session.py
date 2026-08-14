@@ -246,6 +246,7 @@ class SessionManager:
                                 "path": str(path),
                             })
             except Exception:
+                logger.warning("Skipping unreadable session file %s", path, exc_info=True)
                 continue
 
         return sorted(
