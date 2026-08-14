@@ -112,10 +112,12 @@ from pydantic_ai.models.openai import OpenAIModel
 agent = create_minion("MyAgent", model=OpenAIModel("gpt-4o"))
 ```
 
-!!! warning "Auth happens at call time"
-    A `Minion` builds fine without a key, but `await agent.run(...)` will raise
-    an auth/network error from the provider if the relevant key is missing. Use
-    `provider="test"` to exercise your tools and wiring without any credentials.
+!!! warning "When missing keys surface"
+    With the default `openrouter` provider, a missing `OPENROUTER_API_KEY` fails
+    **fast**: `create_minion(...)` raises `ValueError` at construction. The other
+    real providers build fine without a key and instead raise an auth/network
+    error at `await agent.run(...)` time. Use `provider="test"` to exercise your
+    tools and wiring without any credentials.
 
 Next steps from here: attach [Memory](modules/memory.md), wire in
 [Workspaces](modules/workspaces.md) and [Context](modules/context.md), or expose
@@ -126,7 +128,8 @@ external tools over [MCP](modules/agent.md). See the
 
 Installing the package registers a `miminions` console command (you can also run
 `python -m miminions`). On first run it bootstraps a `default` workspace and a
-default agent under `~/.miminions/`, where all CLI state persists.
+default agent under `~/.miminions/`, where all CLI state persists (set
+`MIMINIONS_HOME` to relocate it).
 
 ```bash
 miminions --help
@@ -138,8 +141,8 @@ Registered command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`,
 ### Chat
 
 Start an interactive async chat session. It runs against the default workspace
-unless you pass `--workspace`, and each reply is printed when the Minion finishes
-responding.
+unless you pass `--workspace`, and each reply streams to the terminal as it is
+generated.
 
 ```bash
 # Interactive session against the default workspace
@@ -150,6 +153,9 @@ miminions chat start --workspace "Demo"
 
 # Resume a prior session — its history is reloaded into LLM context
 miminions chat start --session <session_id>
+
+# Show tool calls and per-turn token usage / latency
+miminions chat start --verbose
 ```
 
 Type `/exit` or `/quit` to end the session.
@@ -165,6 +171,82 @@ miminions prompt ask "Summarize the project facts in this workspace"
 # Target a workspace and/or session explicitly
 miminions prompt ask --workspace "Demo" "What rules are active here?"
 ```
+
+### Common Use Cases
+
+#### 1. Writing and editing content
+
+**Fit:** Strong
+
+Use `prompt ask` for one-off drafts and `chat start` for iterative editing.
+
+    # One-off draft
+    miminions prompt ask "Draft a launch update for our weekly team newsletter."
+
+    # Iterative editing session
+    miminions chat start
+
+#### 2. Coding support
+
+**Fit:** Strong
+
+Use chat/prompt for code generation, bug explanation, and refactor suggestions.
+Optionally create a coding-focused agent for a reusable setup.
+
+    # Ask for code help directly
+    miminions prompt ask "Explain this stack trace and suggest a fix strategy."
+
+    # Interactive coding loop
+    miminions chat start
+
+    # Optional: create a dedicated coding agent
+    miminions agent add
+
+#### 3. Research and summarization
+
+**Fit:** Strong
+
+Use chat/prompt to summarize text, compare options, and extract key points.
+
+    miminions prompt ask "Summarize the key tradeoffs between option A and option B."
+    miminions chat start
+
+#### 4. Customer support automation
+
+**Fit:** Partial
+
+MiMinions is strong for drafting replies and FAQ content. Full ticket routing
+and automation typically needs extra workflow/tool integration.
+
+    # Draft support replies or FAQ content
+    miminions prompt ask "Draft a friendly reply for a delayed order complaint."
+
+    # Add workflow/tool integration for deeper automation
+    miminions execution --help
+
+#### 5. Personal productivity
+
+**Fit:** Strong
+
+Use `task` commands for planning/prioritization, `knowledge` for notes, and
+`chat` for ongoing planning.
+
+    miminions task --help
+    miminions knowledge --help
+    miminions chat start
+
+#### 6. Data analysis help
+
+**Fit:** Partial to strong
+
+MiMinions is strong for explanation, query drafting, and insight summaries.
+Deeper automated analysis depends on connecting data/tools through execution.
+
+    # Ask for analysis framing or query drafting
+    miminions prompt ask "Draft SQL to compare weekly active users month over month."
+
+    # Extend with custom tooling/data integration
+    miminions execution --help
 
 ### Agents
 

@@ -192,13 +192,56 @@ def _register_default_cli_tools(runtime_agent):
     runtime_agent.register_tool("cli_now_utc", "Get current UTC timestamp", cli_now_utc)
 
 
-def _get_agent_record_or_error(agent_id):
-    """Load one persisted CLI agent record by id with user-facing errors."""
+def _resolve_agent_id(agent_id: str | None) -> str | None:
+    """Return agent_id, falling back to default_agent from config when None."""
+    if agent_id:
+        return agent_id
+    default = get_config().get("default_agent")
+    if not default:
+        raise click.ClickException(
+            "No agent id given and no default_agent configured. "
+            "Pass an agent id or run 'miminions agent add' first."
+        )
+    return default
+
+
+def _get_agent_record_or_error(agent_id: str | None):
+    """Resolve and load one persisted CLI agent record with user-facing errors."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return None
     return agents[agent_id]
+
+
+def _resolve_agent_ref_or_error(agent_ref: str, agents: dict) -> str | None:
+    """Resolve an agent by exact id, id prefix, or exact name."""
+    if agent_ref in agents:
+        return agent_ref
+
+    matches = []
+
+    for current_id in agents:
+        if str(current_id).startswith(agent_ref):
+            matches.append(current_id)
+
+    for current_id, data in agents.items():
+        if str(data.get("name", "")) == agent_ref and current_id not in matches:
+            matches.append(current_id)
+
+    if not matches:
+        click.echo(f"Agent '{agent_ref}' not found.", err=True)
+        return None
+
+    if len(matches) > 1:
+        click.echo(
+            f"Agent reference '{agent_ref}' is ambiguous: {', '.join(matches)}",
+            err=True,
+        )
+        return None
+
+    return matches[0]
 
 
 def _extract_first_two_ints(text):
@@ -246,10 +289,31 @@ def agent_cli():
 
 
 @agent_cli.command("list")
+<<<<<<< HEAD
 @require_auth
 def list_agents():
+=======
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+@require_auth()
+def list_agents(as_json):
+>>>>>>> upstream/development
     """List all agents."""
     agents = load_agents()
+
+    if as_json:
+        payload = [
+            {
+                "id": agent_id,
+                "name": agent_data.get("name", agent_id),
+                "description": agent_data.get("description", "No description"),
+                "status": agent_data.get("status", "inactive"),
+                "type": agent_data.get("type"),
+                "goal": agent_data.get("goal"),
+            }
+            for agent_id, agent_data in agents.items()
+        ]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not agents:
         click.echo("No agents configured.")
@@ -314,6 +378,49 @@ def update_agent(agent_id, name, description, type):
     
     save_agents(agents)
     click.echo(f"Agent '{agent_id}' updated successfully")
+
+
+@agent_cli.command("show")
+@click.argument("agent_ref")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+@require_auth()
+def show_agent(agent_ref, as_json):
+    """Show one agent by id, id prefix, or exact name."""
+    agents = load_agents()
+    if not agents:
+        click.echo("No agents configured.")
+        return
+
+    agent_id = _resolve_agent_ref_or_error(agent_ref, agents)
+    if not agent_id:
+        return
+
+    agent = agents[agent_id]
+    payload = {
+        "id": agent_id,
+        "name": agent.get("name", agent_id),
+        "description": agent.get("description", "No description"),
+        "type": agent.get("type", "unknown"),
+        "status": agent.get("status", "inactive"),
+        "goal": agent.get("goal"),
+        "base_agent": agent.get("base_agent", "miminions.agent.Minion"),
+        "mode": agent.get("mode", "cli_extension"),
+        "created_at": agent.get("created_at", ""),
+    }
+
+    if as_json:
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    click.echo(f"Agent: {agent.get('name', agent_id)}")
+    click.echo(f"ID: {agent_id}")
+    click.echo(f"Description: {agent.get('description', 'No description')}")
+    click.echo(f"Type: {agent.get('type', 'unknown')}")
+    click.echo(f"Status: {agent.get('status', 'inactive')}")
+    click.echo(f"Goal: {agent.get('goal')}")
+    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.agent.Minion')}")
+    click.echo(f"Mode: {agent.get('mode', 'cli_extension')}")
+    click.echo(f"Created: {agent.get('created_at', '')}")
 
 
 @agent_cli.command("remove")
@@ -396,34 +503,36 @@ def remove_mcp_server(agent_id, server_name):
 
 
 @agent_cli.command("set-goal")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--goal", prompt="Goal", help="Goal for the agent")
 @require_auth
 def set_goal(agent_id, goal):
-    """Set a goal for an agent."""
+    """Set a goal for an agent (defaults to the configured default agent)."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
-    
+
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
-    
+
     agents[agent_id]["goal"] = goal
     save_agents(agents)
     click.echo(f"Goal set for agent '{agent_id}': {goal}")
 
 
 @agent_cli.command("run")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
 @require_auth
 def run_agent(agent_id, async_run):
-    """Run an agent."""
+    """Run an agent (defaults to the configured default agent)."""
+    agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
-    
+
     if agent_id not in agents:
         click.echo(f"Agent '{agent_id}' not found.", err=True)
         return
-    
+
     agent = agents[agent_id]
     
     if not agent.get("goal"):
@@ -447,11 +556,11 @@ def run_agent(agent_id, async_run):
 
 
 @agent_cli.command("ask")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.option("--prompt", required=True, help="Prompt to send to the agent.")
 @require_auth
 def ask_agent(agent_id, prompt):
-    """Ask an agent for a one-off response without mutating its stored goal."""
+    """Ask an agent for a one-off response (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -464,10 +573,15 @@ def ask_agent(agent_id, prompt):
 
 
 @agent_cli.command("tool-list")
+<<<<<<< HEAD
 @click.argument("agent_id")
 @require_auth
+=======
+@click.argument("agent_id", required=False, default=None)
+@require_auth()
+>>>>>>> upstream/development
 def list_agent_tools(agent_id):
-    """List available tools for an agent runtime."""
+    """List available tools for an agent runtime (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -484,11 +598,11 @@ def list_agent_tools(agent_id):
 
 
 @agent_cli.command("tool-info")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name")
 @require_auth
 def show_agent_tool_info(agent_id, tool_name):
-    """Show detailed tool information for one tool."""
+    """Show detailed tool information for one tool (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -509,11 +623,11 @@ def show_agent_tool_info(agent_id, tool_name):
 
 
 @agent_cli.command("tool-search")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("query")
 @require_auth
 def search_agent_tools(agent_id, query):
-    """Search tools by name or description."""
+    """Search tools by name or description (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
         return
@@ -531,7 +645,7 @@ def search_agent_tools(agent_id, query):
 
 
 @agent_cli.command("tool-run")
-@click.argument("agent_id")
+@click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name")
 @click.option(
     "--arguments",
