@@ -28,6 +28,7 @@ python -m miminions --help
 -   :material-book-open-variant: **`knowledge`** — versioned knowledge entries
 -   :material-graph-outline: **`workspace`** — workspaces, rules, and on-disk scaffolding
 -   :material-play-circle: **`execution`** — live tool-execution sessions and interaction traces
+-   :material-lan: **`gateway`** — local gateway runtime, cron jobs, and gateway sessions
 
 </div>
 
@@ -349,6 +350,33 @@ miminions execution session stop
 
 !!! note "Tool modules"
     `add-tool` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `add-tool` at the file.
+
+---
+
+## `gateway`
+
+Manage the local gateway runtime for a workspace, plus gateway cron jobs and gateway-specific sessions. The command group is registered, but it still exposes local runtime controls rather than hosted channel integrations.
+
+```bash
+miminions gateway status --workspace Demo
+miminions gateway run --workspace Demo
+miminions gateway cron list --workspace Demo
+miminions gateway sessions list --workspace Demo
+```
+
+| Command | Options | Description |
+| --- | --- | --- |
+| `status` | `--workspace` | Show workspace gateway paths, session count, and cron job count. |
+| `run` | `--workspace`, `--no-cron`, `--log-level` | Start the local gateway runtime until interrupted. |
+| `cron list` | `--workspace`, `--all` | List gateway cron jobs. |
+| `cron add-every` | `--workspace`, `--name`, interval option, `--message` | Add a recurring interval job. |
+| `cron add-at` | `--workspace`, `--name`, `--at`, `--message` | Add a one-shot ISO-datetime job. |
+| `cron add-cron` | `--workspace`, `--name`, `--expr`, `--tz`, `--message` | Add a cron-expression job; requires `croniter`. |
+| `cron remove` / `enable` / `disable` / `run` | `--workspace` plus job id | Manage or trigger an existing cron job. |
+| `sessions list` / `show` / `delete` | `--workspace` plus session options | Inspect or delete gateway sessions. |
+
+!!! note "Workspace root required"
+    Gateway commands resolve an existing workspace and require it to have a `root_path`. Run `miminions workspace init-files <workspace>` first if needed.
 
 ---
 

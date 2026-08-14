@@ -1,12 +1,10 @@
 """Unit tests for gateway.channel module."""
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
 from dataclasses import dataclass
 
 from miminions.core.gateway.bus import MessageBus
 from miminions.core.gateway.channel import BaseChannel, ChannelManager
-from miminions.core.gateway.events import InboundMessage, OutboundMessage
+from miminions.core.gateway.events import OutboundMessage
 
 
 # ── Helpers ──────────────────────────────────────────────────────────

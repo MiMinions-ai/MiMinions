@@ -22,7 +22,7 @@ from ..utils.chunker import TextChunker
 
 from miminions.agent.models import AgentConfig, AgentState
 from miminions.tools.schemas import (
-    ExecutionStatus, ParameterType, ToolDefinition, ToolExecutionRequest,
+    ParameterType, ToolDefinition, ToolExecutionRequest,
     ToolExecutionResult, ToolParameter, ToolSchema,
 )
 from miminions.memory.types import MemoryEntry, MemoryQueryResult

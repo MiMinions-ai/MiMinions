@@ -5,8 +5,9 @@ Knowledge management commands for MiMinions CLI.
 import click
 import json
 import uuid
-from pathlib import Path
+from datetime import datetime, timezone
 from .auth import get_config_dir
+from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 
 
@@ -17,19 +18,12 @@ def get_knowledge_file():
 
 def load_knowledge():
     """Load knowledge from configuration."""
-    knowledge_file = get_knowledge_file()
-    if not knowledge_file.exists():
-        return {}
-    
-    with open(knowledge_file, "r") as f:
-        return json.load(f)
+    return load_json(get_knowledge_file())
 
 
 def save_knowledge(knowledge):
     """Save knowledge to configuration."""
-    knowledge_file = get_knowledge_file()
-    with open(knowledge_file, "w") as f:
-        json.dump(knowledge, f, indent=2)
+    save_json(get_knowledge_file(), knowledge)
 
 
 @click.group()
@@ -52,7 +46,7 @@ def list_knowledge():
     for entry_id, entry_data in knowledge.items():
         title = entry_data.get("title", entry_id)
         category = entry_data.get("category", "general")
-        version = entry_data.get("version", "1.0")
+        version = entry_data.get("version", "1")
         status = entry_data.get("status", "active")
         click.echo(f"  {entry_id}: {title} (v{version}, {category}, {status})")
 
@@ -72,21 +66,22 @@ def add_knowledge(title, content, category, tags):
     tag_list = []
     if tags:
         tag_list = [tag.strip() for tag in tags.split(",")]
-    
+
+    now = datetime.now(timezone.utc).isoformat()
     knowledge[entry_id] = {
         "title": title,
         "content": content,
         "category": category,
         "tags": tag_list,
-        "version": "1.0",
+        "version": "1",
         "status": "active",
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": now,
         "updated_at": None,
         "versions": [
             {
-                "version": "1.0",
+                "version": "1",
                 "content": content,
-                "timestamp": click.get_current_context().meta.get("timestamp", "")
+                "timestamp": now
             }
         ]
     }
@@ -113,13 +108,14 @@ def update_knowledge(entry_id, title, content, category, tags):
     entry = knowledge[entry_id]
     
     if content and content != entry["content"]:
-        current_version = float(entry["version"])
-        new_version = f"{current_version + 0.1:.1f}"
-        
+        # Integer revisions avoid float rounding (e.g. 1.9 + 0.1 -> 2.0).
+        # int(float(...)) tolerates any legacy "1.0"-style versions on disk.
+        new_version = str(int(float(entry["version"])) + 1)
+
         entry["versions"].append({
             "version": new_version,
             "content": content,
-            "timestamp": click.get_current_context().meta.get("timestamp", "")
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         
         entry["version"] = new_version
@@ -132,7 +128,7 @@ def update_knowledge(entry_id, title, content, category, tags):
     if tags:
         entry["tags"] = [tag.strip() for tag in tags.split(",")]
     
-    entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    entry["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_knowledge(knowledge)
     click.echo(f"Knowledge entry '{entry_id}' updated successfully")
@@ -181,7 +177,7 @@ def revert_knowledge(entry_id, version):
     
     entry["content"] = target_version["content"]
     entry["version"] = target_version["version"]
-    entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    entry["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_knowledge(knowledge)
     click.echo(f"Knowledge entry '{entry_id}' reverted to version {version}")
@@ -223,7 +219,7 @@ def customize_knowledge(entry_id, template, format):
     
     if template:
         entry["template"] = template
-        entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+        entry["updated_at"] = datetime.now(timezone.utc).isoformat()
         save_knowledge(knowledge)
         click.echo(f"Template '{template}' applied to knowledge entry '{entry_id}'")
     

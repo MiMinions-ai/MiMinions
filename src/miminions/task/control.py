@@ -63,7 +63,7 @@ class TaskRuntime:
         try:
             self.init_loop()
             return self.loop.run_until_complete(async_func(*args, **kwargs))
-        except:
+        except Exception:
             # Close the existing loop if open
             if self.loop is not None:
                 self.terminate_loop()
@@ -93,7 +93,7 @@ class TaskRuntime:
             try:
                 self.tasks[name].result = task.result()
                 self.tasks[name].status = TaskStatus.COMPLETED
-            except Exception as e:
+            except Exception:
                 self.tasks[name].status = TaskStatus.FAILED
 
         return {

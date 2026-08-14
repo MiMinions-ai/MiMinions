@@ -2,11 +2,9 @@
 Unit tests for the local data management system.
 """
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from miminions.data.local import (
     LocalDataManager, 

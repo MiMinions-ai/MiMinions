@@ -7,7 +7,6 @@ including metadata extraction and content processing.
 
 import csv
 import mimetypes
-import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
@@ -281,7 +280,7 @@ class CSVFileHandler(FileHandler):
                     if not any(char.isdigit() for char in second):
                         has_header = False
                         break
-        except:
+        except Exception:
             has_header = False
         
         return has_header

@@ -7,14 +7,9 @@ import os
 import json
 import signal
 import time
-from pathlib import Path
 
-
-def get_config_dir():
-    """Get the configuration directory for MiMinions."""
-    config_dir = Path.home() / ".miminions"
-    config_dir.mkdir(exist_ok=True)
-    return config_dir
+from miminions.core.paths import get_config_dir
+from .persistence import load_json, save_json
 
 
 def get_config_file():
@@ -23,23 +18,19 @@ def get_config_file():
 
 
 def get_config():
-    """Get the configuration settings."""
-    config_file = get_config_file()
-    if not config_file.exists():
-        return {
-            "public_access": False,
-            "auth_timeout": 30
-        }
-    
-    with open(config_file, "r") as f:
-        return json.load(f)
+    """Get the configuration settings.
+
+    Returns the raw file contents (or {} if the file is missing) so callers
+    that mutate-and-save don't accidentally drop unrelated keys such as the
+    bootstrap-written ``default_workspace`` / ``default_agent``. Callers apply
+    their own defaults via ``.get(key, default)``.
+    """
+    return load_json(get_config_file())
 
 
 def save_config(config):
     """Save configuration settings."""
-    config_file = get_config_file()
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=2)
+    save_json(get_config_file(), config)
 
 
 def get_auth_file():
@@ -97,9 +88,7 @@ def with_timeout(func, timeout_seconds):
 
 def save_auth_data(data):
     """Save authentication data."""
-    auth_file = get_auth_file()
-    with open(auth_file, "w") as f:
-        json.dump(data, f, indent=2)
+    save_json(get_auth_file(), data)
 
 
 def load_auth_data():

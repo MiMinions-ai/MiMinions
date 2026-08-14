@@ -41,11 +41,8 @@ def _run_session_distillation(
         # Fallback: workspace-provided filter or empty placeholder.
         llm_filter = getattr(workspace, "memory_llm_filter", None)
         if not callable(llm_filter):
-            llm_filter = lambda **_kw: {
-                "history_summary": "",
-                "workspace_facts": [],
-                "global_insights": [],
-            }
+            def llm_filter(**_kw):
+                return {"history_summary": "", "workspace_facts": [], "global_insights": []}
 
     MemoryDistiller(llm_filter=llm_filter).distill_session(
         workspace=workspace,

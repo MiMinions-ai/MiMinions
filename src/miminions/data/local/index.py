@@ -204,9 +204,9 @@ class MasterIndex:
         metadata = self._index[file_id]
         
         # Update fields
-        for field, value in updates.items():
-            if hasattr(metadata, field):
-                setattr(metadata, field, value)
+        for field_name, value in updates.items():
+            if hasattr(metadata, field_name):
+                setattr(metadata, field_name, value)
         
         metadata.updated_at = datetime.now(timezone.utc).isoformat()
         
