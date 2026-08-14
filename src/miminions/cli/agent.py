@@ -7,9 +7,31 @@ import asyncio
 import json
 import re
 from datetime import datetime, timezone
+from enum import Enum
 from .auth import get_config_dir, is_authenticated, is_public_access_enabled
 from miminions.agent import create_minion
 from mcp import StdioServerParameters
+
+
+class AgentAction(str, Enum):
+    """Supported operations for a prepared CLI agent runtime."""
+
+    RUN = "run"
+    ASK = "ask"
+    TOOL_LIST = "tool-list"
+    TOOL_INFO = "tool-info"
+    TOOL_SEARCH = "tool-search"
+    TOOL_RUN = "tool-run"
+
+
+_ACTION_PARAM_TYPES = {
+    AgentAction.RUN: {"prompt": str},
+    AgentAction.ASK: {"prompt": str},
+    AgentAction.TOOL_LIST: {},
+    AgentAction.TOOL_INFO: {"tool_name": str},
+    AgentAction.TOOL_SEARCH: {"query": str},
+    AgentAction.TOOL_RUN: {"tool_name": str, "arguments": dict},
+}
 
 
 def get_agents_file():
@@ -48,9 +70,49 @@ def _build_cli_extension_agent(agent_data):
     return runtime_agent
 
 
+def _validate_agent_action(operation, params):
+    """Return a validated action or raise a user-facing Click error."""
+    try:
+        action = AgentAction(operation)
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(
+            f"Unsupported agent runtime operation: {operation}"
+        ) from exc
+
+    expected = _ACTION_PARAM_TYPES[action]
+    missing = expected.keys() - params.keys()
+    if missing:
+        names = ", ".join(sorted(missing))
+        raise click.ClickException(
+            f"Missing parameter(s) for agent action '{action.value}': {names}"
+        )
+
+    unexpected = params.keys() - expected.keys()
+    if unexpected:
+        names = ", ".join(sorted(unexpected))
+        raise click.ClickException(
+            f"Unexpected parameter(s) for agent action '{action.value}': {names}"
+        )
+
+    for name, expected_type in expected.items():
+        value = params[name]
+        if not isinstance(value, expected_type):
+            raise click.ClickException(
+                f"Invalid parameter '{name}' for agent action '{action.value}': "
+                f"expected {expected_type.__name__}"
+            )
+        if expected_type is str and not value.strip():
+            raise click.ClickException(
+                f"Invalid parameter '{name}' for agent action '{action.value}': "
+                "value cannot be empty"
+            )
+    return action
+
+
 async def _execute_agent_action(runtime_agent, operation, **params):
     """Execute one supported CLI operation against a prepared agent runtime."""
-    if operation == "run":
+    action = _validate_agent_action(operation, params)
+    if action is AgentAction.RUN:
         state = runtime_agent.get_state()
         click.echo(
             "Initialized core Minion runtime "
@@ -58,22 +120,21 @@ async def _execute_agent_action(runtime_agent, operation, **params):
             f"servers={len(state.connected_servers)})"
         )
         return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
-    if operation == "ask":
+    if action is AgentAction.ASK:
         return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
-    if operation == "tool-list":
+    if action is AgentAction.TOOL_LIST:
         return [
             (name, runtime_agent.get_tool_info(name))
             for name in runtime_agent.list_tools()
         ]
-    if operation == "tool-info":
+    if action is AgentAction.TOOL_INFO:
         return runtime_agent.get_tool_info(params["tool_name"])
-    if operation == "tool-search":
+    if action is AgentAction.TOOL_SEARCH:
         return runtime_agent.search_tools(params["query"])
-    if operation == "tool-run":
+    if action is AgentAction.TOOL_RUN:
         return await runtime_agent.execute_async(
             params["tool_name"], arguments=params["arguments"]
         )
-    raise ValueError(f"Unsupported agent runtime operation: {operation}")
 
 
 async def _run_with_agent_runtime(agent_data, operation, **params):
@@ -396,7 +457,7 @@ def run_agent(agent_id, async_run):
     else:
         click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
         output = asyncio.run(
-            _run_with_agent_runtime(agent, "run", prompt=agent["goal"])
+            _run_with_agent_runtime(agent, AgentAction.RUN, prompt=agent["goal"])
         )
         click.echo(f"Agent response: {output}")
         click.echo("Agent execution completed")
@@ -414,7 +475,7 @@ def ask_agent(agent_id, prompt):
 
     click.echo(f"Asking agent '{agent_id}': {prompt}")
     output = asyncio.run(
-        _run_with_agent_runtime(agent_data, "ask", prompt=prompt)
+        _run_with_agent_runtime(agent_data, AgentAction.ASK, prompt=prompt)
     )
     click.echo(f"Agent response: {output}")
 
@@ -428,7 +489,7 @@ def list_agent_tools(agent_id):
     if not agent_data:
         return
 
-    tools = asyncio.run(_run_with_agent_runtime(agent_data, "tool-list"))
+    tools = asyncio.run(_run_with_agent_runtime(agent_data, AgentAction.TOOL_LIST))
     if not tools:
         click.echo(f"No tools available for agent '{agent_id}'.")
         return
@@ -450,7 +511,9 @@ def show_agent_tool_info(agent_id, tool_name):
         return
 
     info = asyncio.run(
-        _run_with_agent_runtime(agent_data, "tool-info", tool_name=tool_name)
+        _run_with_agent_runtime(
+            agent_data, AgentAction.TOOL_INFO, tool_name=tool_name
+        )
     )
     if not info:
         click.echo(f"Tool '{tool_name}' not found for agent '{agent_id}'.", err=True)
@@ -473,7 +536,7 @@ def search_agent_tools(agent_id, query):
         return
 
     matches = asyncio.run(
-        _run_with_agent_runtime(agent_data, "tool-search", query=query)
+        _run_with_agent_runtime(agent_data, AgentAction.TOOL_SEARCH, query=query)
     )
     if not matches:
         click.echo(f"No tools matched '{query}' for agent '{agent_id}'.")
@@ -512,7 +575,7 @@ def run_agent_tool(agent_id, tool_name, arguments):
     result = asyncio.run(
         _run_with_agent_runtime(
             agent_data,
-            "tool-run",
+            AgentAction.TOOL_RUN,
             tool_name=tool_name,
             arguments=parsed_arguments,
         )
