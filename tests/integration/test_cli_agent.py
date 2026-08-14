@@ -2,13 +2,15 @@
 Unit tests for the MiMinions CLI agent module.
 """
 
-import pytest
 import json
-import tempfile
 import os
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
+
+import click
+import pytest
 from click.testing import CliRunner
 
 from miminions.cli.agent import (
@@ -16,6 +18,7 @@ from miminions.cli.agent import (
     load_agents,
     save_agents,
     get_agents_file,
+    AgentAction,
     _execute_agent_action,
     _run_with_agent_runtime,
 )
@@ -106,14 +109,16 @@ class TestAgentFunctions:
                 'miminions.cli.agent._execute_agent_action',
                 new=AsyncMock(return_value="done"),
             ) as action:
-                result = await _run_with_agent_runtime(agent_data, "tool-list")
+                result = await _run_with_agent_runtime(
+                    agent_data, AgentAction.TOOL_LIST
+                )
 
         assert result == "done"
         params = runtime.connect_mcp_server.await_args.args[1]
         assert params.command == "python"
         assert params.args == ["-m", "files_server"]
         runtime.load_tools_from_mcp_server.assert_awaited_once_with("files")
-        action.assert_awaited_once_with(runtime, "tool-list")
+        action.assert_awaited_once_with(runtime, AgentAction.TOOL_LIST)
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
 
     @pytest.mark.asyncio
@@ -126,15 +131,43 @@ class TestAgentFunctions:
             with pytest.raises(Exception, match="Failed to load MCP server 'files'"):
                 await _run_with_agent_runtime(
                     {"mcp_servers": {"files": {"command": "python", "args": []}}},
-                    "tool-list",
+                    AgentAction.TOOL_LIST,
                 )
 
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
 
     @pytest.mark.asyncio
     async def test_runtime_action_dispatch_rejects_unknown_operation(self):
-        with pytest.raises(ValueError, match="Unsupported agent runtime operation"):
+        with pytest.raises(click.ClickException, match="Unsupported agent runtime operation"):
             await _execute_agent_action(MagicMock(), "unknown")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("operation", "params", "message"),
+        [
+            (AgentAction.ASK, {}, "Missing parameter.*prompt"),
+            (
+                AgentAction.TOOL_LIST,
+                {"query": "extra"},
+                "Unexpected parameter.*query",
+            ),
+            (
+                AgentAction.TOOL_RUN,
+                {"tool_name": "greet", "arguments": []},
+                "Invalid parameter 'arguments'.*expected dict",
+            ),
+            (
+                AgentAction.TOOL_INFO,
+                {"tool_name": "  "},
+                "Invalid parameter 'tool_name'.*cannot be empty",
+            ),
+        ],
+    )
+    async def test_runtime_action_dispatch_validates_operation_params(
+        self, operation, params, message
+    ):
+        with pytest.raises(click.ClickException, match=message):
+            await _execute_agent_action(MagicMock(), operation, **params)
 
 
 class TestAgentCLI:
