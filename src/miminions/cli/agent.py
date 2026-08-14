@@ -289,14 +289,9 @@ def agent_cli():
 
 
 @agent_cli.command("list")
-<<<<<<< HEAD
-@require_auth
-def list_agents():
-=======
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth()
+@require_auth
 def list_agents(as_json):
->>>>>>> upstream/development
     """List all agents."""
     agents = load_agents()
 
@@ -573,13 +568,8 @@ def ask_agent(agent_id, prompt):
 
 
 @agent_cli.command("tool-list")
-<<<<<<< HEAD
-@click.argument("agent_id")
-@require_auth
-=======
 @click.argument("agent_id", required=False, default=None)
-@require_auth()
->>>>>>> upstream/development
+@require_auth
 def list_agent_tools(agent_id):
     """List available tools for an agent runtime (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
