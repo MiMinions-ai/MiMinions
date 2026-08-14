@@ -635,7 +635,8 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(
                     agent_cli,
-                    ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments]
+                    ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                    input='y\n',
                 )
 
             assert result.exit_code == 0
@@ -643,6 +644,33 @@ class TestAgentCLI:
             assert "Status: success" in result.output
             assert "'returncode': 0" in result.output
             assert "Python" in result.output
+
+    def test_tool_run_cli_command_denied(self):
+        """Test declining the default command execution tool through the CLI."""
+        existing_agents = {
+            "test_agent": {
+                "name": "Test Agent",
+                "description": "A test agent",
+                "type": "general",
+                "status": "inactive",
+            }
+        }
+        arguments = json.dumps({"command": f"{sys.executable} --version"})
+
+        with patch('miminions.core.auth.is_authenticated', return_value=True):
+            with patch('miminions.cli.agent.load_agents') as mock_load:
+                with patch('miminions.tools.default.subprocess.run') as mock_run:
+                    mock_load.return_value = existing_agents
+                    result = self.runner.invoke(
+                        agent_cli,
+                        ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                        input='n\n',
+                    )
+
+        assert result.exit_code == 0
+        assert "Status: error" in result.output
+        assert "Command execution was not approved" in result.output
+        mock_run.assert_not_called()
 
     def test_tool_run_invalid_json(self):
         """Test running a tool with invalid JSON input."""

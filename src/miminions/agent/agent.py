@@ -19,7 +19,7 @@ from ..tools import GenericTool
 from ..tools.default import (
     CLI_RUN_COMMAND_DESCRIPTION,
     CLI_RUN_COMMAND_NAME,
-    cli_run_command,
+    cli_run_command_tool,
 )
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
@@ -143,7 +143,7 @@ class Minion:
         self.register_tool(
             CLI_RUN_COMMAND_NAME,
             CLI_RUN_COMMAND_DESCRIPTION,
-            cli_run_command,
+            cli_run_command_tool,
         )
         
         if self._memory:
@@ -299,9 +299,15 @@ class Minion:
             result = tool.execute(**args)
             if asyncio.iscoroutine(result):
                 return ToolExecutionResult.from_error(tool_name, "Async tool - use execute_async()")
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     async def execute_async(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool asynchronously."""
@@ -313,9 +319,15 @@ class Minion:
         start = time.time()
         try:
             result = await tool.execute_async(**args)
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
         """Execute tool and return raw result (raises exceptions on error)."""
