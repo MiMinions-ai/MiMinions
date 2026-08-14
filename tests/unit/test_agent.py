@@ -3,6 +3,7 @@
 import asyncio
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from miminions.agent import (
     Minion,
@@ -193,6 +194,19 @@ def test_command_tool_uses_subprocess_reported_timing():
     _cleanup(agent)
 
 
+def test_rejected_command_reports_zero_execution_time():
+    """Time waiting for a rejected confirmation is not execution time."""
+    agent = create_minion("TestAgent")
+
+    with patch("miminions.tools.default.click.confirm", return_value=False):
+        result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.status == ExecutionStatus.ERROR
+    assert "not approved" in result.error
+    assert result.execution_time_ms == 0.0
+    _cleanup(agent)
+
+
 def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
@@ -223,6 +237,7 @@ def main():
         test_tool_schema_json,
         test_command_tool_schema_hides_permission_policy,
         test_command_tool_uses_subprocess_reported_timing,
+        test_rejected_command_reports_zero_execution_time,
         test_tool_management,
     ]
     

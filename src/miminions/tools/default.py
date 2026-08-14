@@ -37,6 +37,12 @@ class _TimedCommandResult(dict):
         self.execution_time_ms = execution_time_ms
 
 
+class _CommandPermissionError(PermissionError):
+    """Permission rejection indicating that command execution never started."""
+
+    execution_time_ms = 0.0
+
+
 @dataclass(frozen=True)
 class CommandPermissionPolicy:
     """Immutable allow, deny, and prompt policy for parsed command arguments."""
@@ -127,7 +133,7 @@ def cli_run_command(
     decision = active_policy.evaluate(args)
 
     if decision is PermissionDecision.DENY:
-        raise PermissionError("Command execution was not approved")
+        raise _CommandPermissionError("Command execution was not approved")
     if decision is PermissionDecision.ASK:
         try:
             approved = click.confirm(
@@ -135,10 +141,12 @@ def cli_run_command(
                 default=False,
             )
         except (click.Abort, EOFError) as exc:
-            raise PermissionError("Command execution was not approved") from exc
+            raise _CommandPermissionError(
+                "Command execution was not approved"
+            ) from exc
 
         if not approved:
-            raise PermissionError("Command execution was not approved")
+            raise _CommandPermissionError("Command execution was not approved")
 
     execution_started = time.perf_counter()
     try:

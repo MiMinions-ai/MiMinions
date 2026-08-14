@@ -268,7 +268,10 @@ class Minion:
                 elapsed_ms = (time.time() - start) * 1000
             return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     async def execute_async(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool asynchronously."""
@@ -285,7 +288,10 @@ class Minion:
                 elapsed_ms = (time.time() - start) * 1000
             return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
         """Execute tool and return raw result (raises exceptions on error)."""
