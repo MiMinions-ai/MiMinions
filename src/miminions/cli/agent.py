@@ -378,7 +378,7 @@ def update_agent(agent_id, name, description, type):
 @agent_cli.command("show")
 @click.argument("agent_ref")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth()
+@require_auth
 def show_agent(agent_ref, as_json):
     """Show one agent by id, id prefix, or exact name."""
     agents = load_agents()
