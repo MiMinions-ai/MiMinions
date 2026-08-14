@@ -254,6 +254,24 @@ miminions agent tool-run researcher cli_add --arguments '{"a": 2, "b": 3}'
 miminions agent tool-run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
 
+### MCP servers
+
+MCP stdio servers are configured per agent. Registration stores the executable
+and its arguments; the server is started only while an agent command is using
+its tools.
+
+| Command | Arguments / Options | Description |
+| --- | --- | --- |
+| `mcp-add <id> <server>` | `--command`, repeatable `--arg` | Register a stdio MCP server without starting it. |
+| `mcp-list <id>` | â€” | List the agent's registered MCP servers. |
+| `mcp-remove <id> <server>` | `--yes` | Remove a registration, with confirmation unless `--yes` is supplied. |
+
+```bash
+miminions agent mcp-add researcher files --command python --arg files_server.py
+miminions agent mcp-list researcher
+miminions agent mcp-remove researcher files --yes
+```
+
 ---
 
 ## `task`

@@ -13,6 +13,7 @@ from miminions.tools.schemas import (
     ExecutionStatus,
     ParameterType,
 )
+from miminions.tools.mcp_adapter import MCPTool
 
 
 async def test_agent_creation():
@@ -175,6 +176,37 @@ async def test_tool_management():
     await agent.cleanup()
     print("PASSED")
     return True
+
+
+async def test_async_generic_tool_registration_uses_async_execution_and_schema():
+    """Async-backed GenericTools such as MCP tools must not use sync run()."""
+    agent = create_minion("TestAgent")
+
+    async def greet(**kwargs):
+        return f"Hello, {kwargs['name']}!"
+
+    tool = MCPTool(
+        name="greet",
+        description="Return a greeting.",
+        func=greet,
+        mcp_schema={
+            "inputSchema": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+    )
+    agent.add_tool(tool)
+
+    result = await agent.execute_async("greet", arguments={"name": "MiMinions"})
+
+    assert result.status == ExecutionStatus.SUCCESS
+    assert result.result == "Hello, MiMinions!"
+    info = agent.get_tool_info("greet")
+    assert info["parameters"]["properties"]["name"]["type"] == "string"
+    assert "name" in info["parameters"]["required"]
+    await agent.cleanup()
 
 
 async def main():

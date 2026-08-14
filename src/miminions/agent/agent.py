@@ -229,21 +229,26 @@ class Minion:
     def add_tool(self, tool: GenericTool) -> ToolDefinition:
         """Add a GenericTool."""
         params = []
-        if hasattr(tool, 'schema') and tool.schema:
+        serialized = tool.to_dict()
+        parameter_schema = serialized.get("parameters", {})
+        properties = parameter_schema.get("properties", {})
+        required = parameter_schema.get("required", [])
+        if properties:
             type_map = {
                 "string": ParameterType.STRING, "integer": ParameterType.INTEGER,
                 "number": ParameterType.NUMBER, "boolean": ParameterType.BOOLEAN,
                 "array": ParameterType.ARRAY, "object": ParameterType.OBJECT,
             }
-            for pname, pinfo in tool.schema.parameters.items():
+            for pname, pinfo in properties.items():
                 params.append(ToolParameter(
                     name=pname,
                     type=type_map.get(pinfo.get("type", "string"), ParameterType.STRING),
                     description=pinfo.get("description", pname),
-                    required=pname in tool.schema.required,
+                    required=pname in required,
                     default=pinfo.get("default"),
                 ))
-        return self.register_tool(tool.name, tool.description, tool.run, ToolSchema(parameters=params))
+        func = tool.arun if inspect.iscoroutinefunction(tool.func) else tool.run
+        return self.register_tool(tool.name, tool.description, func, ToolSchema(parameters=params))
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name."""

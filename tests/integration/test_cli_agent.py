@@ -3,14 +3,25 @@ Unit tests for the MiMinions CLI agent module.
 """
 
 import json
-import tempfile
 import os
 import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
+
+import click
+import pytest
 from click.testing import CliRunner
 
-from miminions.cli.agent import agent_cli, load_agents, save_agents, get_agents_file
+from miminions.cli.agent import (
+    agent_cli,
+    load_agents,
+    save_agents,
+    get_agents_file,
+    AgentAction,
+    _execute_agent_action,
+    _run_with_agent_runtime,
+)
 
 
 class TestAgentFunctions:
@@ -82,6 +93,81 @@ class TestAgentFunctions:
                 assert saved_data == test_data
         finally:
             os.unlink(tmp_path)
+
+    @pytest.mark.asyncio
+    async def test_mcp_runtime_connects_loads_and_cleans_up(self):
+        runtime = MagicMock()
+        runtime.connect_mcp_server = AsyncMock()
+        runtime.load_tools_from_mcp_server = AsyncMock()
+        runtime.cleanup = AsyncMock()
+        agent_data = {"mcp_servers": {
+            "files": {"command": "python", "args": ["-m", "files_server"]}
+        }}
+
+        with patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime):
+            with patch(
+                'miminions.cli.agent._execute_agent_action',
+                new=AsyncMock(return_value="done"),
+            ) as action:
+                result = await _run_with_agent_runtime(
+                    agent_data, AgentAction.TOOL_LIST
+                )
+
+        assert result == "done"
+        params = runtime.connect_mcp_server.await_args.args[1]
+        assert params.command == "python"
+        assert params.args == ["-m", "files_server"]
+        runtime.load_tools_from_mcp_server.assert_awaited_once_with("files")
+        action.assert_awaited_once_with(runtime, AgentAction.TOOL_LIST)
+        runtime.cleanup.assert_awaited_once_with(rebuild=False)
+
+    @pytest.mark.asyncio
+    async def test_mcp_runtime_failure_is_named_and_cleans_up(self):
+        runtime = MagicMock()
+        runtime.connect_mcp_server = AsyncMock(side_effect=RuntimeError("offline"))
+        runtime.cleanup = AsyncMock()
+
+        with patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime):
+            with pytest.raises(Exception, match="Failed to load MCP server 'files'"):
+                await _run_with_agent_runtime(
+                    {"mcp_servers": {"files": {"command": "python", "args": []}}},
+                    AgentAction.TOOL_LIST,
+                )
+
+        runtime.cleanup.assert_awaited_once_with(rebuild=False)
+
+    @pytest.mark.asyncio
+    async def test_runtime_action_dispatch_rejects_unknown_operation(self):
+        with pytest.raises(click.ClickException, match="Unsupported agent runtime operation"):
+            await _execute_agent_action(MagicMock(), "unknown")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("operation", "params", "message"),
+        [
+            (AgentAction.ASK, {}, "Missing parameter.*prompt"),
+            (
+                AgentAction.TOOL_LIST,
+                {"query": "extra"},
+                "Unexpected parameter.*query",
+            ),
+            (
+                AgentAction.TOOL_RUN,
+                {"tool_name": "greet", "arguments": []},
+                "Invalid parameter 'arguments'.*expected dict",
+            ),
+            (
+                AgentAction.TOOL_INFO,
+                {"tool_name": "  "},
+                "Invalid parameter 'tool_name'.*cannot be empty",
+            ),
+        ],
+    )
+    async def test_runtime_action_dispatch_validates_operation_params(
+        self, operation, params, message
+    ):
+        with pytest.raises(click.ClickException, match=message):
+            await _execute_agent_action(MagicMock(), operation, **params)
 
 
 class TestAgentCLI:
@@ -300,6 +386,48 @@ class TestAgentCLI:
                 
                 assert result.exit_code == 0
                 assert 'not found' in result.output
+
+    def test_mcp_add_persists_minimal_config_and_argument_order(self):
+        agents = {"test_agent": {"name": "Test Agent"}}
+        with patch('miminions.cli.agent.load_agents', return_value=agents):
+            with patch('miminions.cli.agent.save_agents') as mock_save:
+                result = self.runner.invoke(agent_cli, [
+                    'mcp-add', 'test_agent', 'files', '--command', 'python',
+                    '--arg', '-m', '--arg', 'files_server',
+                ])
+
+        assert result.exit_code == 0
+        saved = mock_save.call_args.args[0]
+        assert saved['test_agent']['mcp_servers']['files'] == {
+            'command': 'python', 'args': ['-m', 'files_server']
+        }
+
+    def test_mcp_add_rejects_duplicate_server(self):
+        agents = {"test_agent": {"mcp_servers": {"files": {"command": "python", "args": []}}}}
+        with patch('miminions.cli.agent.load_agents', return_value=agents):
+            result = self.runner.invoke(agent_cli, [
+                'mcp-add', 'test_agent', 'files', '--command', 'python',
+            ])
+
+        assert result.exit_code != 0
+        assert "already exists" in result.output
+
+    def test_mcp_list_and_remove(self):
+        agents = {"test_agent": {"mcp_servers": {
+            "files": {"command": "python", "args": ["-m", "files_server"]}
+        }}}
+        with patch('miminions.cli.agent.load_agents', return_value=agents):
+            listed = self.runner.invoke(agent_cli, ['mcp-list', 'test_agent'])
+            with patch('miminions.cli.agent.save_agents') as mock_save:
+                removed = self.runner.invoke(
+                    agent_cli, ['mcp-remove', 'test_agent', 'files', '--yes']
+                )
+
+        assert listed.exit_code == 0
+        assert "files: python -m files_server" in listed.output
+        assert removed.exit_code == 0
+        assert agents['test_agent']['mcp_servers'] == {}
+        mock_save.assert_called_once_with(agents)
 
     def test_set_goal_success(self):
         """Test successful goal setting."""
