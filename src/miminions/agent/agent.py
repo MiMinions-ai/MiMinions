@@ -354,17 +354,31 @@ class Minion:
     async def execute_many_async(
         self,
         requests: List[ToolExecutionRequest],
+        max_concurrency: int = 16,
     ) -> List[ToolExecutionResult]:
         """Execute tools concurrently and return results in request order.
 
         Each request captures its own failure, so one failed tool does not
-        cancel the other executions in the batch.
+        cancel the other executions in the batch. ``max_concurrency`` bounds
+        active executions so large batches cannot exhaust worker threads or
+        other shared resources.
         """
+        if max_concurrency < 1:
+            raise ValueError("max_concurrency must be greater than zero")
+
+        semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def _execute_bounded(
+            request: ToolExecutionRequest,
+        ) -> ToolExecutionResult:
+            async with semaphore:
+                return await self.execute_async(
+                    request.tool_name,
+                    request.arguments,
+                )
+
         return list(await asyncio.gather(
-            *(
-                self.execute_async(request.tool_name, request.arguments)
-                for request in requests
-            )
+            *(_execute_bounded(request) for request in requests)
         ))
 
     def execute_tool(self, tool_name: str, **kwargs) -> Any:
