@@ -137,9 +137,14 @@ async def test_parallel_sync_tool_execution():
     results = await agent.execute_many_async(requests)
     elapsed = time.perf_counter() - started
 
-    assert elapsed < 0.27
-    assert [result.result for result in results] == ["first", "second"]
-    assert threading.get_ident() not in thread_ids
+    actual_values = [result.result for result in results]
+    assert elapsed < 0.27, f"Expected elapsed time under 0.27s, got {elapsed:.3f}s"
+    assert actual_values == ["first", "second"], (
+        f"Expected ordered results ['first', 'second'], got {actual_values!r}"
+    )
+    assert threading.get_ident() not in thread_ids, (
+        f"Expected worker thread IDs, got main thread in {thread_ids!r}"
+    )
     await agent.cleanup()
 
 
@@ -167,8 +172,65 @@ async def test_parallel_async_tools_preserve_request_order():
     results = await agent.execute_many_async(requests)
     elapsed = time.perf_counter() - started
 
-    assert elapsed < 0.2
-    assert [result.result for result in results] == ["slow", "fast"]
+    actual_values = [result.result for result in results]
+    assert elapsed < 0.2, f"Expected elapsed time under 0.2s, got {elapsed:.3f}s"
+    assert actual_values == ["slow", "fast"], (
+        f"Expected ordered results ['slow', 'fast'], got {actual_values!r}"
+    )
+    await agent.cleanup()
+
+
+async def test_parallel_batch_respects_concurrency_limit():
+    """Batch execution never exceeds its configured concurrency limit."""
+    agent = create_minion("TestAgent", provider="test")
+    active = 0
+    max_active = 0
+
+    async def track_concurrency(value: int) -> int:
+        nonlocal active, max_active
+        active += 1
+        max_active = max(max_active, active)
+        await asyncio.sleep(0.03)
+        active -= 1
+        return value
+
+    agent.register_tool(
+        "track_concurrency",
+        "Track active executions",
+        track_concurrency,
+    )
+    requests = [
+        ToolExecutionRequest(
+            tool_name="track_concurrency",
+            arguments={"value": value},
+        )
+        for value in range(6)
+    ]
+
+    results = await agent.execute_many_async(requests, max_concurrency=2)
+    actual_values = [result.result for result in results]
+
+    assert max_active == 2, f"Expected at most 2 active tools, got {max_active}"
+    assert actual_values == list(range(6)), (
+        f"Expected ordered results {list(range(6))!r}, got {actual_values!r}"
+    )
+    await agent.cleanup()
+
+
+async def test_parallel_batch_rejects_invalid_concurrency_limit():
+    """A non-positive concurrency limit is rejected clearly."""
+    agent = create_minion("TestAgent", provider="test")
+
+    try:
+        await agent.execute_many_async([], max_concurrency=0)
+        assert False, "Expected ValueError, got no exception"
+    except ValueError as exc:
+        actual_message = str(exc)
+        assert actual_message == "max_concurrency must be greater than zero", (
+            "Expected max_concurrency validation error, "
+            f"got {actual_message!r}"
+        )
+
     await agent.cleanup()
 
 
@@ -191,10 +253,18 @@ async def test_parallel_batch_isolates_failures():
         ToolExecutionRequest(tool_name="succeed"),
     ])
 
-    assert results[0].status == ExecutionStatus.ERROR
-    assert results[0].error == "broken tool"
-    assert results[1].status == ExecutionStatus.SUCCESS
-    assert results[1].result == "ok"
+    assert results[0].status == ExecutionStatus.ERROR, (
+        f"Expected first status error, got {results[0].status!r}"
+    )
+    assert results[0].error == "broken tool", (
+        f"Expected error 'broken tool', got {results[0].error!r}"
+    )
+    assert results[1].status == ExecutionStatus.SUCCESS, (
+        f"Expected second status success, got {results[1].status!r}"
+    )
+    assert results[1].result == "ok", (
+        f"Expected successful result 'ok', got {results[1].result!r}"
+    )
     await agent.cleanup()
 
 
@@ -218,16 +288,28 @@ async def test_llm_parallel_results_are_injected_together():
                 ToolCallPart("fail_for_model", {}),
             ])
 
-        assert [part.tool_name for part in returns] == [
+        actual_tool_names = [part.tool_name for part in returns]
+        expected_tool_names = [
             "work",
             "work",
             "fail_for_model",
         ]
-        assert [part.content for part in returns[:2]] == ["first", "second"]
-        assert returns[2].content == {
+        assert actual_tool_names == expected_tool_names, (
+            f"Expected tool returns {expected_tool_names!r}, got {actual_tool_names!r}"
+        )
+        actual_success_content = [part.content for part in returns[:2]]
+        assert actual_success_content == ["first", "second"], (
+            "Expected successful content ['first', 'second'], "
+            f"got {actual_success_content!r}"
+        )
+        expected_error_content = {
             "status": "error",
             "error": "model-visible failure",
         }
+        assert returns[2].content == expected_error_content, (
+            f"Expected error content {expected_error_content!r}, "
+            f"got {returns[2].content!r}"
+        )
         model_saw_results = True
         return ModelResponse(parts=[TextPart("all tools completed")])
 
@@ -251,13 +333,17 @@ async def test_llm_parallel_results_are_injected_together():
 
     reply = await agent.run("Run all tools")
 
-    assert reply == "all tools completed"
-    assert max_active == 2
-    assert model_saw_results is True
+    assert reply == "all tools completed", (
+        f"Expected final reply 'all tools completed', got {reply!r}"
+    )
+    assert max_active == 2, f"Expected 2 concurrent LLM tools, got {max_active}"
+    assert model_saw_results is True, (
+        f"Expected model_saw_results True, got {model_saw_results!r}"
+    )
     await agent.cleanup()
 
 
-async def test_error_handling():
+def test_error_handling():
     """Test error handling."""
     print("test_error_handling")
     agent = create_minion("TestAgent")
@@ -419,6 +505,8 @@ async def main():
         test_tool_execution,
         test_parallel_sync_tool_execution,
         test_parallel_async_tools_preserve_request_order,
+        test_parallel_batch_respects_concurrency_limit,
+        test_parallel_batch_rejects_invalid_concurrency_limit,
         test_parallel_batch_isolates_failures,
         test_llm_parallel_results_are_injected_together,
         test_error_handling,
