@@ -24,6 +24,12 @@ pytest tests/e2e -v
 
 # Full suite
 pytest tests/ -v
+
+# Advisory coverage for CLI/workspace modules.
+# First install dev test tooling:
+#   python -m pip install -e ".[dev]"
+python -m coverage run --source=miminions.cli,miminions.core.workspace,miminions.workspace_fs -m pytest tests/unit tests/integration
+python -m coverage report -m --omit="*/miminions/cli/workflow.py"
 ```
 
 ## Test Files

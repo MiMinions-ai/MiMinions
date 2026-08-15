@@ -211,10 +211,16 @@ def session_stop():
 
 
 @session.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def session_list():
+def session_list(as_json):
     """List all sessions."""
     sessions = _load(_sessions_file())
+    if as_json:
+        payload = [{"id": sid, **s} for sid, s in sessions.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
+
     if not sessions:
         click.echo("No sessions found.")
         return
@@ -297,8 +303,9 @@ def interaction():
 
 @interaction.command("list")
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def interaction_list(session_id):
+def interaction_list(session_id, as_json):
     """List all recorded WorkflowRuns for a session."""
     if not session_id:
         session_id, _ = _active_session()
@@ -308,6 +315,18 @@ def interaction_list(session_id):
 
     interactions = _load(_interactions_file())
     runs = interactions.get(session_id, [])
+
+    if as_json:
+        payload = [
+            {
+                "index": i,
+                "workflow_run": wf_dict,
+            }
+            for i, wf_dict in enumerate(runs)
+        ]
+        click.echo(json.dumps(payload, indent=2))
+        return
+
     if not runs:
         click.echo("No interactions recorded.")
         return
@@ -324,8 +343,9 @@ def interaction_list(session_id):
 @interaction.command("show")
 @click.argument("index", type=int)
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def interaction_show(index, session_id):
+def interaction_show(index, session_id, as_json):
     """Show full details of a recorded WorkflowRun by index."""
     if not session_id:
         session_id, _ = _active_session()
@@ -341,6 +361,10 @@ def interaction_show(index, session_id):
         return
 
     wf = WorkflowRun.from_dict(runs[index])
+    if as_json:
+        click.echo(json.dumps(wf.to_dict(), indent=2))
+        return
+
     click.echo(json.dumps(wf.to_dict(), indent=2))
 
 

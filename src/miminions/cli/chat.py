@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any
 
 import click
+from pydantic_ai.usage import RunUsage
 
 from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
-from miminions.session.store import JsonlSessionStore
+from miminions.session.store import JsonlSessionStore, trim_message_history
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.cli.auth import get_config, get_config_dir
 
@@ -75,15 +77,23 @@ def chat_cli():
     default=None,
     help="Resume an existing session id (loads prior history for LLM context).",
 )
-def chat_command(workspace_ref: str | None, session_id: str | None) -> None:
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Show tool calls, token usage and latency per turn.",
+)
+def chat_command(workspace_ref: str | None, session_id: str | None, verbose: bool) -> None:
     """Start an interactive async chat session for a workspace."""
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
     if not workspace_ref:
         workspace_ref = get_config().get("default_workspace")
         if not workspace_ref:
             raise click.ClickException(
                 "No --workspace given and no default workspace configured."
             )
-    asyncio.run(_chat_loop(workspace_ref, session_id))
+    asyncio.run(_chat_loop(workspace_ref, session_id, verbose))
 
 
 # ---------------------------------------------------------------------------
@@ -91,14 +101,29 @@ def chat_command(workspace_ref: str | None, session_id: str | None) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
+def _print_tool_call(name: str, args: dict[str, Any]) -> None:
+    """Verbose-mode hook: show each tool invocation on stderr."""
+    click.secho(f"  [tool] {name} {args}", dim=True, err=True)
+
+
+def _print_turn_end(usage: RunUsage, latency: float) -> None:
+    """Verbose-mode hook: show token usage and latency on stderr."""
+    click.secho(
+        f"  [turn] {usage.input_tokens or 0} in / {usage.output_tokens or 0} out tokens, "
+        f"{usage.tool_calls} tool call(s), {latency:.1f}s",
+        dim=True,
+        err=True,
+    )
+
+
+async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool = False) -> None:
     """Main async chat loop.
 
     1. Resolve the workspace and build the root path.
     2. Create the Minion once — it lives for the entire session.
     3. Wire workspace context via set_context() so the LLM sees it.
     4. If resuming a session, load prior JSONL as pydantic_ai messages.
-    5. Loop: input → minion.run() → print reply.
+    5. Loop: input → minion.run_stream() → print deltas as they arrive.
     6. On exit, run session distillation in the finally block.
     """
     manager = WorkspaceManager(get_config_dir())
@@ -117,6 +142,8 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
     minion = create_minion(
         name="MiMinions",
         description=f"MiMinions agent for workspace '{workspace_name}'.",  # TODO: make customizable per workspace
+        on_tool_call=_print_tool_call if verbose else None,
+        on_turn_end=_print_turn_end if verbose else None,
     )
     minion.set_context(workspace, root)
 
@@ -154,15 +181,29 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
                 meta={"source": "cli-chat"},
             )
 
+            # Bound the LLM context for long sessions; the JSONL transcript
+            # on disk stays complete.
+            message_history = trim_message_history(message_history)
+
+            reply_parts: list[str] = []
             try:
-                reply = await minion.run(
+                click.echo("")
+                async for delta in minion.run_stream(
                     user_text,
                     message_history=message_history,
-                )
+                ):
+                    click.echo(delta, nl=False)
+                    reply_parts.append(delta)
+                click.echo("\n")
+                reply = "".join(reply_parts)
                 # Update history so the LLM remembers prior turns.
                 message_history = minion._last_messages
             except Exception as exc:
-                reply = f"[error] {type(exc).__name__}: {exc}"
+                error_text = f"[error] {type(exc).__name__}: {exc}"
+                click.echo(f"\n{error_text}\n")
+                # Keep the transcript faithful to what was shown on screen:
+                # persist any partial reply alongside the error marker.
+                reply = "\n".join(filter(None, ["".join(reply_parts), error_text]))
 
             store.append(
                 session_id,
@@ -170,8 +211,6 @@ async def _chat_loop(workspace_ref: str, session_id: str | None) -> None:
                 reply,
                 meta={"source": "cli-chat"},
             )
-
-            click.echo(f"\n{reply}\n")
     finally:
         try:
             _run_session_distillation(

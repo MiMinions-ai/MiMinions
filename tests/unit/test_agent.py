@@ -13,6 +13,7 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from pydantic_ai.models.function import FunctionModel
+from unittest.mock import patch
 
 from miminions.agent import (
     create_minion,
@@ -24,9 +25,15 @@ from miminions.tools.schemas import (
     ExecutionStatus,
     ParameterType,
 )
+from miminions.tools.mcp_adapter import MCPTool
 
 
-async def test_agent_creation():
+def _cleanup(agent):
+    """Close an agent without requiring an async pytest plugin."""
+    asyncio.run(agent.cleanup())
+
+
+def test_agent_creation():
     """Test basic agent creation."""
     print("test_agent_creation")
     agent = create_minion("TestAgent", "A test agent")
@@ -39,12 +46,11 @@ async def test_agent_creation():
     assert state.has_memory is False
     assert "cli_run_command" in agent.list_tools()
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_registration():
+def test_tool_registration():
     """Test tool registration and schema extraction."""
     print("test_tool_registration")
     agent = create_minion("TestAgent")
@@ -71,12 +77,11 @@ async def test_tool_registration():
     assert "add" in tools
     assert "greet" in tools
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_execution():
+def test_tool_execution():
     """Test tool execution styles."""
     print("test_tool_execution")
     agent = create_minion("TestAgent")
@@ -105,9 +110,8 @@ async def test_tool_execution():
     result3 = agent.handle_tool_execution_request(request)
     assert result3.result == 14.0
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
 async def test_parallel_sync_tool_execution():
@@ -280,12 +284,11 @@ async def test_error_handling():
     except RuntimeError:
         pass
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_schema_json():
+def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
     agent = create_minion("TestAgent")
@@ -305,12 +308,59 @@ async def test_tool_schema_json():
     assert "query" in schema["parameters"]["required"]
     assert "max_results" not in schema["parameters"]["required"]
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_management():
+def test_command_tool_schema_hides_permission_policy():
+    """The model-facing command tool cannot provide its own policy."""
+    agent = create_minion("TestAgent")
+
+    schema = next(
+        item for item in agent.get_tools_schema()
+        if item["name"] == "cli_run_command"
+    )
+    properties = schema["parameters"]["properties"]
+    assert "command" in properties
+    assert "timeout" in properties
+    assert "policy" not in properties
+
+    _cleanup(agent)
+    print("PASSED")
+
+
+def test_command_tool_uses_subprocess_reported_timing():
+    """Command approval time is not included in the agent execution duration."""
+    agent = create_minion("TestAgent")
+
+    class TimedResult(dict):
+        execution_time_ms = 12.5
+
+    agent._tools["cli_run_command"].func = lambda **kwargs: TimedResult(
+        returncode=0,
+        stdout="",
+        stderr="",
+    )
+    result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.execution_time_ms == 12.5
+    _cleanup(agent)
+
+
+def test_rejected_command_reports_zero_execution_time():
+    """Time waiting for a rejected confirmation is not execution time."""
+    agent = create_minion("TestAgent")
+
+    with patch("miminions.tools.default.click.confirm", return_value=False):
+        result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.status == ExecutionStatus.ERROR
+    assert "not approved" in result.error
+    assert result.execution_time_ms == 0.0
+    _cleanup(agent)
+
+
+def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
     agent = create_minion("TestAgent")
@@ -326,9 +376,39 @@ async def test_tool_management():
     assert "math_add" not in agent.list_tools()
     assert agent.unregister_tool("nonexistent") is False
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
+
+
+async def test_async_generic_tool_registration_uses_async_execution_and_schema():
+    """Async-backed GenericTools such as MCP tools must not use sync run()."""
+    agent = create_minion("TestAgent")
+
+    async def greet(**kwargs):
+        return f"Hello, {kwargs['name']}!"
+
+    tool = MCPTool(
+        name="greet",
+        description="Return a greeting.",
+        func=greet,
+        mcp_schema={
+            "inputSchema": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+    )
+    agent.add_tool(tool)
+
+    result = await agent.execute_async("greet", arguments={"name": "MiMinions"})
+
+    assert result.status == ExecutionStatus.SUCCESS
+    assert result.result == "Hello, MiMinions!"
+    info = agent.get_tool_info("greet")
+    assert info["parameters"]["properties"]["name"]["type"] == "string"
+    assert "name" in info["parameters"]["required"]
+    await agent.cleanup()
 
 
 async def main():
@@ -343,14 +423,17 @@ async def main():
         test_llm_parallel_results_are_injected_together,
         test_error_handling,
         test_tool_schema_json,
+        test_command_tool_schema_hides_permission_policy,
+        test_command_tool_uses_subprocess_reported_timing,
+        test_rejected_command_reports_zero_execution_time,
         test_tool_management,
     ]
     
     passed = 0
     for test in tests:
         try:
-            if await test():
-                passed += 1
+            test()
+            passed += 1
         except Exception as e:
             print(f"FAILED: {e}")
             import traceback
@@ -361,4 +444,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(main())

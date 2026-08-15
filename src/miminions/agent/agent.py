@@ -3,11 +3,16 @@
 import asyncio
 from functools import wraps
 import inspect
+import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 from pathlib import Path
 
-from pydantic_ai import Agent, ModelRetry, Tool
+from pydantic_ai import Agent, Tool, ModelRetry
+from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+from pydantic_ai.messages import FunctionToolCallEvent
+from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import RunUsage
 from mcp import StdioServerParameters
 
 from miminions.agent.provider import ModelFactory
@@ -15,7 +20,7 @@ from ..tools import GenericTool
 from ..tools.default import (
     CLI_RUN_COMMAND_DESCRIPTION,
     CLI_RUN_COMMAND_NAME,
-    cli_run_command,
+    cli_run_command_tool,
 )
 from ..tools.mcp_adapter import MCPToolAdapter
 from ..memory.base_memory import BaseMemory
@@ -27,6 +32,15 @@ from miminions.tools.schemas import (
     ToolExecutionResult, ToolParameter, ToolSchema,
 )
 from miminions.memory.types import MemoryEntry, MemoryQueryResult
+
+logger = logging.getLogger(__name__)
+
+
+def _is_retryable_error(exc: BaseException) -> bool:
+    """True for transient provider failures worth retrying."""
+    if isinstance(exc, ModelHTTPError):  # subclass of ModelAPIError — check first
+        return exc.status_code == 429 or exc.status_code >= 500
+    return isinstance(exc, ModelAPIError)  # connection errors / timeouts
 
 
 def _python_type_to_param_type(py_type: type) -> ParameterType:
@@ -97,8 +111,18 @@ class Minion:
         overlap: int = 150,
         model: Optional[Any] = None,
         provider: str = "openrouter",
+        request_timeout: Optional[float] = 60.0,
+        max_retries: int = 2,
+        retry_base_delay: float = 1.0,
+        on_tool_call: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+        on_turn_end: Optional[Callable[[RunUsage, float], None]] = None,
     ):
         self.config = AgentConfig(name=name, description=description, chunk_size=chunk_size, overlap=overlap)
+        self._request_timeout = request_timeout
+        self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay
+        self._on_tool_call = on_tool_call
+        self._on_turn_end = on_turn_end
         self._tools: Dict[str, RegisteredTool] = {}
         self._memory = memory
         self._mcp_adapter = MCPToolAdapter()
@@ -124,7 +148,7 @@ class Minion:
         self.register_tool(
             CLI_RUN_COMMAND_NAME,
             CLI_RUN_COMMAND_DESCRIPTION,
-            cli_run_command,
+            cli_run_command_tool,
         )
         
         if self._memory:
@@ -157,10 +181,17 @@ class Minion:
         registered as a ``@agent.system_prompt`` callback so the LLM
         receives the full workspace context on every call.
         """
+        # request_timeout bounds each HTTP request to the provider, not the
+        # whole turn — a multi-tool turn may take several requests.
         agent = Agent(
             model=self._model,
             tools=self._pydantic_ai_tools,
             instructions=self.config.description or f"Agent: {self.config.name}",
+            model_settings=(
+                ModelSettings(timeout=self._request_timeout)
+                if self._request_timeout is not None
+                else None
+            ),
         )
 
         # Wire ContextBuilder into the system prompt when workspace context
@@ -220,21 +251,26 @@ class Minion:
     def add_tool(self, tool: GenericTool) -> ToolDefinition:
         """Add a GenericTool."""
         params = []
-        if hasattr(tool, 'schema') and tool.schema:
+        serialized = tool.to_dict()
+        parameter_schema = serialized.get("parameters", {})
+        properties = parameter_schema.get("properties", {})
+        required = parameter_schema.get("required", [])
+        if properties:
             type_map = {
                 "string": ParameterType.STRING, "integer": ParameterType.INTEGER,
                 "number": ParameterType.NUMBER, "boolean": ParameterType.BOOLEAN,
                 "array": ParameterType.ARRAY, "object": ParameterType.OBJECT,
             }
-            for pname, pinfo in tool.schema.parameters.items():
+            for pname, pinfo in properties.items():
                 params.append(ToolParameter(
                     name=pname,
                     type=type_map.get(pinfo.get("type", "string"), ParameterType.STRING),
                     description=pinfo.get("description", pname),
-                    required=pname in tool.schema.required,
+                    required=pname in required,
                     default=pinfo.get("default"),
                 ))
-        return self.register_tool(tool.name, tool.description, tool.run, ToolSchema(parameters=params))
+        func = tool.arun if inspect.iscoroutinefunction(tool.func) else tool.run
+        return self.register_tool(tool.name, tool.description, func, ToolSchema(parameters=params))
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name."""
@@ -285,9 +321,15 @@ class Minion:
             result = tool.execute(**args)
             if asyncio.iscoroutine(result):
                 return ToolExecutionResult.from_error(tool_name, "Async tool - use execute_async()")
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     async def execute_async(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs) -> ToolExecutionResult:
         """Execute a tool asynchronously."""
@@ -299,9 +341,15 @@ class Minion:
         start = time.time()
         try:
             result = await tool.execute_async(**args)
-            return ToolExecutionResult.success(tool_name, result, (time.time() - start) * 1000)
+            elapsed_ms = getattr(result, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.success(tool_name, result, elapsed_ms)
         except Exception as e:
-            return ToolExecutionResult.from_error(tool_name, str(e), (time.time() - start) * 1000)
+            elapsed_ms = getattr(e, "execution_time_ms", None)
+            if elapsed_ms is None:
+                elapsed_ms = (time.time() - start) * 1000
+            return ToolExecutionResult.from_error(tool_name, str(e), elapsed_ms)
 
     async def execute_many_async(
         self,
@@ -482,6 +530,26 @@ class Minion:
         if rebuild:
             self._rebuild_pydantic_ai_agent()
 
+    def _make_event_stream_handler(self) -> Optional[Callable[..., Any]]:
+        """Build a pydantic_ai event-stream handler wiring ``on_tool_call``.
+
+        Returns ``None`` when no callback is registered so the run path is
+        byte-for-byte identical to the un-hooked behavior.
+        """
+        callback = self._on_tool_call
+        if callback is None:
+            return None
+
+        async def _handler(_ctx: Any, event_stream: Any) -> None:
+            async for event in event_stream:
+                if isinstance(event, FunctionToolCallEvent):
+                    try:
+                        callback(event.part.tool_name, event.part.args_as_dict())
+                    except Exception:
+                        logger.exception("on_tool_call callback failed")
+
+        return _handler
+
     async def run(self, prompt: str, message_history: Optional[List[Any]] = None) -> str:
         """Send a prompt to the LLM and return the reply as a plain string.
 
@@ -491,6 +559,11 @@ class Minion:
         The full message list is stored on ``_last_messages`` after each call
         so the caller can pass it back in on the next turn for multi-turn
         conversation memory within a session.
+
+        Transient provider failures (HTTP 429/5xx, connection errors and
+        timeouts) are retried up to ``max_retries`` times with exponential
+        backoff before the error is re-raised. ``request_timeout`` bounds each
+        HTTP request, not the whole turn.
 
         Args:
             prompt: The user message to send.
@@ -502,16 +575,72 @@ class Minion:
             The LLM's reply as a plain string.
 
         Raises:
-            Exception: Re-raises any network / API error so the caller can
-                       decide how to surface it.
+            Exception: Re-raises any non-transient (or retry-exhausted)
+                       network / API error so the caller can decide how to
+                       surface it.
         """
         self._rebuild_pydantic_ai_agent()
-        result = await self._pydantic_ai_agent.run(
+        start = time.monotonic()
+        attempt = 0
+        while True:
+            try:
+                result = await self._pydantic_ai_agent.run(
+                    prompt,
+                    message_history=message_history or None,
+                    event_stream_handler=self._make_event_stream_handler(),
+                )
+                break
+            except Exception as exc:
+                if attempt >= self._max_retries or not _is_retryable_error(exc):
+                    raise
+                delay = self._retry_base_delay * (2 ** attempt)
+                logger.warning(
+                    "Transient model error (%s); retrying in %.1fs (attempt %d/%d)",
+                    exc, delay, attempt + 1, self._max_retries,
+                )
+                await asyncio.sleep(delay)
+                attempt += 1
+        self._last_messages = result.all_messages()
+        if self._on_turn_end is not None:
+            try:
+                self._on_turn_end(result.usage, time.monotonic() - start)
+            except Exception:
+                logger.exception("on_turn_end callback failed")
+        return result.output if hasattr(result, "output") else str(result.data)
+
+    async def run_stream(
+        self, prompt: str, message_history: Optional[List[Any]] = None
+    ) -> AsyncIterator[str]:
+        """Stream the LLM reply as text deltas.
+
+        Mirrors :meth:`run` but yields the reply incrementally. Tool calls
+        still execute (and fire ``on_tool_call``); ``on_turn_end`` fires once
+        the stream completes. ``_last_messages`` is updated only when the
+        stream is fully consumed.
+
+        Unlike :meth:`run` there is no automatic retry: deltas already
+        yielded cannot be withdrawn, so errors propagate immediately.
+        ``request_timeout`` still bounds each HTTP request.
+
+        The stream must be consumed to completion — breaking out of the
+        loop early abandons the underlying HTTP stream, and its deferred
+        cleanup can raise ``RuntimeError`` at generator close.
+        """
+        self._rebuild_pydantic_ai_agent()
+        start = time.monotonic()
+        async with self._pydantic_ai_agent.run_stream(
             prompt,
             message_history=message_history or None,
-        )
-        self._last_messages = result.all_messages()
-        return result.output if hasattr(result, "output") else str(result.data)
+            event_stream_handler=self._make_event_stream_handler(),
+        ) as result:
+            async for delta in result.stream_text(delta=True):
+                yield delta
+            self._last_messages = result.all_messages()
+            if self._on_turn_end is not None:
+                try:
+                    self._on_turn_end(result.usage, time.monotonic() - start)
+                except Exception:
+                    logger.exception("on_turn_end callback failed")
 
     def set_context(self, workspace: Any, root_path: str | Path) -> None:
         """Attach workspace context so ContextBuilder feeds the system prompt.
@@ -547,10 +676,15 @@ def create_minion(
     memory: Optional[BaseMemory] = None,
     model: Optional[Any] = None,
     provider: str = "openrouter",
+    request_timeout: Optional[float] = 60.0,
+    max_retries: int = 2,
+    retry_base_delay: float = 1.0,
+    on_tool_call: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+    on_turn_end: Optional[Callable[[RunUsage, float], None]] = None,
 ) -> Minion:
     """
     Create a new Minion instance.
-    
+
     Args:
         name: Agent name
         description: Agent description
@@ -558,8 +692,28 @@ def create_minion(
         model: Optional pydantic_ai model. Defaults to None.
                Pass a real model like 'openai:gpt-4' for LLM support.
         provider: The string name of the provider. Defaults to "openrouter".
-    
+        request_timeout: Per-HTTP-request timeout in seconds for model calls
+                         (None disables it).
+        max_retries: Retries after a transient model error (429/5xx,
+                     connection failures) before re-raising.
+        retry_base_delay: First retry delay in seconds; doubles per attempt.
+        on_tool_call: Optional callback fired as ``(tool_name, args)`` when
+                      the model invokes a tool.
+        on_turn_end: Optional callback fired as ``(usage, latency_seconds)``
+                     after each successful turn.
+
     Returns:
         Minion instance ready for tool registration and execution
     """
-    return Minion(name=name, description=description, memory=memory, model=model, provider=provider)
+    return Minion(
+        name=name,
+        description=description,
+        memory=memory,
+        model=model,
+        provider=provider,
+        request_timeout=request_timeout,
+        max_retries=max_retries,
+        retry_base_delay=retry_base_delay,
+        on_tool_call=on_tool_call,
+        on_turn_end=on_turn_end,
+    )

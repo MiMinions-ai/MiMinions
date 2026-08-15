@@ -166,8 +166,7 @@ class MemoryDistiller:
             try:
                 from .sqlite import SQLiteMemory
 
-                sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
-                try:
+                with SQLiteMemory(db_path=self.global_db_path) as sqlite_memory:
                     for insight_text in global_insights:
                         metadata = self._build_tier3_metadata(
                             workspace=workspace,
@@ -181,8 +180,6 @@ class MemoryDistiller:
                                 "metadata": metadata,
                             }
                         )
-                finally:
-                    sqlite_memory.close()
             except Exception as exc:
                 logger.warning(
                     "Tier-3 global memory write failed for session %s: %s",

@@ -133,6 +133,14 @@ memory.delete(entry_id)
 memory.close()
 ```
 
+`SQLiteMemory` is also a **context manager** — the connection closes automatically on exit:
+
+```python
+with SQLiteMemory("memory.db") as memory:
+    memory.create("Python is a programming language")
+    results = memory.read("languages for coding", top_k=5)
+```
+
 The constructor `SQLiteMemory(db_path=None, model_name="all-MiniLM-L6-v2", dim=384)` resolves storage by `db_path`:
 
 === "Persistent (path)"
@@ -204,19 +212,22 @@ memory.close()
 | `list_all() -> list[dict]` | Return every entry (no limit). |
 | `clear() -> None` | Delete all entries. |
 | `close()` | Close the underlying SQLite connection. |
+| `__enter__` / `__exit__` | Context-manager support; `with SQLiteMemory(...) as mem:` closes the connection on exit. |
 
 !!! note "Extension support"
     `SQLiteMemory` needs SQLite extension loading. The `sqlite` extra installs `pysqlite3` for this; if your Python's `sqlite3` lacks extension support, the constructor raises `RuntimeError("SQLite extension loading not supported. Install pysqlite3: pip install pysqlite3")`.
 
 ### Global memory path
 
-The canonical cross-workspace database lives at `~/.miminions/global_memory.db`. Resolve it programmatically with:
+The canonical cross-workspace database lives at `~/.miminions/global_memory.db` (or under `$MIMINIONS_HOME` if that environment variable is set). Resolve it programmatically with:
 
 ```python
-from miminions.memory.sqlite import get_global_memory_db_path
+from miminions.core.paths import get_global_memory_db_path
 
-path = get_global_memory_db_path()   # creates ~/.miminions if needed
+path = get_global_memory_db_path()   # creates the config dir if needed
 ```
+
+The function's canonical home is `miminions.core.paths`; it is still re-exported from `miminions.memory.sqlite` for backwards compatibility.
 
 ## Attaching memory to an agent
 

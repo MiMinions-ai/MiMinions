@@ -33,10 +33,16 @@ def knowledge_cli():
 
 
 @knowledge_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def list_knowledge():
+def list_knowledge(as_json):
     """List all knowledge entries."""
     knowledge = load_knowledge()
+
+    if as_json:
+        payload = [{"id": entry_id, **entry_data} for entry_id, entry_data in knowledge.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not knowledge:
         click.echo("No knowledge entries found.")
@@ -238,8 +244,9 @@ def customize_knowledge(entry_id, template, format):
 
 @knowledge_cli.command("show")
 @click.argument("entry_id")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 @require_auth
-def show_knowledge(entry_id):
+def show_knowledge(entry_id, as_json):
     """Show detailed information about a knowledge entry."""
     knowledge = load_knowledge()
     
@@ -248,6 +255,11 @@ def show_knowledge(entry_id):
         return
     
     entry = knowledge[entry_id]
+
+    if as_json:
+        payload = {"id": entry_id, **entry}
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     click.echo(f"Entry ID: {entry_id}")
     click.echo(f"Title: {entry['title']}")

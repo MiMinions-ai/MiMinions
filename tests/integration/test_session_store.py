@@ -1,7 +1,36 @@
 from pathlib import Path
 
-from miminions.session.store import JsonlSessionStore, create_session_id
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
+
+from miminions.session.store import (
+    JsonlSessionStore,
+    create_session_id,
+    trim_message_history,
+)
 from miminions.workspace_fs.bootstrap import init_workspace
+
+
+def _user(content: str) -> ModelRequest:
+    return ModelRequest(parts=[UserPromptPart(content=content)])
+
+
+def _assistant(content: str) -> ModelResponse:
+    return ModelResponse(parts=[TextPart(content=content)])
+
+
+def _tool_call() -> ModelResponse:
+    return ModelResponse(parts=[ToolCallPart(tool_name="t", args={}, tool_call_id="c1")])
+
+
+def _tool_return() -> ModelRequest:
+    return ModelRequest(parts=[ToolReturnPart(tool_name="t", content="r", tool_call_id="c1")])
 
 
 def test_create_session_id_format():
@@ -36,3 +65,41 @@ def test_jsonl_session_store_missing_session_returns_empty(tmp_path: Path):
     init_workspace(tmp_path)
     store = JsonlSessionStore(tmp_path)
     assert list(store.iter_messages("does-not-exist")) == [], f"Expected iter_messages for non-existent session to return empty list, but got: {list(store.iter_messages('does-not-exist'))}"
+
+
+def test_trim_under_limit_returns_history_unchanged():
+    messages = [_user("u1"), _assistant("a1")]
+    assert trim_message_history(messages, max_messages=40) is messages
+
+
+def test_trim_cuts_at_a_user_turn_boundary():
+    messages = []
+    for i in range(30):
+        messages.append(_user(f"u{i}"))
+        messages.append(_assistant(f"a{i}"))
+
+    trimmed = trim_message_history(messages, max_messages=40)
+
+    assert len(trimmed) <= 40
+    first = trimmed[0]
+    assert isinstance(first, ModelRequest)
+    assert any(isinstance(part, UserPromptPart) for part in first.parts)
+
+
+def test_trim_never_starts_mid_tool_exchange():
+    messages = [
+        _user("u1"), _tool_call(), _tool_return(), _assistant("a1"),
+        _user("u2"), _tool_call(), _tool_return(), _assistant("a2"),
+    ]
+
+    # A naive messages[-6:] slice would start at the tool-return request;
+    # the trim must skip forward to the next user turn instead.
+    trimmed = trim_message_history(messages, max_messages=6)
+
+    assert trimmed[0] is messages[4]
+    assert len(trimmed) == 4
+
+
+def test_trim_without_user_boundary_returns_history_unchanged():
+    messages = [_assistant(f"a{i}") for i in range(10)]
+    assert trim_message_history(messages, max_messages=4) is messages
