@@ -8,7 +8,7 @@ import json
 import re
 from datetime import datetime, timezone
 from enum import Enum
-from .auth import get_config_dir
+from .auth import get_config, get_config_dir
 from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion

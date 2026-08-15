@@ -13,6 +13,16 @@ python -m miminions --help
 !!! info "State lives under `~/.miminions/`"
     All persistent CLI state is stored as JSON under your home directory: `config.json`, `auth.json`, `agents.json`, `tasks.json`, `knowledge.json`, `sessions.json`, `interactions.json`, plus a `workspaces/` tree. Set the **`MIMINIONS_HOME`** environment variable to relocate the whole directory (handy for tests and alternate deployments). JSON stores are written **atomically**, so an interrupted save can't leave a corrupt file behind. On the **first** invocation of any command, MiMinions bootstraps a **`default` workspace** and a **`default` agent** so the chat/prompt commands work out of the box.
 
+```bash
+# Explicitly initialize (or verify) default bootstrap state
+miminions init
+
+# Repair bootstrap state and restore missing default templates
+miminions init --force
+```
+
+`init` is an explicit, user-facing bootstrap/repair command over the same default setup logic used on first command run. The `--force` option re-runs bootstrap repair so missing default workspace template files are recreated without overwriting existing customized files.
+
 !!! warning "Authentication gating is uneven"
     A `require_auth` decorator gates the commands in `task`, `knowledge`, `workspace`, and `execution`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat` and `prompt` commands are not wrapped at all — don't rely on those being blocked when signed out.
 
@@ -224,6 +234,7 @@ miminions agent remove researcher
 | Command | Options | Description |
 | --- | --- | --- |
 | `list` | — | List all agent records with status and description. |
+| `show <ref>` | — | Show full details for one agent by id, id prefix, or exact name. |
 | `add` | `--name`, `--description`, `--type` | Create a record (id is the slugified name; a `_2`, `_3`, … suffix is appended if the id is already taken). All three are prompted if omitted. |
 | `update <id>` | `--name`, `--description`, `--type` | Update fields on an existing record. |
 | `remove <id>` | — | Delete a record (asks for confirmation). |

@@ -8,7 +8,7 @@ import time
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 from pathlib import Path
 
-from pydantic_ai import Agent, Tool, ModelRetry
+from pydantic_ai import Agent, ModelRetry, Tool
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import FunctionToolCallEvent
 from pydantic_ai.settings import ModelSettings
