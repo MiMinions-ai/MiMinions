@@ -53,5 +53,9 @@ from miminions.tools.schemas import ToolExecutionRequest
 results = await agent.execute_many_async([
     ToolExecutionRequest(tool_name="add", arguments={"a": 1, "b": 2}),
     ToolExecutionRequest(tool_name="add", arguments={"a": 3, "b": 4}),
-])
+], max_concurrency=16)
 ```
+
+`max_concurrency` defaults to `16` and must be greater than zero. Lower it for
+tools that consume constrained resources such as database connections or file
+descriptors.
