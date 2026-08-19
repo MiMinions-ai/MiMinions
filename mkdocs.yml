@@ -44,6 +44,8 @@ nav:
   - Features: features.md
   - Documentation:
       - Getting Started: getting-started.md
+      - Use Cases:
+          - Real-estate deal desk: use-cases/real-estate-deal-desk.md
       - Modules:
           - Agent: modules/agent.md
           - Memory: modules/memory.md
