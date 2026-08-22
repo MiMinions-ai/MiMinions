@@ -355,3 +355,7 @@ Ready to go deeper? Explore the module guides:
 [Data](modules/data.md) ·
 [Gateway](modules/gateway.md) ·
 [CLI](modules/cli.md).
+
+## Practice use cases
+
+- [Real-estate deal desk](use-cases/real-estate-deal-desk.md) — underwrite tool + three-tier memory starter
