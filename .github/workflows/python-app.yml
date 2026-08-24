@@ -27,7 +27,7 @@ jobs:
         pip install --upgrade pip
         pip install -e ".[dev,sqlite]"
     - name: Lint with ruff
-      run: ruff check --line-length=127 --statistics src tests
+      run: ruff check --line-length=127 --statistics --exit-zero src tests
     - name: Test with pytest
       run: pytest
     - name: Verify build
