@@ -32,7 +32,7 @@ class TestAgentFunctions:
         with patch('miminions.cli.agent.get_config_dir') as mock_get_config_dir:
             mock_get_config_dir.return_value = Path('/tmp/test_config')
             agents_file = get_agents_file()
-            assert agents_file == Path('/tmp/test_config/agents.json')
+            assert agents_file == Path('/tmp/test_config/agents.json'), f"expect agents_file == Path('/tmp/test_config/agents.json'), got {agents_file == Path('/tmp/test_config/agents.json')}"
 
     def test_load_agents_no_file(self):
         """Test load_agents returns empty dict when no file exists."""
@@ -42,7 +42,7 @@ class TestAgentFunctions:
             mock_get_agents_file.return_value = mock_agents_file
             
             agents = load_agents()
-            assert agents == {}
+            assert agents == {}, f"expect agents == {{}}, got {agents == {}}"
 
     def test_load_agents_valid_file(self):
         """Test load_agents returns data from file."""
@@ -64,7 +64,7 @@ class TestAgentFunctions:
                 mock_get_agents_file.return_value = Path(tmp_path)
                 
                 loaded_data = load_agents()
-                assert loaded_data == test_data
+                assert loaded_data == test_data, f"expect loaded_data == test_data, got {loaded_data == test_data}"
         finally:
             os.unlink(tmp_path)
 
@@ -90,7 +90,7 @@ class TestAgentFunctions:
                 with open(tmp_path, 'r') as f:
                     saved_data = json.load(f)
                 
-                assert saved_data == test_data
+                assert saved_data == test_data, f"expect saved_data == test_data, got {saved_data == test_data}"
         finally:
             os.unlink(tmp_path)
 
@@ -113,10 +113,10 @@ class TestAgentFunctions:
                     agent_data, AgentAction.TOOL_LIST
                 )
 
-        assert result == "done"
+        assert result == "done", f"expect result == 'done', got {result == 'done'}"
         params = runtime.connect_mcp_server.await_args.args[1]
-        assert params.command == "python"
-        assert params.args == ["-m", "files_server"]
+        assert params.command == "python", f"expect params.command == 'python', got {params.command == 'python'}"
+        assert params.args == ["-m", "files_server"], f"expect params.args == ['-m', 'files_server'], got {params.args == ['-m', 'files_server']}"
         runtime.load_tools_from_mcp_server.assert_awaited_once_with("files")
         action.assert_awaited_once_with(runtime, AgentAction.TOOL_LIST)
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
@@ -186,8 +186,8 @@ class TestAgentCLI:
                 
                 result = self.runner.invoke(agent_cli, ['list'])
                 
-                assert result.exit_code == 0
-                assert 'No agents configured' in result.output
+                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                assert 'No agents configured' in result.output, f"expect 'No agents configured' in result.output, got {'No agents configured' in result.output}"
 
     def test_list_agents_not_authenticated(self):
         """Test list agents when not authenticated."""
@@ -196,7 +196,7 @@ class TestAgentCLI:
             
             result = self.runner.invoke(agent_cli, ['list'])
             
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
             # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
@@ -227,10 +227,10 @@ class TestAgentCLI:
                 
                 result = self.runner.invoke(agent_cli, ['list'])
                 
-                assert result.exit_code == 0
-                assert 'Agents:' in result.output
-                assert 'test_agent: Test Agent (inactive)' in result.output
-                assert 'another_agent: Another Agent (running)' in result.output
+                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                assert 'Agents:' in result.output, f"expect 'Agents:' in result.output, got {'Agents:' in result.output}"
+                assert 'test_agent: Test Agent (inactive)' in result.output, f"expect 'test_agent: Test Agent (inactive)' in result.output, got {'test_agent: Test Agent (inactive)' in result.output}"
+                assert 'another_agent: Another Agent (running)' in result.output, f"expect 'another_agent: Another Agent (running)' in result.output, got {'another_agent: Another Agent (running)' in result.output}"
 
     def test_add_agent_success(self):
         """Test successful agent addition."""
@@ -247,8 +247,8 @@ class TestAgentCLI:
                         '--type', 'general'
                     ])
                     
-                    assert result.exit_code == 0
-                    assert 'Agent \'Test Agent\' added successfully' in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert 'Agent \'Test Agent\' added successfully' in result.output, f"expect \"Agent 'Test Agent' added successfully\" in result.output, got {"Agent 'Test Agent' added successfully" in result.output}"
                     mock_save.assert_called_once()
 
     def test_add_agent_duplicate_id_gets_unique_suffix(self):
@@ -275,11 +275,11 @@ class TestAgentCLI:
                         '--type', 'general'
                     ])
 
-                    assert result.exit_code == 0
-                    assert 'ID: test_agent_2' in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert 'ID: test_agent_2' in result.output, f"expect 'ID: test_agent_2' in result.output, got {'ID: test_agent_2' in result.output}"
                     saved = mock_save.call_args[0][0]
-                    assert 'test_agent_2' in saved
-                    assert 'test_agent' in saved  # original preserved
+                    assert 'test_agent_2' in saved, f"expect 'test_agent_2' in saved, got {'test_agent_2' in saved}"
+                    assert 'test_agent' in saved, f"expect 'test_agent' in saved, got {'test_agent' in saved}"  # original preserved
 
     def test_add_agent_not_authenticated(self):
         """Test adding agent when not authenticated."""
@@ -293,7 +293,7 @@ class TestAgentCLI:
                 '--type', 'general'
             ])
             
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
             # NOTE(auth-bypass): Auth enforcement is currently disabled in
             # src/miminions/cli/agent.py::require_auth (temporary no-op).
             # Keep this assertion commented so test behavior remains otherwise unchanged.
@@ -324,8 +324,8 @@ class TestAgentCLI:
                         '--description', 'Updated description'
                     ])
                     
-                    assert result.exit_code == 0
-                    assert 'Agent \'test_agent\' updated successfully' in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert 'Agent \'test_agent\' updated successfully' in result.output, f"expect \"Agent 'test_agent' updated successfully\" in result.output, got {"Agent 'test_agent' updated successfully" in result.output}"
                     mock_save.assert_called_once()
 
     def test_update_agent_not_found(self):
@@ -341,8 +341,8 @@ class TestAgentCLI:
                     '--name', 'Updated Agent'
                 ])
                 
-                assert result.exit_code == 0
-                assert 'not found' in result.output
+                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                assert 'not found' in result.output, f"expect 'not found' in result.output, got {'not found' in result.output}"
 
     def test_remove_agent_success(self):
         """Test successful agent removal."""
@@ -367,8 +367,8 @@ class TestAgentCLI:
                         '--yes'  # Skip confirmation
                     ])
                     
-                    assert result.exit_code == 0
-                    assert 'Agent \'test_agent\' removed successfully' in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert 'Agent \'test_agent\' removed successfully' in result.output, f"expect \"Agent 'test_agent' removed successfully\" in result.output, got {"Agent 'test_agent' removed successfully" in result.output}"
                     mock_save.assert_called_once()
 
     def test_remove_agent_not_found(self):
@@ -384,8 +384,8 @@ class TestAgentCLI:
                     '--yes'
                 ])
                 
-                assert result.exit_code == 0
-                assert 'not found' in result.output
+                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                assert 'not found' in result.output, f"expect 'not found' in result.output, got {'not found' in result.output}"
 
     def test_mcp_add_persists_minimal_config_and_argument_order(self):
         agents = {"test_agent": {"name": "Test Agent"}}
@@ -396,11 +396,11 @@ class TestAgentCLI:
                     '--arg', '-m', '--arg', 'files_server',
                 ])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
         saved = mock_save.call_args.args[0]
         assert saved['test_agent']['mcp_servers']['files'] == {
             'command': 'python', 'args': ['-m', 'files_server']
-        }
+        }, f"expect saved['test_agent']['mcp_servers']['files'] == {{'command': 'python', 'args': ['-m', 'files_server']}}, got {saved['test_agent']['mcp_servers']['files'] == {'command': 'python', 'args': ['-m', 'files_server']}}"
 
     def test_mcp_add_rejects_duplicate_server(self):
         agents = {"test_agent": {"mcp_servers": {"files": {"command": "python", "args": []}}}}
@@ -409,8 +409,8 @@ class TestAgentCLI:
                 'mcp-add', 'test_agent', 'files', '--command', 'python',
             ])
 
-        assert result.exit_code != 0
-        assert "already exists" in result.output
+        assert result.exit_code != 0, f"expect result.exit_code != 0, got {result.exit_code != 0}"
+        assert "already exists" in result.output, f"expect 'already exists' in result.output, got {'already exists' in result.output}"
 
     def test_mcp_list_and_remove(self):
         agents = {"test_agent": {"mcp_servers": {
@@ -423,10 +423,10 @@ class TestAgentCLI:
                     agent_cli, ['mcp-remove', 'test_agent', 'files', '--yes']
                 )
 
-        assert listed.exit_code == 0
-        assert "files: python -m files_server" in listed.output
-        assert removed.exit_code == 0
-        assert agents['test_agent']['mcp_servers'] == {}
+        assert listed.exit_code == 0, f"expect listed.exit_code == 0, got {listed.exit_code == 0}"
+        assert "files: python -m files_server" in listed.output, f"expect 'files: python -m files_server' in listed.output, got {'files: python -m files_server' in listed.output}"
+        assert removed.exit_code == 0, f"expect removed.exit_code == 0, got {removed.exit_code == 0}"
+        assert agents['test_agent']['mcp_servers'] == {}, f"expect agents['test_agent']['mcp_servers'] == {{}}, got {agents['test_agent']['mcp_servers'] == {}}"
         mock_save.assert_called_once_with(agents)
 
     def test_set_goal_success(self):
@@ -452,8 +452,8 @@ class TestAgentCLI:
                         '--goal', 'Complete the task'
                     ])
                     
-                    assert result.exit_code == 0
-                    assert 'Goal set for agent \'test_agent\': Complete the task' in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert 'Goal set for agent \'test_agent\': Complete the task' in result.output, f"expect \"Goal set for agent 'test_agent': Complete the task\" in result.output, got {"Goal set for agent 'test_agent': Complete the task" in result.output}"
                     mock_save.assert_called_once()
 
     def test_show_agent_by_exact_id(self):
@@ -475,10 +475,10 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(agent_cli, ['show', 'research_agent'])
 
-            assert result.exit_code == 0
-            assert 'Agent: Research Agent' in result.output
-            assert 'ID: research_agent' in result.output
-            assert 'Description: Finds information' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'Agent: Research Agent' in result.output, f"expect 'Agent: Research Agent' in result.output, got {'Agent: Research Agent' in result.output}"
+            assert 'ID: research_agent' in result.output, f"expect 'ID: research_agent' in result.output, got {'ID: research_agent' in result.output}"
+            assert 'Description: Finds information' in result.output, f"expect 'Description: Finds information' in result.output, got {'Description: Finds information' in result.output}"
 
     def test_show_agent_by_id_prefix(self):
         """Show should resolve by id prefix."""
@@ -497,8 +497,8 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(agent_cli, ['show', 'rese'])
 
-            assert result.exit_code == 0
-            assert 'ID: research_agent' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'ID: research_agent' in result.output, f"expect 'ID: research_agent' in result.output, got {'ID: research_agent' in result.output}"
 
     def test_show_agent_by_name(self):
         """Show should resolve by exact agent name."""
@@ -517,8 +517,8 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(agent_cli, ['show', 'Research Agent'])
 
-            assert result.exit_code == 0
-            assert 'ID: research_agent' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'ID: research_agent' in result.output, f"expect 'ID: research_agent' in result.output, got {'ID: research_agent' in result.output}"
 
     def test_agent_list_and_show_json_output(self):
         """List/show should return valid JSON when --json is used."""
@@ -535,15 +535,15 @@ class TestAgentCLI:
             list_result = self.runner.invoke(agent_cli, ['list', '--json'])
             show_result = self.runner.invoke(agent_cli, ['show', 'research_agent', '--json'])
 
-        assert list_result.exit_code == 0
-        assert show_result.exit_code == 0
+        assert list_result.exit_code == 0, f"expect list_result.exit_code == 0, got {list_result.exit_code == 0}"
+        assert show_result.exit_code == 0, f"expect show_result.exit_code == 0, got {show_result.exit_code == 0}"
 
         list_payload = json.loads(list_result.output)
         show_payload = json.loads(show_result.output)
 
-        assert list_payload[0]['id'] == 'research_agent'
-        assert show_payload['id'] == 'research_agent'
-        assert show_payload['name'] == 'Research Agent'
+        assert list_payload[0]['id'] == 'research_agent', f"expect list_payload[0]['id'] == 'research_agent', got {list_payload[0]['id'] == 'research_agent'}"
+        assert show_payload['id'] == 'research_agent', f"expect show_payload['id'] == 'research_agent', got {show_payload['id'] == 'research_agent'}"
+        assert show_payload['name'] == 'Research Agent', f"expect show_payload['name'] == 'Research Agent', got {show_payload['name'] == 'Research Agent'}"
 
 
 
@@ -564,11 +564,11 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(agent_cli, ['tool-list', 'test_agent'])
 
-            assert result.exit_code == 0
-            assert "Tools for 'test_agent':" in result.output
-            assert "cli_run_command" in result.output
-            assert "cli_echo" in result.output
-            assert "cli_add" in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Tools for 'test_agent':" in result.output, f"expect \"Tools for 'test_agent':\" in result.output, got {"Tools for 'test_agent':" in result.output}"
+            assert "cli_run_command" in result.output, f"expect 'cli_run_command' in result.output, got {'cli_run_command' in result.output}"
+            assert "cli_echo" in result.output, f"expect 'cli_echo' in result.output, got {'cli_echo' in result.output}"
+            assert "cli_add" in result.output, f"expect 'cli_add' in result.output, got {'cli_add' in result.output}"
 
     def test_tool_info_success(self):
         """Test showing tool info for a known tool."""
@@ -587,10 +587,10 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(agent_cli, ['tool-info', 'test_agent', 'cli_add'])
 
-            assert result.exit_code == 0
-            assert "Tool: cli_add" in result.output
-            assert "Description: Add two integers" in result.output
-            assert "Schema:" in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Tool: cli_add" in result.output, f"expect 'Tool: cli_add' in result.output, got {'Tool: cli_add' in result.output}"
+            assert "Description: Add two integers" in result.output, f"expect 'Description: Add two integers' in result.output, got {'Description: Add two integers' in result.output}"
+            assert "Schema:" in result.output, f"expect 'Schema:' in result.output, got {'Schema:' in result.output}"
 
     def test_tool_run_success(self):
         """Test running a tool with valid JSON arguments."""
@@ -612,10 +612,10 @@ class TestAgentCLI:
                     ['tool-run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
                 )
 
-            assert result.exit_code == 0
-            assert "Tool: cli_add" in result.output
-            assert "Status: success" in result.output
-            assert "Result: 5" in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Tool: cli_add" in result.output, f"expect 'Tool: cli_add' in result.output, got {'Tool: cli_add' in result.output}"
+            assert "Status: success" in result.output, f"expect 'Status: success' in result.output, got {'Status: success' in result.output}"
+            assert "Result: 5" in result.output, f"expect 'Result: 5' in result.output, got {'Result: 5' in result.output}"
 
     def test_tool_run_cli_command_success(self):
         """Test running the default command execution tool through the CLI."""
@@ -639,11 +639,11 @@ class TestAgentCLI:
                     input='y\n',
                 )
 
-            assert result.exit_code == 0
-            assert "Tool: cli_run_command" in result.output
-            assert "Status: success" in result.output
-            assert "'returncode': 0" in result.output
-            assert "Python" in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Tool: cli_run_command" in result.output, f"expect 'Tool: cli_run_command' in result.output, got {'Tool: cli_run_command' in result.output}"
+            assert "Status: success" in result.output, f"expect 'Status: success' in result.output, got {'Status: success' in result.output}"
+            assert "'returncode': 0" in result.output, f"expect \"'returncode': 0\" in result.output, got {"'returncode': 0" in result.output}"
+            assert "Python" in result.output, f"expect 'Python' in result.output, got {'Python' in result.output}"
 
     def test_tool_run_cli_command_denied(self):
         """Test declining the default command execution tool through the CLI."""
@@ -667,9 +667,9 @@ class TestAgentCLI:
                         input='n\n',
                     )
 
-        assert result.exit_code == 0
-        assert "Status: error" in result.output
-        assert "Command execution was not approved" in result.output
+        assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+        assert "Status: error" in result.output, f"expect 'Status: error' in result.output, got {'Status: error' in result.output}"
+        assert "Command execution was not approved" in result.output, f"expect 'Command execution was not approved' in result.output, got {'Command execution was not approved' in result.output}"
         mock_run.assert_not_called()
 
     def test_tool_run_invalid_json(self):
@@ -692,8 +692,8 @@ class TestAgentCLI:
                     ['tool-run', 'test_agent', 'cli_add', '--arguments', 'not-json']
                 )
 
-            assert result.exit_code == 0
-            assert "Invalid JSON for --arguments." in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Invalid JSON for --arguments." in result.output, f"expect 'Invalid JSON for --arguments.' in result.output, got {'Invalid JSON for --arguments.' in result.output}"
 
     def test_ask_agent_uses_tool_fallback_for_addition(self):
         """Ask should use cli_add fallback when prompt requests arithmetic."""
@@ -715,9 +715,9 @@ class TestAgentCLI:
                     ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
                 )
 
-            assert result.exit_code == 0
-            assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output
-            assert "Agent response: Used tool cli_add -> 13" in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output, f"expect \"Asking agent 'test_agent': Please add 4 and 9 for me\" in result.output, got {"Asking agent 'test_agent': Please add 4 and 9 for me" in result.output}"
+            assert "Agent response: Used tool cli_add -> 13" in result.output, f"expect 'Agent response: Used tool cli_add -> 13' in result.output, got {'Agent response: Used tool cli_add -> 13' in result.output}"
 
     def test_run_agent_uses_tool_fallback_for_addition_goal(self):
         """Run should use cli_add fallback for arithmetic goals."""
@@ -738,7 +738,7 @@ class TestAgentCLI:
 
                     result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
 
-                    assert result.exit_code == 0
-                    assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output
-                    assert "Agent response: Used tool cli_add -> 15" in result.output
+                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                    assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {"Running agent 'test_agent' with goal: Add 10 and 5" in result.output}"
+                    assert "Agent response: Used tool cli_add -> 15" in result.output, f"expect 'Agent response: Used tool cli_add -> 15' in result.output, got {'Agent response: Used tool cli_add -> 15' in result.output}"
                     mock_save.assert_called_once()

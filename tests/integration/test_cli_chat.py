@@ -119,11 +119,11 @@ def test_chat_cli_streams_deltas_incrementally(tmp_path: Path, monkeypatch):
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert "foobar" in result.output
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert "foobar" in result.output, f"expect 'foobar' in result.output, got {'foobar' in result.output}"
 
     contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert '"content": "foobar"' in contents
+    assert '"content": "foobar"' in contents, f"expect '\"content\": \"foobar\"' in contents, got {'"content": "foobar"' in contents}"
 
 
 def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, monkeypatch):
@@ -166,12 +166,12 @@ def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, mon
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert "[error] RuntimeError: stream died" in result.output
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert "[error] RuntimeError: stream died" in result.output, f"expect '[error] RuntimeError: stream died' in result.output, got {'[error] RuntimeError: stream died' in result.output}"
 
     contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert "partial text" in contents
-    assert "[error] RuntimeError: stream died" in contents
+    assert "partial text" in contents, f"expect 'partial text' in contents, got {'partial text' in contents}"
+    assert "[error] RuntimeError: stream died" in contents, f"expect '[error] RuntimeError: stream died' in contents, got {'[error] RuntimeError: stream died' in contents}"
 
 
 def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
@@ -219,9 +219,9 @@ def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
         input="/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert callable(captured_kwargs["on_tool_call"])
-    assert callable(captured_kwargs["on_turn_end"])
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert callable(captured_kwargs["on_tool_call"]), f"expect callable(captured_kwargs['on_tool_call']), got {callable(captured_kwargs['on_tool_call'])}"
+    assert callable(captured_kwargs["on_turn_end"]), f"expect callable(captured_kwargs['on_turn_end']), got {callable(captured_kwargs['on_turn_end'])}"
 
     captured_kwargs.clear()
     result = runner.invoke(
@@ -230,9 +230,9 @@ def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
         input="/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert captured_kwargs["on_tool_call"] is None
-    assert captured_kwargs["on_turn_end"] is None
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert captured_kwargs["on_tool_call"] is None, f"expect captured_kwargs['on_tool_call'] is None, got {captured_kwargs['on_tool_call'] is None}"
+    assert captured_kwargs["on_turn_end"] is None, f"expect captured_kwargs['on_turn_end'] is None, got {captured_kwargs['on_turn_end'] is None}"
 
 
 def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
@@ -280,11 +280,11 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert len(calls) == 1
-    assert calls[0][0] == "ws1"
-    assert calls[0][1] == tmp_path
-    assert calls[0][2]
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert len(calls) == 1, f"expect len(calls) == 1, got {len(calls) == 1}"
+    assert calls[0][0] == "ws1", f"expect calls[0][0] == 'ws1', got {calls[0][0] == 'ws1'}"
+    assert calls[0][1] == tmp_path, f"expect calls[0][1] == tmp_path, got {calls[0][1] == tmp_path}"
+    assert calls[0][2], f"expect calls[0][2], got {calls[0][2]}"
 
 
 def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch):
@@ -331,5 +331,5 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
         input="/quit\n",
     )
 
-    assert result.exit_code == 0
-    assert "Warning: memory distillation skipped" in result.output
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert "Warning: memory distillation skipped" in result.output, f"expect 'Warning: memory distillation skipped' in result.output, got {'Warning: memory distillation skipped' in result.output}"

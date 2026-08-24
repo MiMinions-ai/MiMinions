@@ -39,12 +39,12 @@ def test_knowledge_list_and_show_json_output():
             list_result = runner.invoke(knowledge_cli, ["list", "--json"])
             show_result = runner.invoke(knowledge_cli, ["show", "kn01", "--json"])
 
-    assert list_result.exit_code == 0
-    assert show_result.exit_code == 0
+    assert list_result.exit_code == 0, f"expect list_result.exit_code == 0, got {list_result.exit_code == 0}"
+    assert show_result.exit_code == 0, f"expect show_result.exit_code == 0, got {show_result.exit_code == 0}"
 
     list_payload = json.loads(list_result.output)
     show_payload = json.loads(show_result.output)
 
-    assert list_payload[0]["id"] == "kn01"
-    assert show_payload["id"] == "kn01"
-    assert show_payload["title"] == "Deploy Steps"
+    assert list_payload[0]["id"] == "kn01", f"expect list_payload[0]['id'] == 'kn01', got {list_payload[0]['id'] == 'kn01'}"
+    assert show_payload["id"] == "kn01", f"expect show_payload['id'] == 'kn01', got {show_payload['id'] == 'kn01'}"
+    assert show_payload["title"] == "Deploy Steps", f"expect show_payload['title'] == 'Deploy Steps', got {show_payload['title'] == 'Deploy Steps'}"

@@ -29,7 +29,7 @@ def test_execution_interaction_list_json_output():
         with patch("miminions.cli.execution._load", side_effect=_fake_load):
             result = runner.invoke(execution, ["interaction", "list", "--session-id", "s1", "--json"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
     payload = json.loads(result.output)
-    assert payload[0]["index"] == 0
-    assert payload[0]["workflow_run"]["id"] == run.id
+    assert payload[0]["index"] == 0, f"expect payload[0]['index'] == 0, got {payload[0]['index'] == 0}"
+    assert payload[0]["workflow_run"]["id"] == run.id, f"expect payload[0]['workflow_run']['id'] == run.id, got {payload[0]['workflow_run']['id'] == run.id}"

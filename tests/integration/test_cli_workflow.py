@@ -40,8 +40,8 @@ def test_workflow_add_rejects_unknown_agents(temp_config_dir):
                 ],
             )
 
-    assert result.exit_code == 0
-    assert "Unknown agent id(s): missing" in result.output
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert "Unknown agent id(s): missing" in result.output, f"expect 'Unknown agent id(s): missing' in result.output, got {'Unknown agent id(s): missing' in result.output}"
 
 
 def test_workflow_update_rejects_unknown_agents(temp_config_dir):
@@ -66,8 +66,8 @@ def test_workflow_update_rejects_unknown_agents(temp_config_dir):
         with patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
             result = runner.invoke(workflow_cli, ["update", "wf1", "--agents", "missing"])
 
-    assert result.exit_code == 0
-    assert "Unknown agent id(s): missing" in result.output
+    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+    assert "Unknown agent id(s): missing" in result.output, f"expect 'Unknown agent id(s): missing' in result.output, got {'Unknown agent id(s): missing' in result.output}"
 
     workflows = _read(temp_config_dir / "workflows.json")
-    assert workflows["wf1"]["agents"] == ["a1"]
+    assert workflows["wf1"]["agents"] == ["a1"], f"expect workflows['wf1']['agents'] == ['a1'], got {workflows['wf1']['agents'] == ['a1']}"

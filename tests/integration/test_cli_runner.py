@@ -25,15 +25,15 @@ def run_basic_test():
         
         # Test basic CLI functionality
         result = runner.invoke(cli, ['--help'])
-        assert result.exit_code == 0
-        assert 'MiMinions CLI' in result.output
+        assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+        assert 'MiMinions CLI' in result.output, f"expect 'MiMinions CLI' in result.output, got {'MiMinions CLI' in result.output}"
         
         # Test auth status when not signed in (with isolated config)
         with patch('miminions.cli.auth.get_config_dir') as mock_config_dir:
             mock_config_dir.return_value = config_dir
             result = runner.invoke(cli, ['auth', 'status'])
-            assert result.exit_code == 0
-            assert 'Not signed in' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'Not signed in' in result.output, f"expect 'Not signed in' in result.output, got {'Not signed in' in result.output}"
         
         print("✓ Basic CLI tests passed")
         return True
@@ -56,8 +56,8 @@ def run_auth_test():
         # Test signin
         with patch('miminions.cli.auth.save_auth_data') as mock_save:
             result = runner.invoke(auth_cli, ['signin', '--username', 'testuser', '--password', 'testpass'])
-            assert result.exit_code == 0
-            assert 'Successfully signed in as testuser' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'Successfully signed in as testuser' in result.output, f"expect 'Successfully signed in as testuser' in result.output, got {'Successfully signed in as testuser' in result.output}"
             mock_save.assert_called_once()
         
         print("✓ Authentication tests passed")
@@ -80,8 +80,8 @@ def run_agent_test():
         with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
             mock_is_auth.return_value = False
             result = runner.invoke(agent_cli, ['list'])
-            assert result.exit_code == 0
-            assert 'Please sign in first' in result.output
+            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+            assert 'Please sign in first' in result.output, f"expect 'Please sign in first' in result.output, got {'Please sign in first' in result.output}"
         
         # Test list agents when authenticated but no agents
         with patch('miminions.cli.agent.is_authenticated') as mock_is_auth:
@@ -89,8 +89,8 @@ def run_agent_test():
                 mock_is_auth.return_value = True
                 mock_load.return_value = {}
                 result = runner.invoke(agent_cli, ['list'])
-                assert result.exit_code == 0
-                assert 'No agents configured' in result.output
+                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
+                assert 'No agents configured' in result.output, f"expect 'No agents configured' in result.output, got {'No agents configured' in result.output}"
         
         print("✓ Agent management tests passed")
         return True
