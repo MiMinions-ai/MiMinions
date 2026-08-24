@@ -307,6 +307,7 @@ Factory that builds a configured `Minion`. When `model` is `None`, `provider` dr
 | `search_tools(query) -> list[str]` | Case-insensitive search over tool names/descriptions. |
 | `execute(name, arguments=None, **kwargs) -> ToolExecutionResult` | Run a tool synchronously; never raises. |
 | `async execute_async(name, arguments=None, **kwargs) -> ToolExecutionResult` | Async variant of `execute`; awaits coroutine tools. |
+| `async execute_many_async(requests, max_concurrency=16) -> list[ToolExecutionResult]` | Run structured tool requests with bounded concurrency; results preserve request order and isolate failures. |
 | `execute_tool(name, **kwargs) -> Any` | Run a tool and return its raw result; raises on error. |
 | `async execute_tool_async(name, **kwargs) -> Any` | Async raw-result variant; raises on error. |
 | `set_memory(memory) -> None` | Attach a memory backend and auto-register the 7 memory tools. |
