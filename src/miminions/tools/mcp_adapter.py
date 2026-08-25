@@ -86,7 +86,12 @@ class MCPToolAdapter:
         except BaseException:
             self._connection_tasks.pop(server_name, None)
             self._stop_events.pop(server_name, None)
-            await task
+            if not task.done():
+                task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
             raise
 
     async def disconnect_server(self, server_name: str) -> None:
