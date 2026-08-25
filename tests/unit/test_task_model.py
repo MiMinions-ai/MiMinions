@@ -33,7 +33,7 @@ class TestTaskStatus:
 
     def test_task_status_comparison(self):
         """Test TaskStatus enum comparison."""
-        assert TaskStatus.PENDING == TaskStatus.PENDING, f"expect TaskStatus.PENDING, got {TaskStatus.PENDING}"
+        assert TaskStatus.PENDING == TaskStatus("pending"), f"expect TaskStatus.PENDING, got {TaskStatus('pending')}"
         assert TaskStatus.PENDING != TaskStatus.RUNNING, f"expect value != TaskStatus.RUNNING, got {TaskStatus.PENDING}"
         assert TaskStatus.COMPLETED != TaskStatus.FAILED, f"expect value != TaskStatus.FAILED, got {TaskStatus.COMPLETED}"
 
