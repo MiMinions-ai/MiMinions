@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from miminions.core.workspace import WorkspaceManager, Node, Rule, NodeType, RulePriority, default_workspace_root
+from miminions.core.workspace import WorkspaceManager, Rule, NodeType, RulePriority, default_workspace_root
 from miminions.workspace_fs import init_workspace
 
 
