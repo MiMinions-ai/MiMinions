@@ -341,7 +341,7 @@ class CSVFileHandler(FileHandler):
         try:
             # Try to detect encoding and delimiter
             encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252']
-            delimiters = [',', ';', '\t', '|']
+            delimiters = ',;\t|'
             
             for encoding in encodings:
                 try:

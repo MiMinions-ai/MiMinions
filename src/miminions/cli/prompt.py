@@ -10,7 +10,7 @@ import click
 from miminions.agent import create_minion
 from miminions.context import ContextBuilder
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.cli.auth import get_config_dir
+from miminions.core.paths import get_config_dir
 from miminions.session.store import JsonlSessionStore
 
 

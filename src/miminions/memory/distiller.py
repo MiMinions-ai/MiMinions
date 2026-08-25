@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from miminions.core.paths import get_global_memory_db_path
 from miminions.session.store import JsonlSessionStore
 
 from .md_store import append_history, upsert_memory_section
 
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -131,6 +127,10 @@ class MemoryDistiller:
                 session_id=session_id,
             )
         except Exception as exc:
+            logger.warning(
+                "Distillation LLM filter failed for session %s: %s",
+                session_id, exc, exc_info=True,
+            )
             result.dropped_reasons.append(f"llm_filter_error: {exc}")
             return result
 
@@ -166,8 +166,7 @@ class MemoryDistiller:
             try:
                 from .sqlite import SQLiteMemory
 
-                sqlite_memory = SQLiteMemory(db_path=self.global_db_path)
-                try:
+                with SQLiteMemory(db_path=self.global_db_path) as sqlite_memory:
                     for insight_text in global_insights:
                         metadata = self._build_tier3_metadata(
                             workspace=workspace,
@@ -181,9 +180,11 @@ class MemoryDistiller:
                                 "metadata": metadata,
                             }
                         )
-                finally:
-                    sqlite_memory.close()
             except Exception as exc:
+                logger.warning(
+                    "Tier-3 global memory write failed for session %s: %s",
+                    session_id, exc, exc_info=True,
+                )
                 result.dropped_reasons.append(f"tier3_unavailable: {exc}")
 
         return result

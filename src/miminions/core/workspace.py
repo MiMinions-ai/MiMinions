@@ -6,6 +6,7 @@ and structured logic based on internal state.
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +14,17 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 
-DEFAULT_WORKSPACES_ROOT = Path("~/.miminions/workspaces").expanduser()
+from miminions.core.paths import get_workspaces_root
+from miminions.core.persistence import save_json
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_WORKSPACES_ROOT = get_workspaces_root()
+
+# Version of the persisted workspace record format. Bump on any breaking
+# change to to_dict()'s shape and add a migration step in
+# _migrate_workspace_record().
+WORKSPACE_SCHEMA_VERSION = 1
 
 
 class NodeType(Enum):
@@ -226,6 +237,8 @@ class Workspace:
         elif condition_type == 'state_equals':
             key = condition.get('key')
             value = condition.get('value')
+            if key is None:
+                return False
             return self.state.get(key) == value
         elif condition_type == 'node_count':
             operator = condition.get('operator', '>=')
@@ -273,6 +286,7 @@ class Workspace:
     def to_dict(self) -> Dict[str, Any]:
         """Convert workspace to dictionary."""
         return {
+            'schema_version': WORKSPACE_SCHEMA_VERSION,
             'id': self.id,
             'name': self.name,
             'description': self.description,
@@ -317,6 +331,31 @@ class Workspace:
         return workspace
 
 
+def _migrate_workspace_record(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize a persisted workspace record to WORKSPACE_SCHEMA_VERSION.
+
+    Records without a version predate versioning and are treated as v1
+    (they get stamped on the next save). Future format changes dispatch on
+    the record's version here, e.g. ``if version == 1: data = _v1_to_v2(data)``.
+    """
+    try:
+        version = int(data.get('schema_version', 1))
+    except (TypeError, ValueError):
+        logger.warning(
+            "Workspace %s has invalid schema_version %r; treating as %d.",
+            data.get('id', '<unknown>'), data.get('schema_version'),
+            WORKSPACE_SCHEMA_VERSION,
+        )
+        version = WORKSPACE_SCHEMA_VERSION
+    if version > WORKSPACE_SCHEMA_VERSION:
+        logger.warning(
+            "Workspace %s has schema_version %d, newer than supported %d; "
+            "loading best-effort.",
+            data.get('id', '<unknown>'), version, WORKSPACE_SCHEMA_VERSION,
+        )
+    return data
+
+
 class WorkspaceManager:
     """Manager for workspace operations and persistence."""
     
@@ -336,22 +375,28 @@ class WorkspaceManager:
             
             workspaces = {}
             for workspace_id, workspace_data in data.items():
-                workspaces[workspace_id] = Workspace.from_dict(workspace_data)
-            
+                workspaces[workspace_id] = Workspace.from_dict(
+                    _migrate_workspace_record(workspace_data)
+                )
+
             return workspaces
         except Exception:
+            logger.warning(
+                "Could not read workspaces from %s; treating as empty. "
+                "If the file is corrupt it will be overwritten on the next save; "
+                "if it is unreadable (e.g. permissions), fix access before saving.",
+                self.workspaces_file,
+                exc_info=True,
+            )
             return {}
     
     def save_workspaces(self, workspaces: Dict[str, Workspace]) -> None:
         """Save workspaces to storage."""
-        self.config_dir.mkdir(exist_ok=True)
-        
         data = {}
         for workspace_id, workspace in workspaces.items():
             data[workspace_id] = workspace.to_dict()
-        
-        with open(self.workspaces_file, 'w') as f:
-            json.dump(data, f, indent=2)
+
+        save_json(self.workspaces_file, data)
     
     def create_workspace(self, name: str, description: str = "") -> Workspace:
         """Create a new workspace."""

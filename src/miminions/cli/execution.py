@@ -16,8 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .auth import get_config_dir
-from miminions.core.auth import require_auth
+from miminions.core.paths import get_config_dir
+from .persistence import load_json, save_json
+# TODO(auth): Re-enable require_auth when execution sessions become account-backed.
 from miminions.agent import create_minion
 from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
@@ -32,12 +33,12 @@ def _interactions_file() -> Path:
     return get_config_dir() / "interactions.json"
 
 def _load(path: Path) -> Any:
-    return json.loads(path.read_text()) if path.exists() else {}
+    return load_json(path)
 
 def _save(path: Path, data: Any) -> None:
-    path.write_text(json.dumps(data, indent=2))
+    save_json(path, data)
 
-def _active_session():
+def _active_session() -> tuple[Optional[str], Optional[dict]]:
     """Return (id, session) for the current active session, else (None, None)."""
     for sid, s in _load(_sessions_file()).items():
         if s.get("status") == "active":
@@ -59,6 +60,13 @@ def _load_module(agent, path: str) -> int:
     """Load GenericTool instances from a .py file into the Minion via add_tool()."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("_dyn_module", path)
+
+    if spec is None:
+        raise click.ClickException(f"Failed to load module from {path}")
+
+    if spec.loader is None:
+        raise click.ClickException(f"Module loader is None for {path}")
+
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     count = 0
@@ -174,7 +182,7 @@ def session():
 
 @session.command("start")
 @click.option("--name", default=None, help="Optional session name.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
 def session_start(name):
     """Start a new execution session."""
     sid, existing = _active_session()
@@ -195,7 +203,7 @@ def session_start(name):
 
 
 @session.command("stop")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
 def session_stop():
     """Stop the active session."""
     sid, s = _active_session()
@@ -210,10 +218,16 @@ def session_stop():
 
 
 @session.command("list")
-@require_auth
-def session_list():
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
+def session_list(as_json):
     """List all sessions."""
     sessions = _load(_sessions_file())
+    if as_json:
+        payload = [{"id": sid, **s} for sid, s in sessions.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
+
     if not sessions:
         click.echo("No sessions found.")
         return
@@ -225,7 +239,7 @@ def session_list():
 
 @execution.command("add-tool")
 @click.argument("path")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool registration does not require sign-in yet.
 def add_tool(path):
     """Register a tool module (.py) with the active session."""
     sid, s = _active_session()
@@ -254,12 +268,16 @@ def add_tool(path):
 @click.argument("tool_name")
 @click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
               help="Tool input as KEY=VALUE pairs.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool execution does not require sign-in yet.
 def run_tool(tool_name, inputs):
     """Execute a tool in the active session."""
-    sid, s = _active_session()
+    sid, session = _active_session()
     if not sid:
         click.echo("No active session.")
+        return
+
+    if not session or not isinstance(session, dict):
+        click.echo("Invalid session data.")
         return
 
     parsed = {}
@@ -270,7 +288,7 @@ def run_tool(tool_name, inputs):
         k, v = item.split("=", 1)
         parsed[k.strip()] = v.strip()
 
-    workflow_run, stdout_output = _run_tool(sid, s, tool_name, parsed)
+    workflow_run, stdout_output = _run_tool(sid, session, tool_name, parsed)
     tool_calls = [r for r in workflow_run.trace.records if isinstance(r, ToolCallRecord)]
     tool_call = tool_calls[0] if tool_calls else None
 
@@ -296,8 +314,9 @@ def interaction():
 
 @interaction.command("list")
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
-@require_auth
-def interaction_list(session_id):
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
+def interaction_list(session_id, as_json):
     """List all recorded WorkflowRuns for a session."""
     if not session_id:
         session_id, _ = _active_session()
@@ -307,6 +326,18 @@ def interaction_list(session_id):
 
     interactions = _load(_interactions_file())
     runs = interactions.get(session_id, [])
+
+    if as_json:
+        payload = [
+            {
+                "index": i,
+                "workflow_run": wf_dict,
+            }
+            for i, wf_dict in enumerate(runs)
+        ]
+        click.echo(json.dumps(payload, indent=2))
+        return
+
     if not runs:
         click.echo("No interactions recorded.")
         return
@@ -323,8 +354,9 @@ def interaction_list(session_id):
 @interaction.command("show")
 @click.argument("index", type=int)
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
-@require_auth
-def interaction_show(index, session_id):
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
+def interaction_show(index, session_id, as_json):
     """Show full details of a recorded WorkflowRun by index."""
     if not session_id:
         session_id, _ = _active_session()
@@ -340,6 +372,10 @@ def interaction_show(index, session_id):
         return
 
     wf = WorkflowRun.from_dict(runs[index])
+    if as_json:
+        click.echo(json.dumps(wf.to_dict(), indent=2))
+        return
+
     click.echo(json.dumps(wf.to_dict(), indent=2))
 
 
@@ -347,7 +383,7 @@ def interaction_show(index, session_id):
 
 @execution.command("test")
 @click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution tests do not require sign-in yet.
 def run_test(prompt):
     """
     Query the agent with all registered tools and record inputs/outputs.
@@ -355,12 +391,16 @@ def run_test(prompt):
     Builds the agent for the active session, runs each registered tool
     using its default parameters, and logs the full execution as a WorkflowRun.
     """
-    sid, s = _active_session()
+    sid, session = _active_session()
     if not sid:
         click.echo("No active session.")
         return
 
-    agent = _build_agent(sid, s)
+    if not session or not isinstance(session, dict):
+        click.echo("Invalid session data.")
+        return
+
+    agent = _build_agent(sid, session)
     agent_name = f"session-{sid}"
     tool_names = agent.list_tools()
 

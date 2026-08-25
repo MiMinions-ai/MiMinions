@@ -7,39 +7,16 @@ import os
 import json
 import signal
 import time
-from pathlib import Path
 
+from miminions.core.paths import get_config_dir
 
-def get_config_dir():
-    """Get the configuration directory for MiMinions."""
-    config_dir = Path.home() / ".miminions"
-    config_dir.mkdir(exist_ok=True)
-    return config_dir
-
-
-def get_config_file():
-    """Get the configuration file path."""
-    return get_config_dir() / "config.json"
-
-
-def get_config():
-    """Get the configuration settings."""
-    config_file = get_config_file()
-    if not config_file.exists():
-        return {
-            "public_access": False,
-            "auth_timeout": 30
-        }
-    
-    with open(config_file, "r") as f:
-        return json.load(f)
+from .config import get_config_file, load_config
+from .persistence import save_json
 
 
 def save_config(config):
     """Save configuration settings."""
-    config_file = get_config_file()
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=2)
+    save_json(get_config_file(), config)
 
 
 def get_auth_file():
@@ -55,13 +32,13 @@ def is_authenticated():
 
 def is_public_access_enabled():
     """Check if public access mode is enabled."""
-    config = get_config()
+    config = load_config()
     return config.get("public_access", False)
 
 
 def get_auth_timeout():
     """Get authentication timeout in seconds."""
-    config = get_config()
+    config = load_config()
     return config.get("auth_timeout", 30)
 
 
@@ -97,9 +74,7 @@ def with_timeout(func, timeout_seconds):
 
 def save_auth_data(data):
     """Save authentication data."""
-    auth_file = get_auth_file()
-    with open(auth_file, "w") as f:
-        json.dump(data, f, indent=2)
+    save_json(get_auth_file(), data)
 
 
 def load_auth_data():
@@ -199,7 +174,7 @@ def status():
 @click.option("--auth-timeout", type=int, help="Set authentication timeout in seconds")
 def config_auth(public_access, auth_timeout):
     """Configure authentication settings."""
-    config = get_config()
+    config = load_config()
     
     if public_access is not None:
         config["public_access"] = public_access

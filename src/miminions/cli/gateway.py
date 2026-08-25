@@ -20,7 +20,7 @@ from miminions.core.gateway import (
     SessionManager,
 )
 from miminions.core.workspace import WorkspaceManager
-from miminions.cli.auth import get_config_dir
+from miminions.core.paths import get_config_dir
 
 
 @dataclass(frozen=True)

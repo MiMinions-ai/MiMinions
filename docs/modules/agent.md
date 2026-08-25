@@ -1,6 +1,6 @@
 # Agent
 
-The `miminions.agent` module is the core reasoning engine — a **`Minion`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Minion` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` loop.
+The `miminions.agent` module is the core reasoning engine — a **`Minion`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Minion` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` / `run_stream()` loop.
 
 !!! note "Import from the subpackage"
     Always import from `miminions.agent` — the top-level `import miminions` does not re-export these symbols.
@@ -11,7 +11,9 @@ The `miminions.agent` module is the core reasoning engine — a **`Minion`** is 
 
 ## Features
 
-- **Async execution** — owns its full `async run()` reasoning loop
+- **Async execution** — owns its full `async run()` reasoning loop, with a streaming `run_stream()` variant
+- **Resilience** — per-request timeouts and automatic retries (with exponential backoff) on transient provider errors
+- **Observability hooks** — optional `on_tool_call` / `on_turn_end` callbacks for tool-call and usage/latency reporting
 - **Tool registration** — register plain Python functions or [`GenericTool`](tools.md) objects as LLM-callable tools
 - **MCP integration** — connect to Model Context Protocol servers and load their tools
 - **Memory** — attach any [memory backend](memory.md) and get 7 memory tools auto-registered
@@ -38,7 +40,7 @@ asyncio.run(main())
 ```
 
 !!! warning "Set `OPENROUTER_API_KEY`"
-    The default provider is OpenRouter. `run()` needs a working backend, so export `OPENROUTER_API_KEY` first — otherwise the call fails with an auth/network error. For offline runs (tests, examples), use `provider="test"` (see below).
+    The default provider is OpenRouter, and the key is validated **at construction time**: `create_minion(...)` raises `ValueError` if `OPENROUTER_API_KEY` is not set. Other providers (`openai`, `anthropic`, `gemini`) construct fine without a key and fail at call time instead. For offline runs (tests, examples), use `provider="test"` (see below).
 
 ## Model & Provider Selection
 
@@ -196,7 +198,7 @@ There are three ways to invoke a tool. Pick by how you want errors and results s
 
 | Method | Returns | On error |
 |--------|---------|----------|
-| `await run(prompt)` | the LLM's reply (the model decides which tools to call) | re-raises network/API errors |
+| `await run(prompt)` | the LLM's reply (the model decides which tools to call) | retries transient errors, then re-raises |
 | `execute(name, arguments=None, **kwargs)` | a `ToolExecutionResult` | **never raises** — failure is captured on the result |
 | `execute_tool(name, **kwargs)` | the tool's raw return value | **raises** `ValueError` / `RuntimeError` |
 
@@ -226,6 +228,51 @@ reply1 = await agent.run("My name is Asher.")
 reply2 = await agent.run("What is my name?", message_history=agent._last_messages)
 ```
 
+!!! tip "Bounding long histories"
+    For long sessions, `miminions.session.store.trim_message_history(messages, max_messages=40)` caps the history without breaking request/response pairing — it only cuts at a user-prompt turn boundary, so a trimmed history never starts mid-tool-exchange. The CLI chat loop applies this automatically.
+
+## Streaming Replies
+
+`run_stream()` mirrors `run()` but yields the reply incrementally as text deltas. Tool calls still execute (and fire `on_tool_call`); `on_turn_end` fires when the stream completes, and `_last_messages` is updated only once the stream is fully consumed.
+
+```python
+async for delta in agent.run_stream("Tell me a story."):
+    print(delta, end="", flush=True)
+```
+
+!!! warning "Consume the stream to completion"
+    Breaking out of the loop early abandons the underlying HTTP stream and its deferred cleanup can raise `RuntimeError` at generator close. Also note `run_stream()` does **not** retry transient errors — deltas already yielded cannot be withdrawn, so errors propagate immediately.
+
+## Timeouts, Retries & Hooks
+
+`create_minion` (and `Minion`) accept resilience and observability options:
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `request_timeout` | `60.0` | Per-HTTP-request timeout in seconds for model calls (`None` disables it). Bounds each request, **not** the whole turn — a multi-tool turn may take several requests. |
+| `max_retries` | `2` | How many times `run()` retries after a transient model error before re-raising. |
+| `retry_base_delay` | `1.0` | First retry delay in seconds; doubles per attempt (exponential backoff). |
+| `on_tool_call` | `None` | Callback fired as `(tool_name, args)` whenever the model invokes a tool. |
+| `on_turn_end` | `None` | Callback fired as `(usage, latency_seconds)` after each successful turn — `usage` is a pydantic-ai `RunUsage`. |
+
+Transient means HTTP 429/5xx, connection errors, and timeouts (`ModelHTTPError` / `ModelAPIError`); other errors re-raise immediately. Exceptions raised inside either callback are logged and swallowed, so a broken hook never breaks the turn.
+
+```python
+def show_tool(name, args):
+    print(f"[tool] {name} {args}")
+
+def show_usage(usage, latency):
+    print(f"[turn] {usage.input_tokens} in / {usage.output_tokens} out, {latency:.1f}s")
+
+agent = create_minion(
+    "MyAgent",
+    request_timeout=30.0,
+    max_retries=3,
+    on_tool_call=show_tool,
+    on_turn_end=show_usage,
+)
+```
+
 ## API Reference
 
 ### `create_minion`
@@ -237,16 +284,22 @@ create_minion(
     memory: BaseMemory | None = None,
     model: Any | None = None,
     provider: str = "openrouter",
+    request_timeout: float | None = 60.0,
+    max_retries: int = 2,
+    retry_base_delay: float = 1.0,
+    on_tool_call: Callable[[str, dict], None] | None = None,
+    on_turn_end: Callable[[RunUsage, float], None] | None = None,
 ) -> Minion
 ```
 
-Factory that builds a configured `Minion`. When `model` is `None`, `provider` drives model selection (default OpenRouter free model). This is the primary entry point.
+Factory that builds a configured `Minion`. When `model` is `None`, `provider` drives model selection (default OpenRouter free model). See [Timeouts, Retries & Hooks](#timeouts-retries-hooks) for the resilience and callback parameters. This is the primary entry point.
 
 ### `Minion` methods
 
 | Method | Description |
 |--------|-------------|
-| `async run(prompt, message_history=None) -> str` | Send a prompt; the model reasons and calls tools. Returns the reply. |
+| `async run(prompt, message_history=None) -> str` | Send a prompt; the model reasons and calls tools. Retries transient provider errors with backoff. Returns the reply. |
+| `run_stream(prompt, message_history=None) -> AsyncIterator[str]` | Streaming variant of `run()`; yields text deltas. No automatic retry. |
 | `register_tool(name, description, func, schema=None) -> ToolDefinition` | Register a Python function as a tool (schema inferred if omitted). |
 | `add_tool(tool: GenericTool) -> ToolDefinition` | Register a [`GenericTool`](tools.md). |
 | `unregister_tool(name) -> bool` | Remove a tool by name. |
@@ -254,6 +307,7 @@ Factory that builds a configured `Minion`. When `model` is `None`, `provider` dr
 | `search_tools(query) -> list[str]` | Case-insensitive search over tool names/descriptions. |
 | `execute(name, arguments=None, **kwargs) -> ToolExecutionResult` | Run a tool synchronously; never raises. |
 | `async execute_async(name, arguments=None, **kwargs) -> ToolExecutionResult` | Async variant of `execute`; awaits coroutine tools. |
+| `async execute_many_async(requests, max_concurrency=16) -> list[ToolExecutionResult]` | Run structured tool requests with bounded concurrency; results preserve request order and isolate failures. |
 | `execute_tool(name, **kwargs) -> Any` | Run a tool and return its raw result; raises on error. |
 | `async execute_tool_async(name, **kwargs) -> Any` | Async raw-result variant; raises on error. |
 | `set_memory(memory) -> None` | Attach a memory backend and auto-register the 7 memory tools. |

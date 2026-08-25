@@ -10,7 +10,8 @@ a generic tool system, three-tier memory, and local-first workspaces.
 
 - **Minion agent** — an async, LLM-powered agent on `pydantic-ai`, defaulting to
   [OpenRouter](https://openrouter.ai/) (with OpenAI, Anthropic, Gemini, and an
-  offline test model also selectable).
+  offline test model also selectable), with streaming replies, retries,
+  request timeouts, and observability hooks.
 - **Generic tool system** — turn a typed Python function into an agent-callable
   tool with an auto-derived JSON schema; no boilerplate.
 - **MCP integration** — connect to MCP servers and load their tools alongside
@@ -24,7 +25,8 @@ a generic tool system, three-tier memory, and local-first workspaces.
 - **Workspaces** — a node/rule graph plus an on-disk layout (`prompt/`,
   `memory/`, `skills/`, `sessions/`, `data/`) that drives each agent's context.
 - **CLI** — manage agents, tasks, knowledge, workspaces, and an interactive chat
-  from the `miminions` command; state persists under `~/.miminions/`.
+  from the `miminions` command; state persists under `~/.miminions/` by default
+  and can be relocated with `MIMINIONS_HOME`.
 - **Local data manager** — content-addressable (SHA-256) storage with
   deduplication, a master index, and an append-only transaction log.
 - **Async-first** — full asynchronous operation throughout.
@@ -54,6 +56,13 @@ The agent uses OpenRouter by default — set your key before running:
 export OPENROUTER_API_KEY="sk-or-..."
 ```
 
+MiMinions stores local CLI/workspace state in `~/.miminions` by default. Set
+`MIMINIONS_HOME` to use a different location:
+
+```bash
+export MIMINIONS_HOME="/path/to/miminions-home"
+```
+
 ## Quick Start
 
 ### A first agent with a custom tool
@@ -77,6 +86,13 @@ async def main():
 asyncio.run(main())
 ```
 
+For streamed replies, iterate over `run_stream()`:
+
+```python
+async for delta in agent.run_stream("Draft a short project update"):
+  print(delta, end="", flush=True)
+```
+
 Want a different model? Pass a `provider` (or a `pydantic-ai` model directly):
 
 ```python
@@ -90,11 +106,12 @@ agent = create_minion("MyAgent", provider="test")          # offline, no API key
 from miminions.memory.sqlite import SQLiteMemory
 from miminions.agent import create_minion
 
-agent = create_minion("Assistant", memory=SQLiteMemory("agent.db"))
+with SQLiteMemory("agent.db") as memory:
+  agent = create_minion("Assistant", memory=memory)
 
-# store_knowledge / recall_knowledge require an attached memory backend.
-agent.store_knowledge("Python is a high-level language", metadata={"topic": "python"})
-print(agent.recall_knowledge("What language is Python?"))
+  # store_knowledge / recall_knowledge require an attached memory backend.
+  agent.store_knowledge("Python is a high-level language", metadata={"topic": "python"})
+  print(agent.recall_knowledge("What language is Python?"))
 ```
 
 With memory attached, the agent also gains a built-in `ingest_document` tool that
@@ -128,7 +145,7 @@ python -m miminions --help        # equivalent
 Command groups:
 
 | Group | What it does |
-|-------|--------------|
+| ----- | ------------ |
 | `chat` | Interactive chat with a workspace agent; distills memory on exit |
 | `prompt` | One-shot prompt to a workspace agent |
 | `agent` | Create/manage agents and run/inspect their tools |
@@ -136,11 +153,15 @@ Command groups:
 | `knowledge` | A versioned knowledge base |
 | `workspace` | Manage workspaces, their nodes, rules, and on-disk files |
 | `execution` | Register tools and record tool runs in execution sessions |
+| `gateway` | Manage local gateway runtime, cron jobs, and gateway sessions |
 | `auth` | Local sign-in, public-access mode, and config |
 
 ```bash
 # Start an interactive chat (resume with --session <id>)
 miminions chat start
+
+# Show tool calls, token usage, and latency while chatting
+miminions chat start --verbose
 
 # One-shot prompt
 miminions prompt ask "Summarize today's standup notes"

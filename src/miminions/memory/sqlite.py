@@ -1,10 +1,11 @@
 # Try to use pysqlite3 first (has extension support), fallback to sqlite3
-try:
-    import pysqlite3.dbapi2 as sqlite3
-except ImportError:
-    import sqlite3
+import pysqlite3.dbapi2 as sqlite3
 
-import sqlite_vec
+from typing import Optional
+try:
+    import sqlite_vec
+except ImportError:
+    sqlite_vec = None
 import struct
 import json
 import re
@@ -12,7 +13,11 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .base_memory import BaseMemory
 from uuid import uuid4
-from fastembed import TextEmbedding
+try:
+    from fastembed import TextEmbedding
+except ImportError:
+    TextEmbedding = None
+
 
 
 _DEFAULT_DB_DIR = Path(__file__).parent / ".data"
@@ -23,14 +28,6 @@ _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "memory.db"
 _MODEL_ALIASES = {
     "all-MiniLM-L6-v2": "sentence-transformers/all-MiniLM-L6-v2",
 }
-
-
-def get_global_memory_db_path(create_dir: bool = True) -> str:
-    """Return canonical path for cross-workspace global memory DB."""
-    path = Path.home() / ".miminions" / "global_memory.db"
-    if create_dir:
-        path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
 
 
 def _serialize_f32(vector: list) -> bytes:
@@ -62,10 +59,22 @@ class SQLiteMemory(BaseMemory):
             user_path = Path(db_path)
             user_path.parent.mkdir(parents=True, exist_ok=True)
             self.db_path = str(user_path)
+
+        if TextEmbedding is None:
+            raise RuntimeError(
+                "fastembed is required for SQLiteMemory. "
+                "Install it with: pip install fastembed"
+            )
         
         self.dim = dim
         self.encoder = TextEmbedding(_MODEL_ALIASES.get(model_name, model_name))
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False) # type: ignore
+
+        if sqlite_vec is None:
+            raise RuntimeError(
+                "sqlite_vec is required for SQLiteMemory. "
+                "Install it with: pip install sqlite-vec"
+            )
         
         # Try to load sqlite-vec extension if available
         try:
@@ -120,7 +129,7 @@ class SQLiteMemory(BaseMemory):
         """)
         self.conn.commit()
     
-    def create(self, text: str, metadata: Dict[str, Any] = None) -> str:
+    def create(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         id = str(uuid4())
         vector = self._embed(text)
         
@@ -268,7 +277,7 @@ class SQLiteMemory(BaseMemory):
                 seen_ids.add(r["id"])
         return combined[:top_k]
 
-    def date_time_search(self, start: str = None, end: str = None, top_k: int = 5) -> List[Dict[str, Any]]:
+    def date_time_search(self, start: str = "", end: str = "", top_k: int = 5) -> List[Dict[str, Any]]:
         """Search entries by creation date range (ISO format: YYYY-MM-DD)."""
         if start and end:
             cursor = self.conn.execute(
@@ -308,7 +317,13 @@ class SQLiteMemory(BaseMemory):
     
     def close(self):
         self.conn.close()
-    
+
+    def __enter__(self) -> "SQLiteMemory":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
     def __del__(self):
         if hasattr(self, 'conn'):
             self.conn.close()

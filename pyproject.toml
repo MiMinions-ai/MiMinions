@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miminions"
-version = "0.3.0"
+version = "0.4.0"
 description = "An agentic framework with pydantic_ai, MCP server support and vector memory"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -16,7 +16,8 @@ dependencies = [
     "mcp>=1.23.0",
     "numpy>=1.21.0",
     "pdfplumber>=0.9.0",
-    "Faker>=40.0.0"
+    "Faker>=40.0.0",
+    "pysqlite3>=0.6.0",
 ]
 
 [project.scripts]
@@ -26,12 +27,10 @@ miminions = "miminions.cli.main:main"
 sqlite = [
     "fastembed>=0.3.0",
     "sqlite-vec>=0.1.0",
-    "pysqlite3>=0.5.0",
 ]
 all = [
     "fastembed>=0.3.0",
     "sqlite-vec>=0.1.0",
-    "pysqlite3>=0.5.0",
 ]
 dev = [
     "pytest>=7.0.0",
@@ -46,6 +45,5 @@ cli-build = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 

@@ -1,14 +1,37 @@
 # MiMinions Tests
 
-Comprehensive test suites for the Minion Agent.
+MiMinions uses a tiered test layout. The first directory answers how much of
+the system is exercised; nested directories should answer which code or product
+domain owns the behavior.
 
 ## Test Tiers
 
 | Tier | Folder | Scope | Speed |
-|---|---|---|---|
-| **unit** | `tests/unit/` | Package logic only — no external services or filesystem I/O | < 5s |
-| **integration** | `tests/integration/` | Filesystem and external services (CLI, gateway, SQLite, session store) | Seconds–minutes |
-| **e2e** | `tests/e2e/` | Complete use-case flows from the CLI | Minutes |
+| --- | --- | --- | --- |
+| **unit** | `tests/unit/` | One module or small abstraction; dependencies mocked or in-memory | Fast |
+| **integration** | `tests/integration/` | Real interactions across modules, filesystem, CLI wiring, local stores, gateway services, or optional local dependencies | Seconds |
+| **e2e** | `tests/e2e/` | Full user-facing flows through public entry points such as the packaged CLI | Slowest |
+
+## Placement Rules
+
+Every test path should answer two questions:
+
+1. What kind of test is this? Use `unit`, `integration`, or `e2e`.
+2. What domain owns this behavior? Use source-aligned names such as `cli`, `gateway`, `memory`, `session`, `task`, `tools`, `workflow`, or `workspace_fs`.
+
+Prefer tier-plus-domain paths as the suite grows:
+
+```text
+tests/unit/cli/test_task.py
+tests/unit/tools/test_mcp_adapter.py
+tests/integration/cli/test_chat.py
+tests/integration/gateway/test_services.py
+tests/integration/memory/test_distiller.py
+tests/e2e/cli/test_use_cases.py
+```
+
+Avoid adding new top-level domain folders directly under `tests/`. Keep domain
+folders inside a tier so pytest selection remains predictable.
 
 ## Running Tests
 
@@ -24,37 +47,73 @@ pytest tests/e2e -v
 
 # Full suite
 pytest tests/ -v
+
+# Focused domain examples
+pytest tests/unit/cli -v
+pytest tests/integration/gateway -v
+
+# Advisory coverage for CLI/workspace modules.
+# First install dev test tooling:
+#   python -m pip install -e ".[dev]"
+python -m coverage run --source=miminions.cli,miminions.core.workspace,miminions.workspace_fs -m pytest tests/unit tests/integration
+python -m coverage report -m --omit="*/miminions/cli/workflow.py"
 ```
 
-## Test Files
+## Current Structure
 
-### unit/
-- **test_agent.py** — Agent creation, tool registration, structured result validation
-- **test_mcp_adapter.py** — MCP adapter logic
-- **test_task_model.py** — Task model enums and dataclasses
-- **test_task_runtime.py** — Task runtime logic
+The active suite is currently organized primarily by tier:
 
-### integration/
-- **test_context_builder.py** — ContextBuilder memory injection
-- **test_distiller.py** — MemoryDistiller session distillation pipeline
-- **test_document_ingestion.py** — PDF/text ingestion and chunking
-- **test_md_store.py** — Markdown memory store read/write
-- **test_session_store.py** — JSONL session persistence
-- **test_sqlite_memory.py** — SQLite vector memory CRUD
-- **test_cli_agent.py** — CLI agent command
-- **test_cli_auth.py** — CLI auth flow
-- **test_cli_chat.py** — CLI chat session
-- **test_cli_runner.py** — CLI runner
-- **test_cli_workspace.py** — CLI workspace commands
-- **test_cli_workspace_init_files.py** — Workspace file initialisation
-- **test_data_management.py** — Data management system
-- **test_gateway_bus.py** — Gateway event bus
-- **test_gateway_channel.py** — Gateway channels
-- **test_gateway_events.py** — Gateway event model
-- **test_gateway_orchestrator.py** — Gateway orchestrator
-- **test_gateway_services.py** — Gateway services
-- **test_gateway_session.py** — Gateway session handling
+```text
+tests/
+  unit/
+  integration/
+  e2e/
+```
 
-### e2e/
-- **test_e2e.py** — Full CLI use-case flows
-- **test_data_management_e2e.py** — Data management end-to-end
+Some files are still flat within their tier, for example
+`tests/integration/test_gateway_services.py`. That is allowed during migration,
+but new or moved tests should prefer the tier-plus-domain form.
+
+## Target Structure
+
+Use this as the direction for gradual cleanup:
+
+```text
+tests/
+  unit/
+    agent/
+    cli/
+    core/
+      gateway/
+    data/
+    memory/
+    session/
+    task/
+    tools/
+    utils/
+    workflow/
+    workspace_fs/
+
+  integration/
+    cli/
+    gateway/
+    memory/
+    session/
+    data/
+    context/
+    workspace_fs/
+
+  e2e/
+    cli/
+    data/
+```
+
+## Migration Notes
+
+- Move tests in small mechanical batches and run `pytest -q` after each batch.
+- Keep behavior changes separate from file moves when practical.
+- Prefer `tests/integration/cli/` for `CliRunner` tests that exercise command wiring, persistence, or filesystem behavior.
+- Prefer `tests/unit/cli/` for command helper logic that can be tested with mocks and no real filesystem state.
+- Prefer `tests/integration/gateway/` for async lifecycle, bus, channel, cron, and session-service interactions.
+- Prefer `tests/unit/core/gateway/` for pure gateway dataclasses, simple helpers, or isolated model behavior.
+- Keep end-to-end tests few and focused on complete user workflows.

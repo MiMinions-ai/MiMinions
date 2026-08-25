@@ -1,6 +1,6 @@
 """Utility functions for async operations, JSON handling, and agent execution."""
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 from miminions.task.model import (
@@ -55,6 +55,7 @@ class TaskRuntime:
 
     def terminate_loop(self):
         """Terminate the event loop and cancel all tasks."""
+        assert self.loop is not None, "Event loop is not initialized."
         self.loop.stop()
         self.loop.close()
 
@@ -62,6 +63,7 @@ class TaskRuntime:
         """Run an async function in the event loop."""        
         try:
             self.init_loop()
+            assert self.loop is not None, "Event loop is not initialized."
             return self.loop.run_until_complete(async_func(*args, **kwargs))
         except Exception:
             # Close the existing loop if open
@@ -69,6 +71,7 @@ class TaskRuntime:
                 self.terminate_loop()
             # Create a new loop for retry
             self.init_loop()
+            assert self.loop is not None, "Event loop is not initialized."
             return self.loop.run_until_complete(async_func(*args, **kwargs))
         finally:
             self.terminate_loop()
@@ -83,6 +86,8 @@ class TaskRuntime:
         async_tasks = {}
         async with asyncio.TaskGroup() as tg:
             for name, task in self.tasks.items():
+                if task.agent is None:
+                    raise ValueError(f"Task {name} has no agent assigned.")
                 async_tasks[name] = tg.create_task(
                     coro=task.agent.run(*task.args, **task.kwargs),
                     name=name
@@ -107,7 +112,7 @@ class TaskRuntime:
         """Run a batch of async functions in the event loop."""
         return self.run_async_func(self.run)
 
-    async def get_task_status(self, task_id: str=None) -> TaskStatus:
+    async def get_task_status(self, task_id: Optional[str] = None) -> TaskStatus | Dict[str, TaskStatus]:
         """Get the status of a specific task asynchronously."""
         if not self.tasks:
             raise ValueError("No tasks available.")

@@ -1,12 +1,13 @@
 """
 Task management commands for MiMinions CLI.
 """
-
-import click
 import json
+import click
 import uuid
-from .auth import get_config_dir
-from miminions.core.auth import require_auth
+from datetime import datetime, timezone
+from miminions.core.paths import get_config_dir
+from .persistence import load_json, save_json
+# TODO(auth): Re-enable require_auth when task operations become account-backed.
 
 
 def get_tasks_file():
@@ -16,19 +17,34 @@ def get_tasks_file():
 
 def load_tasks():
     """Load tasks from configuration."""
-    tasks_file = get_tasks_file()
-    if not tasks_file.exists():
-        return {}
-    
-    with open(tasks_file, "r") as f:
-        return json.load(f)
+    return load_json(get_tasks_file())
 
 
 def save_tasks(tasks):
     """Save tasks to configuration."""
-    tasks_file = get_tasks_file()
-    with open(tasks_file, "w") as f:
-        json.dump(tasks, f, indent=2)
+    save_json(get_tasks_file(), tasks)
+
+
+def _load_agents():
+    """Load agents from configuration for cross-reference checks."""
+    agents_file = get_config_dir() / "agents.json"
+    if not agents_file.exists():
+        return {}
+
+    with open(agents_file, "r") as f:
+        return json.load(f)
+
+
+def _validate_agent_reference_or_error(agent_id: str | None) -> bool:
+    """Return True when agent reference is empty or exists; else print error."""
+    if not agent_id:
+        return True
+
+    agents = _load_agents()
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return False
+    return True
 
 
 @click.group()
@@ -38,10 +54,16 @@ def task_cli():
 
 
 @task_cli.command("list")
-@require_auth
-def list_tasks():
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
+def list_tasks(as_json):
     """List all tasks."""
     tasks = load_tasks()
+
+    if as_json:
+        payload = [{"id": task_id, **task_data} for task_id, task_data in tasks.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not tasks:
         click.echo("No tasks configured.")
@@ -61,9 +83,12 @@ def list_tasks():
 @click.option("--description", prompt="Description", help="Description of the task")
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), default="medium", help="Priority level")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def add_task(title, description, priority, agent):
     """Add a new task."""
+    if not _validate_agent_reference_or_error(agent):
+        return
+
     tasks = load_tasks()
     
     task_id = str(uuid.uuid4())[:8]
@@ -74,7 +99,7 @@ def add_task(title, description, priority, agent):
         "priority": priority,
         "status": "pending",
         "agent": agent,
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -89,7 +114,7 @@ def add_task(title, description, priority, agent):
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), help="New priority level")
 @click.option("--status", type=click.Choice(["pending", "in_progress", "completed", "cancelled"]), help="New status")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def update_task(task_id, title, description, priority, status, agent):
     """Update an existing task."""
     tasks = load_tasks()
@@ -109,10 +134,12 @@ def update_task(task_id, title, description, priority, status, agent):
     if status:
         task["status"] = status
     if agent:
+        if not _validate_agent_reference_or_error(agent):
+            return
         task["agent"] = agent
     
-    task["updated_at"] = click.get_current_context().meta.get("timestamp", "")
-    
+    task["updated_at"] = datetime.now(timezone.utc).isoformat()
+
     save_tasks(tasks)
     click.echo(f"Task '{task_id}' updated successfully")
 
@@ -120,7 +147,7 @@ def update_task(task_id, title, description, priority, status, agent):
 @task_cli.command("remove")
 @click.argument("task_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this task?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def remove_task(task_id):
     """Remove a task."""
     tasks = load_tasks()
@@ -137,7 +164,7 @@ def remove_task(task_id):
 @task_cli.command("duplicate")
 @click.argument("task_id")
 @click.option("--title", help="Title for the duplicated task")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def duplicate_task(task_id, title):
     """Duplicate an existing task."""
     tasks = load_tasks()
@@ -155,7 +182,7 @@ def duplicate_task(task_id, title):
         original_task["title"] = f"{original_task['title']} (copy)"
     
     original_task["status"] = "pending"
-    original_task["created_at"] = click.get_current_context().meta.get("timestamp", "")
+    original_task["created_at"] = datetime.now(timezone.utc).isoformat()
     original_task["updated_at"] = None
     
     tasks[new_task_id] = original_task
@@ -165,8 +192,9 @@ def duplicate_task(task_id, title):
 
 @task_cli.command("show")
 @click.argument("task_id")
-@require_auth
-def show_task(task_id):
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
+def show_task(task_id, as_json):
     """Show detailed information about a task."""
     tasks = load_tasks()
     
@@ -175,6 +203,11 @@ def show_task(task_id):
         return
     
     task = tasks[task_id]
+
+    if as_json:
+        payload = {"id": task_id, **task}
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     click.echo(f"Task ID: {task_id}")
     click.echo(f"Title: {task['title']}")

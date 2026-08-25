@@ -1,12 +1,13 @@
 """
 Workflow management commands for MiMinions CLI.
 """
-
-import click
 import json
+import click
 import uuid
-from .auth import get_config_dir
-from miminions.core.auth import require_auth
+from datetime import datetime, timezone
+from miminions.core.paths import get_config_dir
+from .persistence import load_json, save_json
+# TODO(auth): Re-enable require_auth when workflow operations become account-backed.
 
 
 def get_workflows_file():
@@ -16,19 +17,46 @@ def get_workflows_file():
 
 def load_workflows():
     """Load workflows from configuration."""
-    workflows_file = get_workflows_file()
-    if not workflows_file.exists():
-        return {}
-    
-    with open(workflows_file, "r") as f:
-        return json.load(f)
+    return load_json(get_workflows_file())
 
 
 def save_workflows(workflows):
     """Save workflows to configuration."""
-    workflows_file = get_workflows_file()
-    with open(workflows_file, "w") as f:
-        json.dump(workflows, f, indent=2)
+    save_json(get_workflows_file(), workflows)
+
+
+def _load_agents():
+    """Load agents from configuration for cross-reference checks."""
+    agents_file = get_config_dir() / "agents.json"
+    if not agents_file.exists():
+        return {}
+
+    with open(agents_file, "r") as f:
+        return json.load(f)
+
+
+def _parse_agent_list(raw_agents: str | None) -> list[str]:
+    """Parse comma-separated agent input into a normalized list."""
+    if not raw_agents:
+        return []
+    return [agent.strip() for agent in raw_agents.split(",") if agent.strip()]
+
+
+def _validate_agent_list_or_error(agent_list: list[str]) -> bool:
+    """Validate that every referenced agent id exists."""
+    if not agent_list:
+        return True
+
+    existing_agents = _load_agents()
+    missing = [agent_id for agent_id in agent_list if agent_id not in existing_agents]
+    if missing:
+        click.echo(
+            f"Unknown agent id(s): {', '.join(missing)}. "
+            "Create agents first or update the workflow references.",
+            err=True,
+        )
+        return False
+    return True
 
 
 @click.group()
@@ -38,7 +66,7 @@ def workflow_cli():
 
 
 @workflow_cli.command("list")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def list_workflows():
     """List all workflows."""
     workflows = load_workflows()
@@ -60,16 +88,16 @@ def list_workflows():
 @click.option("--name", prompt="Workflow name", help="Name of the workflow")
 @click.option("--description", prompt="Description", help="Description of the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def add_workflow(name, description, agents):
     """Add a new workflow."""
     workflows = load_workflows()
     
     workflow_id = str(uuid.uuid4())[:8]
     
-    agent_list = []
-    if agents:
-        agent_list = [agent.strip() for agent in agents.split(",")]
+    agent_list = _parse_agent_list(agents)
+    if not _validate_agent_list_or_error(agent_list):
+        return
     
     workflows[workflow_id] = {
         "name": name,
@@ -77,7 +105,7 @@ def add_workflow(name, description, agents):
         "agents": agent_list,
         "status": "stopped",
         "tasks": [],
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None
     }
     
@@ -90,7 +118,7 @@ def add_workflow(name, description, agents):
 @click.option("--name", help="New name for the workflow")
 @click.option("--description", help="New description for the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def update_workflow(workflow_id, name, description, agents):
     """Update an existing workflow."""
     workflows = load_workflows()
@@ -106,9 +134,12 @@ def update_workflow(workflow_id, name, description, agents):
     if description:
         workflow["description"] = description
     if agents:
-        workflow["agents"] = [agent.strip() for agent in agents.split(",")]
+        parsed_agents = _parse_agent_list(agents)
+        if not _validate_agent_list_or_error(parsed_agents):
+            return
+        workflow["agents"] = parsed_agents
     
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' updated successfully")
@@ -117,7 +148,7 @@ def update_workflow(workflow_id, name, description, agents):
 @workflow_cli.command("remove")
 @click.argument("workflow_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this workflow?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def remove_workflow(workflow_id):
     """Remove a workflow."""
     workflows = load_workflows()
@@ -133,7 +164,7 @@ def remove_workflow(workflow_id):
 
 @workflow_cli.command("start")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def start_workflow(workflow_id):
     """Start a workflow."""
     workflows = load_workflows()
@@ -153,7 +184,7 @@ def start_workflow(workflow_id):
         return
     
     workflow["status"] = "running"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' started successfully")
@@ -161,7 +192,7 @@ def start_workflow(workflow_id):
 
 @workflow_cli.command("pause")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def pause_workflow(workflow_id):
     """Pause a running workflow."""
     workflows = load_workflows()
@@ -177,7 +208,7 @@ def pause_workflow(workflow_id):
         return
     
     workflow["status"] = "paused"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' paused successfully")
@@ -185,7 +216,7 @@ def pause_workflow(workflow_id):
 
 @workflow_cli.command("stop")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def stop_workflow(workflow_id):
     """Stop a workflow."""
     workflows = load_workflows()
@@ -201,7 +232,7 @@ def stop_workflow(workflow_id):
         return
     
     workflow["status"] = "stopped"
-    workflow["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    workflow["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_workflows(workflows)
     click.echo(f"Workflow '{workflow_id}' stopped successfully")
@@ -209,7 +240,7 @@ def stop_workflow(workflow_id):
 
 @workflow_cli.command("show")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def show_workflow(workflow_id):
     """Show detailed information about a workflow."""
     workflows = load_workflows()

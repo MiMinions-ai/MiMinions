@@ -4,6 +4,8 @@ hide:
   - toc
 ---
 
+<!-- markdownlint-disable MD030 MD033 MD041 -->
+
 <div class="home-hero" markdown>
 
 # Build Autonomous AI Agents with MiMinions
@@ -25,7 +27,8 @@ The open-source framework for creating, deploying, and managing agentic AI syste
     ---
 
     Create AI agents that think, plan, and execute tasks independently through
-    an async reasoning loop powered by pydantic-ai and OpenRouter.
+    an async reasoning loop powered by pydantic-ai and OpenRouter, with
+    streaming replies for responsive chat and CLI sessions.
 
 -   :material-graph-outline:{ .lg .middle } &nbsp; **Multi-Agent Systems**
 
@@ -55,6 +58,13 @@ The open-source framework for creating, deploying, and managing agentic AI syste
     Define a tool once from a typed Python function and get a framework-agnostic
     JSON schema for free — then hand it to any agent or load tools from MCP
     servers.
+
+-   :material-timer-cog-outline:{ .lg .middle } &nbsp; **Resilient Runs**
+
+    ---
+
+    Bound provider requests with timeouts, retry transient failures, and attach
+    hooks for tool-call, token-usage, and latency reporting.
 
 -   :material-magnify:{ .lg .middle } &nbsp; **Vector Search**
 
@@ -92,6 +102,9 @@ The default OpenRouter backend needs an API key. Set it once in your environment
 export OPENROUTER_API_KEY="your-key-here"
 ```
 
+By default, local CLI and workspace state lives under `~/.miminions/`. Set
+`MIMINIONS_HOME` to relocate it for tests, sandboxes, or alternate deployments.
+
 Create your first agent:
 
 ```python
@@ -119,7 +132,7 @@ Then head to the [Getting Started](getting-started.md) guide to go further.
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                       CLI / Chat                            │
 └─────────────────────────┬───────────────────────────────────┘

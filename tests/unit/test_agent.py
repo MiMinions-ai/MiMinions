@@ -1,39 +1,55 @@
 """Agent Test Suite - Core functionality tests."""
-
 import asyncio
-import sys
+import threading
+import time
+from unittest.mock import patch
+
+import pytest
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    ToolCallPart,
+    ToolReturnPart,
+)
+from pydantic_ai.models.function import FunctionModel
 
 from miminions.agent import (
     create_minion,
 )
+from miminions.tools.mcp_adapter import MCPTool
 from miminions.tools.schemas import (
+    ExecutionStatus,
+    ParameterType,
     ToolDefinition,
     ToolExecutionRequest,
     ToolExecutionResult,
-    ExecutionStatus,
-    ParameterType,
 )
 
 
-async def test_agent_creation():
+def _cleanup(agent):
+    """Close an agent without requiring an async pytest plugin."""
+    asyncio.run(agent.cleanup())
+
+
+def test_agent_creation():
     """Test basic agent creation."""
     print("test_agent_creation")
     agent = create_minion("TestAgent", "A test agent")
     
-    assert agent.name == "TestAgent"
-    assert agent.description == "A test agent"
+    assert agent.name == "TestAgent", f"expect 'TestAgent', got {agent.name}"
+    assert agent.description == "A test agent", f"expect 'A test agent', got {agent.description}"
     
     state = agent.get_state()
-    assert state.tool_count == 1
-    assert state.has_memory is False
-    assert "cli_run_command" in agent.list_tools()
+    assert state.tool_count == 1, f"expect 1, got {state.tool_count}"
+    assert state.has_memory is False, f"expect False, got {state.has_memory}"
+    assert "cli_run_command" in agent.list_tools(), f"expect contains 'cli_run_command', got {agent.list_tools()}"
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_registration():
+def test_tool_registration():
     """Test tool registration and schema extraction."""
     print("test_tool_registration")
     agent = create_minion("TestAgent")
@@ -48,24 +64,24 @@ async def test_tool_registration():
     agent.register_tool("greet", "Greet someone", greet)
     
     # Verify tool definition
-    assert isinstance(add_def, ToolDefinition)
-    assert add_def.name == "add"
+    add_def_is_tool_definition = isinstance(add_def, ToolDefinition)
+    assert add_def_is_tool_definition, f"expect register_tool returns ToolDefinition, got {type(add_def)}"
+    assert add_def.name == "add", f"expect 'add', got {add_def.name}"
     
     # Verify schema extraction
     a_param = next(p for p in add_def.schema_def.parameters if p.name == "a")
-    assert a_param.type == ParameterType.INTEGER
-    assert a_param.required is True
+    assert a_param.type == ParameterType.INTEGER, f"expect ParameterType.INTEGER, got {a_param.type}"
+    assert a_param.required is True, f"expect True, got {a_param.required}"
     
     tools = agent.list_tools()
-    assert "add" in tools
-    assert "greet" in tools
+    assert "add" in tools, f"expect contains 'add', got {tools}"
+    assert "greet" in tools, f"expect contains 'greet', got {tools}"
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_execution():
+def test_tool_execution():
     """Test tool execution styles."""
     print("test_tool_execution")
     agent = create_minion("TestAgent")
@@ -76,30 +92,228 @@ async def test_tool_execution():
     agent.register_tool("multiply", "Multiply two numbers", multiply)
     
     result = agent.execute("multiply", a=3.0, b=4.0)
-    assert isinstance(result, ToolExecutionResult)
-    assert result.status == ExecutionStatus.SUCCESS
-    assert result.result == 12.0
-    assert result.execution_time_ms >= 0
+    result_is_execution_result = isinstance(result, ToolExecutionResult)
+    assert result_is_execution_result, f"expect execute returns ToolExecutionResult, got {type(result)}"
+    assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {result.status}"
+    assert result.result == 12.0, f"expect 12.0, got {result.result}"
+    assert result.execution_time_ms >= 0, f"expect result.execution_time_ms >= 0, got {result.execution_time_ms}"
     
     # With arguments dict
     result2 = agent.execute("multiply", arguments={"a": 5.0, "b": 2.0})
-    assert result2.result == 10.0
+    assert result2.result == 10.0, f"expect 10.0, got {result2.result}"
     
     # Raw execution (returns value directly)
     raw = agent.execute_tool("multiply", a=2.0, b=3.0)
-    assert raw == 6.0
+    assert raw == 6.0, f"expect 6.0, got {raw}"
     
     # Via ToolExecutionRequest
     request = ToolExecutionRequest(tool_name="multiply", arguments={"a": 7.0, "b": 2.0})
     result3 = agent.handle_tool_execution_request(request)
-    assert result3.result == 14.0
+    assert result3.result == 14.0, f"expect 14.0, got {result3.result}"
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_error_handling():
+async def test_parallel_sync_tool_execution():
+    """Blocking synchronous tools run concurrently in worker threads."""
+    agent = create_minion("TestAgent", provider="test")
+    thread_ids = set()
+
+    def slow_value(value: str, delay: float) -> str:
+        thread_ids.add(threading.get_ident())
+        time.sleep(delay)
+        return value
+
+    agent.register_tool("slow_value", "Return a value slowly", slow_value)
+    requests = [
+        ToolExecutionRequest(
+            tool_name="slow_value",
+            arguments={"value": value, "delay": 0.15},
+        )
+        for value in ("first", "second")
+    ]
+
+    started = time.perf_counter()
+    results = await agent.execute_many_async(requests)
+    elapsed = time.perf_counter() - started
+
+    actual_values = [result.result for result in results]
+    assert elapsed < 0.27, f"expect elapsed < 0.27, got {elapsed}"
+    assert actual_values == ["first", "second"], f"expect ['first', 'second'], got {actual_values}"
+    assert threading.get_ident() not in thread_ids, f"expect not contains threading.get_ident(), got {thread_ids}"
+    await agent.cleanup()
+
+
+async def test_parallel_async_tools_preserve_request_order():
+    """Async tools overlap while results remain in request order."""
+    agent = create_minion("TestAgent", provider="test")
+
+    async def delayed(value: str, delay: float) -> str:
+        await asyncio.sleep(delay)
+        return value
+
+    agent.register_tool("delayed", "Return a delayed value", delayed)
+    requests = [
+        ToolExecutionRequest(
+            tool_name="delayed",
+            arguments={"value": "slow", "delay": 0.12},
+        ),
+        ToolExecutionRequest(
+            tool_name="delayed",
+            arguments={"value": "fast", "delay": 0.01},
+        ),
+    ]
+
+    started = time.perf_counter()
+    results = await agent.execute_many_async(requests)
+    elapsed = time.perf_counter() - started
+
+    actual_values = [result.result for result in results]
+    assert elapsed < 0.2, f"expect elapsed < 0.2, got {elapsed}"
+    assert actual_values == ["slow", "fast"], f"expect ['slow', 'fast'], got {actual_values}"
+    await agent.cleanup()
+
+
+async def test_parallel_batch_respects_concurrency_limit():
+    """Batch execution never exceeds its configured concurrency limit."""
+    agent = create_minion("TestAgent", provider="test")
+    active = 0
+    max_active = 0
+
+    async def track_concurrency(value: int) -> int:
+        nonlocal active, max_active
+        active += 1
+        max_active = max(max_active, active)
+        await asyncio.sleep(0.03)
+        active -= 1
+        return value
+
+    agent.register_tool(
+        "track_concurrency",
+        "Track active executions",
+        track_concurrency,
+    )
+    requests = [
+        ToolExecutionRequest(
+            tool_name="track_concurrency",
+            arguments={"value": value},
+        )
+        for value in range(6)
+    ]
+
+    results = await agent.execute_many_async(requests, max_concurrency=2)
+    actual_values = [result.result for result in results]
+
+    assert max_active == 2, f"expect 2, got {max_active}"
+    assert actual_values == list(range(6)), f"expect list(range(6)), got {actual_values}"
+    await agent.cleanup()
+
+
+async def test_parallel_batch_rejects_invalid_concurrency_limit():
+    """A non-positive concurrency limit is rejected clearly."""
+    agent = create_minion("TestAgent", provider="test")
+
+    try:
+        await agent.execute_many_async([], max_concurrency=0)
+        pytest.fail("expect execute_many_async to reject non-positive max_concurrency")
+    except ValueError as exc:
+        actual_message = str(exc)
+        assert actual_message == "max_concurrency must be greater than zero", f"expect 'max_concurrency must be greater than zero', got {actual_message}"
+
+    await agent.cleanup()
+
+
+async def test_parallel_batch_isolates_failures():
+    """A failed request does not cancel successful siblings."""
+    agent = create_minion("TestAgent", provider="test")
+
+    def fail() -> None:
+        raise ValueError("broken tool")
+
+    async def succeed() -> str:
+        await asyncio.sleep(0)
+        return "ok"
+
+    agent.register_tool("fail", "Fail", fail)
+    agent.register_tool("succeed", "Succeed", succeed)
+
+    results = await agent.execute_many_async([
+        ToolExecutionRequest(tool_name="fail"),
+        ToolExecutionRequest(tool_name="succeed"),
+    ])
+
+    assert results[0].status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {results[0].status}"
+    assert results[0].error == "broken tool", f"expect 'broken tool', got {results[0].error}"
+    assert results[1].status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {results[1].status}"
+    assert results[1].result == "ok", f"expect 'ok', got {results[1].result}"
+    await agent.cleanup()
+
+
+async def test_llm_parallel_results_are_injected_together():
+    """The model receives all concurrently completed tool results at once."""
+    model_saw_results = False
+
+    def model_handler(messages, _info):
+        nonlocal model_saw_results
+        returns = [
+            part
+            for message in messages
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, ToolReturnPart)
+        ]
+        if not returns:
+            return ModelResponse(parts=[
+                ToolCallPart("work", {"value": "first"}),
+                ToolCallPart("work", {"value": "second"}),
+                ToolCallPart("fail_for_model", {}),
+            ])
+
+        actual_tool_names = [part.tool_name for part in returns]
+        expected_tool_names = [
+            "work",
+            "work",
+            "fail_for_model",
+        ]
+        assert actual_tool_names == expected_tool_names, f"expect expected_tool_names, got {actual_tool_names}"
+        actual_success_content = [part.content for part in returns[:2]]
+        assert actual_success_content == ["first", "second"], f"expect ['first', 'second'], got {actual_success_content}"
+        expected_error_content = {
+            "status": "error",
+            "error": "model-visible failure",
+        }
+        assert returns[2].content == expected_error_content, f"expect expected_error_content, got {returns[2].content}"
+        model_saw_results = True
+        return ModelResponse(parts=[TextPart("all tools completed")])
+
+    agent = create_minion("TestAgent", model=FunctionModel(model_handler))
+    active = 0
+    max_active = 0
+
+    async def work(value: str) -> str:
+        nonlocal active, max_active
+        active += 1
+        max_active = max(max_active, active)
+        await asyncio.sleep(0.05)
+        active -= 1
+        return value
+
+    def fail_for_model() -> None:
+        raise ValueError("model-visible failure")
+
+    agent.register_tool("work", "Do asynchronous work", work)
+    agent.register_tool("fail_for_model", "Fail visibly", fail_for_model)
+
+    reply = await agent.run("Run all tools")
+
+    assert reply == "all tools completed", f"expect 'all tools completed', got {reply}"
+    assert max_active == 2, f"expect 2, got {max_active}"
+    assert model_saw_results is True, f"expect True, got {model_saw_results}"
+    await agent.cleanup()
+
+
+def test_error_handling():
     """Test error handling."""
     print("test_error_handling")
     agent = create_minion("TestAgent")
@@ -111,27 +325,26 @@ async def test_error_handling():
     
     # execute() captures errors
     result = agent.execute("fail")
-    assert result.status == ExecutionStatus.ERROR
-    assert "always fails" in result.error.lower()
+    assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result.status}"
+    assert "always fails" in result.error.lower(), f"expect contains 'always fails', got {result.error.lower()}"
     
     # execute() on nonexistent tool
     result2 = agent.execute("nonexistent")
-    assert result2.status == ExecutionStatus.ERROR
-    assert "not found" in result2.error.lower()
+    assert result2.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result2.status}"
+    assert "not found" in result2.error.lower(), f"expect contains 'not found', got {result2.error.lower()}"
     
     # execute_tool() raises exceptions
     try:
         agent.execute_tool("fail")
-        assert False, "Should have raised"
+        pytest.fail("expect execute_tool to raise RuntimeError for failing tool")
     except RuntimeError:
         pass
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_schema_json():
+def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
     agent = create_minion("TestAgent")
@@ -142,21 +355,68 @@ async def test_tool_schema_json():
     agent.register_tool("search", "Search for items", search)
     
     schemas = agent.get_tools_schema()
-    assert len(schemas) == 2
+    assert len(schemas) == 2, f"expect 2, got {len(schemas)}"
     
     schema = next(s for s in schemas if s["name"] == "search")
-    assert schema["name"] == "search"
-    assert "parameters" in schema
-    assert "query" in schema["parameters"]["properties"]
-    assert "query" in schema["parameters"]["required"]
-    assert "max_results" not in schema["parameters"]["required"]
+    assert schema["name"] == "search", f"expect 'search', got {schema['name']}"
+    assert "parameters" in schema, f"expect contains 'parameters', got {schema}"
+    assert "query" in schema["parameters"]["properties"], f"expect contains 'query', got {schema['parameters']['properties']}"
+    assert "query" in schema["parameters"]["required"], f"expect contains 'query', got {schema['parameters']['required']}"
+    assert "max_results" not in schema["parameters"]["required"], f"expect not contains 'max_results', got {schema['parameters']['required']}"
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def test_tool_management():
+def test_command_tool_schema_hides_permission_policy():
+    """The model-facing command tool cannot provide its own policy."""
+    agent = create_minion("TestAgent")
+
+    schema = next(
+        item for item in agent.get_tools_schema()
+        if item["name"] == "cli_run_command"
+    )
+    properties = schema["parameters"]["properties"]
+    assert "command" in properties, f"expect contains 'command', got {properties}"
+    assert "timeout" in properties, f"expect contains 'timeout', got {properties}"
+    assert "policy" not in properties, f"expect not contains 'policy', got {properties}"
+
+    _cleanup(agent)
+    print("PASSED")
+
+
+def test_command_tool_uses_subprocess_reported_timing():
+    """Command approval time is not included in the agent execution duration."""
+    agent = create_minion("TestAgent")
+
+    class TimedResult(dict):
+        execution_time_ms = 12.5
+
+    agent._tools["cli_run_command"].func = lambda **kwargs: TimedResult(
+        returncode=0,
+        stdout="",
+        stderr="",
+    )
+    result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.execution_time_ms == 12.5, f"expect 12.5, got {result.execution_time_ms}"
+    _cleanup(agent)
+
+
+def test_rejected_command_reports_zero_execution_time():
+    """Time waiting for a rejected confirmation is not execution time."""
+    agent = create_minion("TestAgent")
+
+    with patch("miminions.tools.default.click.confirm", return_value=False):
+        result = agent.execute("cli_run_command", command="python --version")
+
+    assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result.status}"
+    assert "not approved" in result.error, f"expect contains 'not approved', got {result.error}"
+    assert result.execution_time_ms == 0.0, f"expect 0.0, got {result.execution_time_ms}"
+    _cleanup(agent)
+
+
+def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
     agent = create_minion("TestAgent")
@@ -166,41 +426,43 @@ async def test_tool_management():
     agent.register_tool("string_concat", "Concatenate strings", lambda a, b: a + b)
     
     math_tools = agent.search_tools("math")
-    assert len(math_tools) == 2
+    assert len(math_tools) == 2, f"expect 2, got {len(math_tools)}"
     
-    assert agent.unregister_tool("math_add") is True
-    assert "math_add" not in agent.list_tools()
-    assert agent.unregister_tool("nonexistent") is False
+    assert agent.unregister_tool("math_add") is True, f"expect True, got {agent.unregister_tool('math_add')}"
+    assert "math_add" not in agent.list_tools(), f"expect not contains 'math_add', got {agent.list_tools()}"
+    assert agent.unregister_tool("nonexistent") is False, f"expect False, got {agent.unregister_tool('nonexistent')}"
     
-    await agent.cleanup()
+    _cleanup(agent)
     print("PASSED")
-    return True
 
 
-async def main():
-    print("Agent Tests")
-    tests = [
-        test_agent_creation,
-        test_tool_registration,
-        test_tool_execution,
-        test_error_handling,
-        test_tool_schema_json,
-        test_tool_management,
-    ]
-    
-    passed = 0
-    for test in tests:
-        try:
-            if await test():
-                passed += 1
-        except Exception as e:
-            print(f"FAILED: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    print(f"\nTests completed: {passed}/{len(tests)} passed")
-    return 0 if passed == len(tests) else 1
+async def test_async_generic_tool_registration_uses_async_execution_and_schema():
+    """Async-backed GenericTools such as MCP tools must not use sync run()."""
+    agent = create_minion("TestAgent")
 
+    async def greet(**kwargs):
+        return f"Hello, {kwargs['name']}!"
 
-if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    tool = MCPTool(
+        name="greet",
+        description="Return a greeting.",
+        func=greet,
+        mcp_schema={
+            "inputSchema": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+    )
+    agent.add_tool(tool)
+
+    result = await agent.execute_async("greet", arguments={"name": "MiMinions"})
+
+    assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {result.status}"
+    assert result.result == "Hello, MiMinions!", f"expect 'Hello, MiMinions!', got {result.result}"
+    info = agent.get_tool_info("greet")
+    assert info["parameters"]["properties"]["name"]["type"] == "string", f"expect 'string', got {info['parameters']['properties']['name']['type']}"
+    assert "name" in info["parameters"]["required"], f"expect contains 'name', got {info['parameters']['required']}"
+    await agent.cleanup()
+

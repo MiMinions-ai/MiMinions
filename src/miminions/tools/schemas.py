@@ -91,4 +91,4 @@ class ToolExecutionResult(BaseModel):
 
     @classmethod
     def from_error(cls, tool_name: str, error: str, execution_time_ms: Optional[float] = None):
-        return cls(tool_name=tool_name, status=ExecutionStatus.ERROR, error_message=error, execution_time_ms=execution_time_ms)
+        return cls(tool_name=tool_name, status=ExecutionStatus.ERROR, error=error, execution_time_ms=execution_time_ms)

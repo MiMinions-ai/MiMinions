@@ -5,8 +5,10 @@ Knowledge management commands for MiMinions CLI.
 import click
 import json
 import uuid
-from .auth import get_config_dir
-from miminions.core.auth import require_auth
+from datetime import datetime, timezone
+from .persistence import load_json, save_json
+from miminions.core.paths import get_config_dir
+# TODO(auth): Re-enable require_auth when knowledge operations become account-backed.
 
 
 def get_knowledge_file():
@@ -16,19 +18,12 @@ def get_knowledge_file():
 
 def load_knowledge():
     """Load knowledge from configuration."""
-    knowledge_file = get_knowledge_file()
-    if not knowledge_file.exists():
-        return {}
-    
-    with open(knowledge_file, "r") as f:
-        return json.load(f)
+    return load_json(get_knowledge_file())
 
 
 def save_knowledge(knowledge):
     """Save knowledge to configuration."""
-    knowledge_file = get_knowledge_file()
-    with open(knowledge_file, "w") as f:
-        json.dump(knowledge, f, indent=2)
+    save_json(get_knowledge_file(), knowledge)
 
 
 @click.group()
@@ -38,10 +33,16 @@ def knowledge_cli():
 
 
 @knowledge_cli.command("list")
-@require_auth
-def list_knowledge():
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
+def list_knowledge(as_json):
     """List all knowledge entries."""
     knowledge = load_knowledge()
+
+    if as_json:
+        payload = [{"id": entry_id, **entry_data} for entry_id, entry_data in knowledge.items()]
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     if not knowledge:
         click.echo("No knowledge entries found.")
@@ -51,7 +52,7 @@ def list_knowledge():
     for entry_id, entry_data in knowledge.items():
         title = entry_data.get("title", entry_id)
         category = entry_data.get("category", "general")
-        version = entry_data.get("version", "1.0")
+        version = entry_data.get("version", "1")
         status = entry_data.get("status", "active")
         click.echo(f"  {entry_id}: {title} (v{version}, {category}, {status})")
 
@@ -61,7 +62,7 @@ def list_knowledge():
 @click.option("--content", prompt="Content", help="Content of the knowledge entry")
 @click.option("--category", default="general", help="Category of the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def add_knowledge(title, content, category, tags):
     """Add a new knowledge entry."""
     knowledge = load_knowledge()
@@ -71,21 +72,22 @@ def add_knowledge(title, content, category, tags):
     tag_list = []
     if tags:
         tag_list = [tag.strip() for tag in tags.split(",")]
-    
+
+    now = datetime.now(timezone.utc).isoformat()
     knowledge[entry_id] = {
         "title": title,
         "content": content,
         "category": category,
         "tags": tag_list,
-        "version": "1.0",
+        "version": "1",
         "status": "active",
-        "created_at": click.get_current_context().meta.get("timestamp", ""),
+        "created_at": now,
         "updated_at": None,
         "versions": [
             {
-                "version": "1.0",
+                "version": "1",
                 "content": content,
-                "timestamp": click.get_current_context().meta.get("timestamp", "")
+                "timestamp": now
             }
         ]
     }
@@ -100,7 +102,7 @@ def add_knowledge(title, content, category, tags):
 @click.option("--content", help="New content for the knowledge entry")
 @click.option("--category", help="New category for the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def update_knowledge(entry_id, title, content, category, tags):
     """Update an existing knowledge entry."""
     knowledge = load_knowledge()
@@ -112,13 +114,14 @@ def update_knowledge(entry_id, title, content, category, tags):
     entry = knowledge[entry_id]
     
     if content and content != entry["content"]:
-        current_version = float(entry["version"])
-        new_version = f"{current_version + 0.1:.1f}"
-        
+        # Integer revisions avoid float rounding (e.g. 1.9 + 0.1 -> 2.0).
+        # int(float(...)) tolerates any legacy "1.0"-style versions on disk.
+        new_version = str(int(float(entry["version"])) + 1)
+
         entry["versions"].append({
             "version": new_version,
             "content": content,
-            "timestamp": click.get_current_context().meta.get("timestamp", "")
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         
         entry["version"] = new_version
@@ -131,7 +134,7 @@ def update_knowledge(entry_id, title, content, category, tags):
     if tags:
         entry["tags"] = [tag.strip() for tag in tags.split(",")]
     
-    entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    entry["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_knowledge(knowledge)
     click.echo(f"Knowledge entry '{entry_id}' updated successfully")
@@ -140,7 +143,7 @@ def update_knowledge(entry_id, title, content, category, tags):
 @knowledge_cli.command("remove")
 @click.argument("entry_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this knowledge entry?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def remove_knowledge(entry_id):
     """Remove a knowledge entry."""
     knowledge = load_knowledge()
@@ -157,7 +160,7 @@ def remove_knowledge(entry_id):
 @knowledge_cli.command("revert")
 @click.argument("entry_id")
 @click.option("--version", prompt="Version to revert to", help="Version to revert to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def revert_knowledge(entry_id, version):
     """Revert a knowledge entry to a previous version."""
     knowledge = load_knowledge()
@@ -180,7 +183,7 @@ def revert_knowledge(entry_id, version):
     
     entry["content"] = target_version["content"]
     entry["version"] = target_version["version"]
-    entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+    entry["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     save_knowledge(knowledge)
     click.echo(f"Knowledge entry '{entry_id}' reverted to version {version}")
@@ -188,7 +191,7 @@ def revert_knowledge(entry_id, version):
 
 @knowledge_cli.command("version")
 @click.argument("entry_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def show_versions(entry_id):
     """Show version history of a knowledge entry."""
     knowledge = load_knowledge()
@@ -209,7 +212,7 @@ def show_versions(entry_id):
 @click.argument("entry_id")
 @click.option("--template", help="Template to apply")
 @click.option("--format", type=click.Choice(["json", "markdown", "plain"]), default="plain", help="Output format")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def customize_knowledge(entry_id, template, format):
     """Customize knowledge entry format or template."""
     knowledge = load_knowledge()
@@ -222,7 +225,7 @@ def customize_knowledge(entry_id, template, format):
     
     if template:
         entry["template"] = template
-        entry["updated_at"] = click.get_current_context().meta.get("timestamp", "")
+        entry["updated_at"] = datetime.now(timezone.utc).isoformat()
         save_knowledge(knowledge)
         click.echo(f"Template '{template}' applied to knowledge entry '{entry_id}'")
     
@@ -241,8 +244,9 @@ def customize_knowledge(entry_id, template, format):
 
 @knowledge_cli.command("show")
 @click.argument("entry_id")
-@require_auth
-def show_knowledge(entry_id):
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
+def show_knowledge(entry_id, as_json):
     """Show detailed information about a knowledge entry."""
     knowledge = load_knowledge()
     
@@ -251,6 +255,11 @@ def show_knowledge(entry_id):
         return
     
     entry = knowledge[entry_id]
+
+    if as_json:
+        payload = {"id": entry_id, **entry}
+        click.echo(json.dumps(payload, indent=2))
+        return
     
     click.echo(f"Entry ID: {entry_id}")
     click.echo(f"Title: {entry['title']}")

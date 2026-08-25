@@ -1,11 +1,16 @@
 """Unit tests for task.control module (TaskRuntime)."""
-import pytest
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+import pytest
+
 from miminions.task.control import TaskRuntime
-from miminions.task.model import AgentTask, TaskStatus, TaskPriority
+from miminions.task.model import AgentTask, TaskPriority, TaskStatus
+
+
+class TaskRuntimeTestError(Exception):
+    """Test-only exception raised by mock task agents."""
 
 
 class TestTaskRuntimeInitialization:
@@ -15,21 +20,21 @@ class TestTaskRuntimeInitialization:
         """Test creating a TaskRuntime instance."""
         runtime = TaskRuntime()
         
-        assert runtime.loop is None
-        assert runtime.tasks == {}
-        assert runtime.status == TaskStatus.INITIALIZED
-        assert isinstance(runtime.last_update, datetime)
+        assert runtime.loop is None, f"expect runtime.loop is None, got {runtime.loop}"
+        assert runtime.tasks == {}, f"expect runtime.tasks is empty {{}}, got {runtime.tasks}"
+        assert runtime.status == TaskStatus.INITIALIZED, f"expect runtime.status is {TaskStatus.INITIALIZED}, got {runtime.status}"
+        assert isinstance(runtime.last_update, datetime), f"expect the runtime.last_update to be a datetime instance, got {type(runtime.last_update)}"
 
     def test_task_runtime_initial_status(self):
         """Test TaskRuntime initial status is INITIALIZED."""
         runtime = TaskRuntime()
-        assert runtime.status == TaskStatus.INITIALIZED
+        assert runtime.status == TaskStatus.INITIALIZED, f"expect runtime.status is {TaskStatus.INITIALIZED}, got {runtime.status}"
 
     def test_task_runtime_initial_tasks_empty(self):
         """Test TaskRuntime starts with empty tasks dict."""
         runtime = TaskRuntime()
-        assert len(runtime.tasks) == 0
-        assert isinstance(runtime.tasks, dict)
+        assert len(runtime.tasks) == 0, f"expect runtime.tasks to be empty, got {len(runtime.tasks)}"
+        assert isinstance(runtime.tasks, dict), f"expect runtime.tasks to be a dict instance, got {type(runtime.tasks)}"
 
 
 class TestTaskRuntimeAddTask:
@@ -42,10 +47,10 @@ class TestTaskRuntimeAddTask:
         
         runtime.add_task(task)
         
-        assert len(runtime.tasks) == 1
-        assert task.id in runtime.tasks
-        assert runtime.tasks[task.id] == task
-        assert runtime.status == TaskStatus.IDLE
+        assert len(runtime.tasks) == 1, f"expect runtime.tasks to have 1 task, got {len(runtime.tasks)}"
+        assert task.id in runtime.tasks, f"expect runtime.tasks to contain {task.id}, got {runtime.tasks}"
+        assert runtime.tasks[task.id] == task, f"expect runtime.tasks[task.id] to be {task}, got {runtime.tasks[task.id]}"
+        assert runtime.status == TaskStatus.IDLE, f"expect runtime.status is {TaskStatus.IDLE}, got {runtime.status}"
 
     def test_add_multiple_tasks(self):
         """Test adding multiple tasks to runtime."""
@@ -58,20 +63,20 @@ class TestTaskRuntimeAddTask:
         runtime.add_task(task2)
         runtime.add_task(task3)
         
-        assert len(runtime.tasks) == 3
-        assert task1.id in runtime.tasks
-        assert task2.id in runtime.tasks
-        assert task3.id in runtime.tasks
+        assert len(runtime.tasks) == 3, f"expect runtime.tasks to have 3 tasks, got {len(runtime.tasks)}"
+        assert task1.id in runtime.tasks, f"expect runtime.tasks to contain {task1.id}, got {runtime.tasks}"
+        assert task2.id in runtime.tasks, f"expect runtime.tasks to contain {task2.id}, got {runtime.tasks}"
+        assert task3.id in runtime.tasks, f"expect runtime.tasks to contain {task3.id}, got {runtime.tasks}"
 
     def test_add_task_updates_status(self):
         """Test that adding a task updates runtime status to IDLE."""
         runtime = TaskRuntime()
-        assert runtime.status == TaskStatus.INITIALIZED
+        assert runtime.status == TaskStatus.INITIALIZED, f"expect runtime.status is {TaskStatus.INITIALIZED}, got {runtime.status}"
         
         task = AgentTask()
         runtime.add_task(task)
         
-        assert runtime.status == TaskStatus.IDLE
+        assert runtime.status == TaskStatus.IDLE, f"expect runtime.status is {TaskStatus.IDLE}, got {runtime.status}"
 
     def test_add_task_updates_last_update(self):
         """Test that adding a task updates last_update timestamp."""
@@ -85,7 +90,7 @@ class TestTaskRuntimeAddTask:
         task = AgentTask()
         runtime.add_task(task)
         
-        assert runtime.last_update > initial_update
+        assert runtime.last_update > initial_update, f"expect runtime.last_update > initial_update, got {runtime.last_update}"
 
     def test_add_task_with_custom_id(self):
         """Test adding a task with a custom ID."""
@@ -94,8 +99,8 @@ class TestTaskRuntimeAddTask:
         
         runtime.add_task(task)
         
-        assert "custom-id-123" in runtime.tasks
-        assert runtime.tasks["custom-id-123"] == task
+        assert "custom-id-123" in runtime.tasks, f"expect runtime.tasks to contain 'custom-id-123', got {runtime.tasks}"
+        assert runtime.tasks["custom-id-123"] == task, f"expect runtime.tasks['custom-id-123'] to be {task}, got {runtime.tasks['custom-id-123']}"
 
 
 class TestTaskRuntimeGetTasks:
@@ -106,8 +111,8 @@ class TestTaskRuntimeGetTasks:
         runtime = TaskRuntime()
         tasks = runtime.get_tasks()
         
-        assert tasks == {}
-        assert len(tasks) == 0
+        assert tasks == {}, f"expect runtime.get_tasks() to be empty, got {tasks}"
+        assert len(tasks) == 0, f"expect runtime.get_tasks() to have 0 tasks, got {len(tasks)}"
 
     def test_get_tasks_with_tasks(self):
         """Test getting tasks when runtime has tasks."""
@@ -120,9 +125,9 @@ class TestTaskRuntimeGetTasks:
         
         tasks = runtime.get_tasks()
         
-        assert len(tasks) == 2
-        assert task1.id in tasks
-        assert task2.id in tasks
+        assert len(tasks) == 2, f"expect runtime.get_tasks() to have 2 tasks, got {len(tasks)}"
+        assert task1.id in tasks, f"expect runtime.get_tasks() to contain {task1.id}, got {tasks}"
+        assert task2.id in tasks, f"expect runtime.get_tasks() to contain {task2.id}, got {tasks}"
 
     def test_get_tasks_returns_reference(self):
         """Test that get_tasks returns a reference to the tasks dict."""
@@ -131,7 +136,7 @@ class TestTaskRuntimeGetTasks:
         runtime.add_task(task)
         
         tasks = runtime.get_tasks()
-        assert tasks is runtime.tasks
+        assert tasks is runtime.tasks, f"expect tasks to be {runtime.tasks}, got {tasks}"
 
 
 class TestTaskRuntimeFilterTasks:
@@ -150,10 +155,10 @@ class TestTaskRuntimeFilterTasks:
         
         pending_tasks = runtime.filter_tasks("status", TaskStatus.PENDING)
         
-        assert len(pending_tasks) == 2
-        assert task1 in pending_tasks
-        assert task3 in pending_tasks
-        assert task2 not in pending_tasks
+        assert len(pending_tasks) == 2, f"expect runtime.filter_tasks('status', TaskStatus.PENDING) to have 2 tasks, got {len(pending_tasks)}"
+        assert task1 in pending_tasks, f"expect runtime.filter_tasks('status', TaskStatus.PENDING) to contain task1, got {pending_tasks}"
+        assert task3 in pending_tasks, f"expect runtime.filter_tasks('status', TaskStatus.PENDING) to contain task3, got {pending_tasks}"
+        assert task2 not in pending_tasks, f"expect runtime.filter_tasks('status', TaskStatus.PENDING) not to contain task2, got {pending_tasks}"
 
     def test_filter_tasks_by_priority(self):
         """Test filtering tasks by priority."""
@@ -168,9 +173,9 @@ class TestTaskRuntimeFilterTasks:
         
         high_priority_tasks = runtime.filter_tasks("priority", TaskPriority.HIGH)
         
-        assert len(high_priority_tasks) == 2
-        assert task2 in high_priority_tasks
-        assert task3 in high_priority_tasks
+        assert len(high_priority_tasks) == 2, f"expect runtime.filter_tasks('priority', TaskPriority.HIGH) to have 2 tasks, got {len(high_priority_tasks)}"
+        assert task2 in high_priority_tasks, f"expect runtime.filter_tasks('priority', TaskPriority.HIGH) to contain task2, got {high_priority_tasks}"
+        assert task3 in high_priority_tasks, f"expect runtime.filter_tasks('priority', TaskPriority.HIGH) to contain task3, got {high_priority_tasks}"
 
     def test_filter_tasks_by_name(self):
         """Test filtering tasks by name."""
@@ -185,9 +190,9 @@ class TestTaskRuntimeFilterTasks:
         
         important_tasks = runtime.filter_tasks("name", "Important Task")
         
-        assert len(important_tasks) == 2
-        assert task1 in important_tasks
-        assert task3 in important_tasks
+        assert len(important_tasks) == 2, f"expect runtime.filter_tasks('name', 'Important Task') to have 2 tasks, got {len(important_tasks)}"
+        assert task1 in important_tasks, f"expect runtime.filter_tasks('name', 'Important Task') to contain task1, got {important_tasks}"
+        assert task3 in important_tasks, f"expect runtime.filter_tasks('name', 'Important Task') to contain task3, got {important_tasks}"
 
     def test_filter_tasks_no_match(self):
         """Test filtering tasks with no matches."""
@@ -197,15 +202,15 @@ class TestTaskRuntimeFilterTasks:
         
         completed_tasks = runtime.filter_tasks("status", TaskStatus.COMPLETED)
         
-        assert len(completed_tasks) == 0
-        assert completed_tasks == []
+        assert len(completed_tasks) == 0, f"expect runtime.filter_tasks('status', TaskStatus.COMPLETED) to have 0 tasks, got {len(completed_tasks)}"
+        assert completed_tasks == [], f"expect [], got {completed_tasks}"
 
     def test_filter_tasks_empty_runtime(self):
         """Test filtering tasks on empty runtime."""
         runtime = TaskRuntime()
         filtered = runtime.filter_tasks("status", TaskStatus.PENDING)
         
-        assert filtered == []
+        assert filtered == [], f"expect runtime.filter_tasks('status', TaskStatus.PENDING) to return [], got {filtered}"
 
 
 class TestTaskRuntimeUpdateTask:
@@ -219,7 +224,7 @@ class TestTaskRuntimeUpdateTask:
         
         runtime.update_task(task.id, status=TaskStatus.RUNNING)
         
-        assert task.status == TaskStatus.RUNNING
+        assert task.status == TaskStatus.RUNNING, f"expect after update task, task status to be {TaskStatus.RUNNING}, got {task.status}"
 
     def test_update_task_multiple_attributes(self):
         """Test updating multiple task attributes."""
@@ -234,9 +239,9 @@ class TestTaskRuntimeUpdateTask:
             status=TaskStatus.RUNNING
         )
         
-        assert task.name == "New Name"
-        assert task.priority == TaskPriority.HIGH
-        assert task.status == TaskStatus.RUNNING
+        assert task.name == "New Name", f"expect after update task, task name to be 'New Name', got {task.name}"
+        assert task.priority == TaskPriority.HIGH, f"expect after update task, task priority to be {TaskPriority.HIGH}, got {task.priority}"
+        assert task.status == TaskStatus.RUNNING, f"expect after update task, task status to be {TaskStatus.RUNNING}, got {task.status}"
 
     def test_update_task_updates_last_update(self):
         """Test that updating a task updates last_update timestamp."""
@@ -250,7 +255,7 @@ class TestTaskRuntimeUpdateTask:
         
         runtime.update_task(task.id, status=TaskStatus.RUNNING)
         
-        assert runtime.last_update > initial_update
+        assert runtime.last_update > initial_update, f"expect after update task, runtime.last_update to be greater than initial_update, got {runtime.last_update}"
 
     def test_update_task_not_found(self):
         """Test updating a task that doesn't exist raises error."""
@@ -274,10 +279,10 @@ class TestTaskRuntimeUpdateTask:
         task = AgentTask()
         runtime.add_task(task)
         
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         runtime.update_task(task.id, start_time=start_time)
         
-        assert task.start_time == start_time
+        assert task.start_time == start_time, f"expect after update task, task start_time to be {start_time}, got {task.start_time}"
 
     def test_update_task_end_time(self):
         """Test updating task end time."""
@@ -285,10 +290,10 @@ class TestTaskRuntimeUpdateTask:
         task = AgentTask()
         runtime.add_task(task)
         
-        end_time = datetime.now()
+        end_time = datetime.now(UTC)
         runtime.update_task(task.id, end_time=end_time)
         
-        assert task.end_time == end_time
+        assert task.end_time == end_time, f"expect after update task, task end_time to be {end_time}, got {task.end_time}"
 
 
 class TestTaskRuntimeClearTasks:
@@ -299,8 +304,8 @@ class TestTaskRuntimeClearTasks:
         runtime = TaskRuntime()
         runtime.clear_tasks()
         
-        assert len(runtime.tasks) == 0
-        assert runtime.status == TaskStatus.IDLE
+        assert len(runtime.tasks) == 0, f"expect after clear_tasks, runtime.tasks to have 0 tasks, got {len(runtime.tasks)}"
+        assert runtime.status == TaskStatus.IDLE, f"expect after clear_tasks, runtime.status to be TaskStatus.IDLE, got {runtime.status}"
 
     def test_clear_tasks_with_tasks(self):
         """Test clearing tasks when runtime has tasks."""
@@ -310,12 +315,12 @@ class TestTaskRuntimeClearTasks:
         
         runtime.add_task(task1)
         runtime.add_task(task2)
-        assert len(runtime.tasks) == 2
+        assert len(runtime.tasks) == 2, f"expect after add_task, runtime.tasks to have 2 tasks, got {len(runtime.tasks)}"
         
         runtime.clear_tasks()
         
-        assert len(runtime.tasks) == 0
-        assert runtime.status == TaskStatus.IDLE
+        assert len(runtime.tasks) == 0, f"expect after clear_tasks, runtime.tasks to have 0 tasks, got {len(runtime.tasks)}"
+        assert runtime.status == TaskStatus.IDLE, f"expect after clear_tasks, runtime.status to be TaskStatus.IDLE, got {runtime.status}"
 
     def test_clear_tasks_updates_status(self):
         """Test that clearing tasks sets status to IDLE."""
@@ -325,7 +330,7 @@ class TestTaskRuntimeClearTasks:
         
         runtime.clear_tasks()
         
-        assert runtime.status == TaskStatus.IDLE
+        assert runtime.status == TaskStatus.IDLE, f"expect after clear_tasks, runtime.status to be   TaskStatus.IDLE, got {runtime.status}"
 
     def test_clear_tasks_updates_last_update(self):
         """Test that clearing tasks updates last_update timestamp."""
@@ -339,7 +344,7 @@ class TestTaskRuntimeClearTasks:
         
         runtime.clear_tasks()
         
-        assert runtime.last_update > initial_update
+        assert runtime.last_update > initial_update, f"expect after clear_tasks, runtime.last_update to be greater than initial_update, got {runtime.last_update}"
 
 
 class TestTaskRuntimeEventLoop:
@@ -350,8 +355,9 @@ class TestTaskRuntimeEventLoop:
         runtime = TaskRuntime()
         runtime.init_loop()
         
-        assert runtime.loop is not None
-        assert isinstance(runtime.loop, asyncio.AbstractEventLoop)
+        assert runtime.loop is not None, f"expect runtime.loop is not None, got {runtime.loop}"
+        loop_is_event_loop = isinstance(runtime.loop, asyncio.AbstractEventLoop)
+        assert loop_is_event_loop, f"expect runtime.loop to be an instance of asyncio.AbstractEventLoop, got {type(runtime.loop)}"
         
         # Cleanup
         runtime.terminate_loop()
@@ -361,10 +367,10 @@ class TestTaskRuntimeEventLoop:
         runtime = TaskRuntime()
         runtime.init_loop()
         
-        assert runtime.loop is not None
+        assert runtime.loop is not None, f"expect runtime.loop is not None, got {runtime.loop}"
         runtime.terminate_loop()
         
-        assert runtime.loop.is_closed()
+        assert runtime.loop.is_closed(), f"expect runtime.loop to be closed, got {runtime.loop.is_closed()}"
 
     def test_init_loop_creates_new_loop(self):
         """Test that init_loop creates a new event loop."""
@@ -376,7 +382,7 @@ class TestTaskRuntimeEventLoop:
         runtime.init_loop()
         loop2 = runtime.loop
         
-        assert loop1 is not loop2
+        assert loop1 is not loop2, f"expect loop1 is not {loop2}, got {loop1}"
         
         # Cleanup
         runtime.terminate_loop()
@@ -391,7 +397,7 @@ class TestTaskRuntimeAsyncExecution:
         runtime = TaskRuntime()
         results = await runtime.run()
         
-        assert results == {}
+        assert results == {}, f"expect the runtime.run() result to be {{}}, got {results}"
 
     @pytest.mark.asyncio
     async def test_run_single_task(self):
@@ -415,10 +421,10 @@ class TestTaskRuntimeAsyncExecution:
         # Run tasks
         results = await runtime.run()
         
-        assert len(results) == 1
-        assert task.id in results
-        assert results[task.id]["status"] == TaskStatus.COMPLETED
-        assert results[task.id]["result"] == mock_result
+        assert len(results) == 1, f"expect runtime.run() to return 1 result, got {len(results)}"
+        assert task.id in results, f"expect runtime.run() result to contain task.id, got {results}"
+        assert results[task.id]["status"] == TaskStatus.COMPLETED, f"expect runtime.run() result to have status {TaskStatus.COMPLETED}, got {results[task.id]['status']}"
+        assert results[task.id]["result"] == mock_result, f"expect runtime.run() result to have result {mock_result}, got {results[task.id]['result']}"
 
     @pytest.mark.asyncio
     async def test_run_multiple_tasks(self):
@@ -451,11 +457,11 @@ class TestTaskRuntimeAsyncExecution:
         # Run tasks
         results = await runtime.run()
         
-        assert len(results) == 2
-        assert task1.id in results
-        assert task2.id in results
-        assert results[task1.id]["status"] == TaskStatus.COMPLETED
-        assert results[task2.id]["status"] == TaskStatus.COMPLETED
+        assert len(results) == 2, f"expect runtime.run() to return 2 results, got {len(results)}"
+        assert task1.id in results, f"expect runtime.run() result to contain task1.id, got {results}"
+        assert task2.id in results, f"expect runtime.run() result to contain task2.id, got {results}"
+        assert results[task1.id]["status"] == TaskStatus.COMPLETED, f"expect runtime.run() result to have status {TaskStatus.COMPLETED}, got {results[task1.id]['status']}"
+        assert results[task2.id]["status"] == TaskStatus.COMPLETED, f"expect runtime.run() result to have status {TaskStatus.COMPLETED}, got {results[task2.id]['status']}"
 
     @pytest.mark.asyncio
     async def test_run_task_with_failure(self):
@@ -466,7 +472,7 @@ class TestTaskRuntimeAsyncExecution:
         mock_agent = MagicMock()
         
         async def mock_run_fail(*args, **kwargs):
-            raise Exception("Task failed")
+            raise TaskRuntimeTestError("Task failed")
         
         mock_agent.run = mock_run_fail
         
@@ -475,8 +481,12 @@ class TestTaskRuntimeAsyncExecution:
         runtime.add_task(task)
         
         # Run tasks - should handle exception
-        with pytest.raises(Exception):
+        with pytest.raises(ExceptionGroup) as exc_info:
             await runtime.run()
+        inner_errors = exc_info.value.exceptions
+        assert len(inner_errors) == 1, f"expect runtime.run failure group contains one inner error as 1, got {len(inner_errors)}"
+        assert isinstance(inner_errors[0], TaskRuntimeTestError), f"expect runtime.run failure wraps TaskRuntimeTestError, got {type(inner_errors[0])}"
+        assert str(inner_errors[0]) == "Task failed", f"expect runtime.run failure message is 'Task failed', got {inner_errors[0]}"
 
     @pytest.mark.asyncio
     async def test_get_task_status_all_tasks(self):
@@ -489,12 +499,14 @@ class TestTaskRuntimeAsyncExecution:
         runtime.add_task(task2)
         
         statuses = await runtime.get_task_status()
-        
-        assert len(statuses) == 2
-        assert task1.id in statuses
-        assert task2.id in statuses
-        assert statuses[task1.id] == TaskStatus.PENDING
-        assert statuses[task2.id] == TaskStatus.RUNNING
+
+        assert isinstance(statuses, dict), f"expect runtime.get_task_status() to return a dict, got {type(statuses)}"
+        assert all(isinstance(status, TaskStatus) for status in statuses.values()), f"expect all items in runtime.get_task_status() to be TaskStatus instances, got {statuses}"
+        assert len(statuses) == 2, f"expect runtime.get_task_status() to return 2 statuses, got {len(statuses)}"
+        assert task1.id in statuses, f"expect runtime.get_task_status() result to contain task1.id, got {statuses}"
+        assert task2.id in statuses, f"expect runtime.get_task_status() result to contain task2.id, got {statuses}"
+        assert statuses[task1.id] == TaskStatus.PENDING, f"expect runtime.get_task_status() result to have status {TaskStatus.PENDING}, got {statuses[task1.id]}"
+        assert statuses[task2.id] == TaskStatus.RUNNING, f"expect runtime.get_task_status() result to have status {TaskStatus.RUNNING}, got {statuses[task2.id]}"
 
     @pytest.mark.asyncio
     async def test_get_task_status_specific_task(self):
@@ -505,7 +517,7 @@ class TestTaskRuntimeAsyncExecution:
         
         status = await runtime.get_task_status(task.id)
         
-        assert status == TaskStatus.RUNNING
+        assert status == TaskStatus.RUNNING, f"expect runtime.get_task_status(task.id) to return {TaskStatus.RUNNING}, got {status}"
 
     @pytest.mark.asyncio
     async def test_get_task_status_no_tasks(self):
@@ -534,7 +546,7 @@ class TestTaskRuntimeSyncExecution:
         runtime = TaskRuntime()
         results = runtime.run_sync()
         
-        assert results == {}
+        assert results == {}, f"expect runtime.run_sync() to return {{}}, got {results}"
 
     def test_run_sync_single_task(self):
         """Test synchronous run with a single task."""
@@ -557,9 +569,9 @@ class TestTaskRuntimeSyncExecution:
         # Run tasks synchronously
         results = runtime.run_sync()
         
-        assert len(results) == 1
-        assert task.id in results
-        assert results[task.id]["status"] == TaskStatus.COMPLETED
+        assert len(results) == 1, f"expect runtime.run_sync() to return 1 result, got {len(results)}"
+        assert task.id in results, f"expect runtime.run_sync() result to contain task.id, got {results}"
+        assert results[task.id]["status"] == TaskStatus.COMPLETED, f"expect runtime.run_sync() result to have status {TaskStatus.COMPLETED}, got {results[task.id]['status']}"
 
     def test_run_async_func(self):
         """Test running an async function synchronously."""
@@ -571,7 +583,7 @@ class TestTaskRuntimeSyncExecution:
         
         result = runtime.run_async_func(sample_async_func, 5, 10)
         
-        assert result == 15
+        assert result == 15, f"expect runtime.run_async_func() to return 15, got {result}"
 
     def test_run_async_func_with_kwargs(self):
         """Test running an async function with kwargs."""
@@ -583,7 +595,7 @@ class TestTaskRuntimeSyncExecution:
         
         result = runtime.run_async_func(sample_async_func, 5, 10, multiplier=2)
         
-        assert result == 30
+        assert result == 30, f"expect runtime.run_async_func() to return     30, got {result}"
 
 
 class TestTaskRuntimeEdgeCases:
@@ -598,8 +610,8 @@ class TestTaskRuntimeEdgeCases:
         runtime.add_task(task)
         
         # Should have one task (overwritten)
-        assert len(runtime.tasks) == 1
-        assert "duplicate-id" in runtime.tasks
+        assert len(runtime.tasks) == 1, f"expect runtime.tasks to have 1 task, got {len(runtime.tasks)}"
+        assert "duplicate-id" in runtime.tasks, f"expect runtime.tasks to contain 'duplicate-id', got {runtime.tasks}"
 
     def test_filter_tasks_invalid_attribute(self):
         """Test filtering by non-existent attribute."""
@@ -620,7 +632,7 @@ class TestTaskRuntimeEdgeCases:
         runtime.update_task(task.id)
         
         # Status should remain unchanged
-        assert task.status == TaskStatus.PENDING
+        assert task.status == TaskStatus.PENDING, f"expect runtime.update_task() to leave status as {TaskStatus.PENDING}, got {task.status}"
 
     def test_runtime_state_persistence(self):
         """Test that runtime maintains state across operations."""
@@ -636,11 +648,11 @@ class TestTaskRuntimeEdgeCases:
         runtime.update_task(task1.id, status=TaskStatus.RUNNING)
         
         # Verify state
-        assert len(runtime.tasks) == 2
-        assert runtime.tasks[task1.id].status == TaskStatus.RUNNING
-        assert runtime.tasks[task2.id].status == TaskStatus.PENDING
+        assert len(runtime.tasks) == 2, f"expect runtime.tasks to have 2 tasks, got {len(runtime.tasks)}"
+        assert runtime.tasks[task1.id].status == TaskStatus.RUNNING, f"expect runtime.tasks[task1.id] to have status {TaskStatus.RUNNING}, got {runtime.tasks[task1.id].status}"
+        assert runtime.tasks[task2.id].status == TaskStatus.PENDING, f"expect runtime.tasks[task2.id] to have status {TaskStatus.PENDING}, got {runtime.tasks[task2.id].status}"
         
         # Filter and verify
         running_tasks = runtime.filter_tasks("status", TaskStatus.RUNNING)
-        assert len(running_tasks) == 1
-        assert running_tasks[0] == task1
+        assert len(running_tasks) == 1, f"expect runtime.filter_tasks() to return 1 task, got {len(running_tasks)}"
+        assert running_tasks[0] == task1, f"expect runtime.filter_tasks() to return task1, got {running_tasks[0]}"

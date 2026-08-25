@@ -2,6 +2,7 @@
 from uuid import uuid1
 from enum import Enum
 from typing import Any, Dict, List, Optional
+from collections.abc import Callable
 from dataclasses import field,dataclass
 from datetime import datetime
 
@@ -67,7 +68,7 @@ class Task:
 @dataclass
 class AgentTask(Task):
     """Model representing a task assigned to an agent."""
-    agent: Agent = field(
+    agent: Optional[Agent] = field(
         default=None, 
         metadata={"description":"Agent assigned to the task"}
     )
@@ -83,11 +84,11 @@ class AgentTask(Task):
         default_factory=dict, 
         metadata={"description":"Keyword arguments for the task execution"}
     )
-    call_back: Optional[callable] = field(
+    call_back: Optional[Callable[..., Any]] = field(
         default=None, 
         metadata={"description":"Callback function after task completion"}
     )
-    result: AgentRunResult = field(
+    result: Optional[AgentRunResult] = field(
         default=None, 
         metadata={"description":"Result of the task execution"}
     )

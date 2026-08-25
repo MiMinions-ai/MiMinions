@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.gemini import GeminiModel
@@ -9,15 +11,21 @@ class ModelFactory:
     """Factory to create LLM models based on provider strings."""
     
     @staticmethod
-    def create(provider_name: str, model_name: str = None):
+    def create(provider_name: str, model_name: Optional[str] = None):
         provider_name = provider_name.lower()
         
         if provider_name == "openrouter":
             # OpenRouter speaks the OpenAI API protocol
             model_name = model_name or "openai/gpt-oss-20b:free"
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OPENROUTER_API_KEY is not set. Export it before using the "
+                    "'openrouter' provider (e.g. `export OPENROUTER_API_KEY=...`)."
+                )
             provider = OpenAIProvider(
                 base_url="https://openrouter.ai/api/v1",
-                api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+                api_key=api_key,
             )
             return OpenAIChatModel(model_name, provider=provider)
             

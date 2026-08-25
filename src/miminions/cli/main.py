@@ -25,6 +25,9 @@ _LAZY_COMMANDS: tuple[tuple[str, str, str, str], ...] = (
     ("chat", "miminions.cli.chat", "chat_cli", "Interactive chat sessions."),
     ("gateway", "miminions.cli.gateway", "gateway_cli", "Gateway runtime and channels."),
     ("prompt", "miminions.cli.prompt", "prompt_cli", "One-shot prompts."),
+    ("config", "miminions.cli.config", "config_cli", "Get or set CLI configuration."),
+    ("export", "miminions.cli.transfer", "export_data", "Export agents, tasks, and knowledge."),
+    ("import", "miminions.cli.transfer", "import_data", "Import agents, tasks, and knowledge."),
 )
 
 
@@ -65,7 +68,7 @@ class LazyGroup(click.Group):
         """List commands using static short help so root --help stays lazy."""
         rows: list[tuple[str, str]] = []
         for name in self.list_commands(ctx):
-            if name in self._lazy_commands and name not in self.commands:
+            if name in self._lazy_commands:
                 help_text = self._lazy_helps.get(name, "")
             else:
                 command = self.get_command(ctx, name)
@@ -85,7 +88,7 @@ def _maybe_bootstrap(ctx: click.Context) -> None:
         return
     # Import bootstrap + config path only when needed so `--help` stays light.
     from miminions.core.bootstrap import ensure_default_setup
-    from miminions.cli.auth import get_config_dir
+    from miminions.core.paths import get_config_dir
 
     try:
         ensure_default_setup(get_config_dir())
@@ -103,6 +106,33 @@ def _maybe_bootstrap(ctx: click.Context) -> None:
 def cli(ctx: click.Context) -> None:
     """MiMinions CLI - Manage AI agents, tasks, workflows and knowledge."""
     _maybe_bootstrap(ctx)
+
+
+@click.command("init")
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-run bootstrap and restore any missing default template files.",
+)
+def init_cli(force: bool) -> None:
+    """Initialize or repair the default CLI bootstrap state."""
+    from miminions.core.bootstrap import ensure_default_setup
+    from miminions.core.paths import get_config_dir
+
+    try:
+        config = ensure_default_setup(get_config_dir(), force=force)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Default workspace: {config.get('default_workspace')}")
+    click.echo(f"Default agent: {config.get('default_agent')}")
+    if force:
+        click.echo("Bootstrap repair complete.")
+    else:
+        click.echo("Bootstrap initialization complete.")
+
+
+cli.add_command(init_cli, name="init")
 
 
 def main() -> None:
