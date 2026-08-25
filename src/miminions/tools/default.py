@@ -36,6 +36,19 @@ class _TimedCommandResult(dict):
         super().__init__(*args, **kwargs)
         self.execution_time_ms = execution_time_ms
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, _TimedCommandResult):
+            return NotImplemented
+        return dict.__eq__(self, other) and (
+            self.execution_time_ms == other.execution_time_ms
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        eq_result = self.__eq__(other)
+        if eq_result is NotImplemented:
+            return NotImplemented
+        return not eq_result
+
 
 class _CommandPermissionError(PermissionError):
     """Permission rejection indicating that command execution never started."""
