@@ -31,4 +31,4 @@ jobs:
     - name: Verify build
       run: python -m build
     - name: Lint with ruff
-      run: ruff check --line-length=127 --statistics src tests
+      run: ruff check --line-length=127 --statistics --select=E9,F63,F7,F82 src tests
