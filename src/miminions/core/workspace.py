@@ -237,6 +237,8 @@ class Workspace:
         elif condition_type == 'state_equals':
             key = condition.get('key')
             value = condition.get('value')
+            if key is None:
+                return False
             return self.state.get(key) == value
         elif condition_type == 'node_count':
             operator = condition.get('operator', '>=')

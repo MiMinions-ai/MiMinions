@@ -1,6 +1,7 @@
 # Try to use pysqlite3 first (has extension support), fallback to sqlite3
 import pysqlite3.dbapi2 as sqlite3
 
+from typing import Optional
 try:
     import sqlite_vec
 except ImportError:
@@ -67,7 +68,7 @@ class SQLiteMemory(BaseMemory):
         
         self.dim = dim
         self.encoder = TextEmbedding(_MODEL_ALIASES.get(model_name, model_name))
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False) # type: ignore
 
         if sqlite_vec is None:
             raise RuntimeError(
@@ -128,7 +129,7 @@ class SQLiteMemory(BaseMemory):
         """)
         self.conn.commit()
     
-    def create(self, text: str, metadata: Dict[str, Any] = None) -> str:
+    def create(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         id = str(uuid4())
         vector = self._embed(text)
         
@@ -276,7 +277,7 @@ class SQLiteMemory(BaseMemory):
                 seen_ids.add(r["id"])
         return combined[:top_k]
 
-    def date_time_search(self, start: str = None, end: str = None, top_k: int = 5) -> List[Dict[str, Any]]:
+    def date_time_search(self, start: str = "", end: str = "", top_k: int = 5) -> List[Dict[str, Any]]:
         """Search entries by creation date range (ISO format: YYYY-MM-DD)."""
         if start and end:
             cursor = self.conn.execute(

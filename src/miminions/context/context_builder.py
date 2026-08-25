@@ -33,7 +33,7 @@ def _normalize_mapping(obj: Any) -> dict[str, Any]:
     if isinstance(obj, dict):
         return obj
 
-    if is_dataclass(obj):
+    if is_dataclass(obj) and not isinstance(obj, type):
         try:
             return asdict(obj)
         except Exception:

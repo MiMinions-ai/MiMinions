@@ -499,7 +499,9 @@ class TestTaskRuntimeAsyncExecution:
         runtime.add_task(task2)
         
         statuses = await runtime.get_task_status()
-        
+
+        assert isinstance(statuses, dict), f"expect runtime.get_task_status() to return a dict, got {type(statuses)}"
+        assert all(isinstance(status, TaskStatus) for status in statuses.values()), f"expect all items in runtime.get_task_status() to be TaskStatus instances, got {statuses}"
         assert len(statuses) == 2, f"expect runtime.get_task_status() to return 2 statuses, got {len(statuses)}"
         assert task1.id in statuses, f"expect runtime.get_task_status() result to contain task1.id, got {statuses}"
         assert task2.id in statuses, f"expect runtime.get_task_status() result to contain task2.id, got {statuses}"

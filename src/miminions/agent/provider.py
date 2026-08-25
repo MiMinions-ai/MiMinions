@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.gemini import GeminiModel
@@ -9,7 +11,7 @@ class ModelFactory:
     """Factory to create LLM models based on provider strings."""
     
     @staticmethod
-    def create(provider_name: str, model_name: str = None):
+    def create(provider_name: str, model_name: Optional[str] = None):
         provider_name = provider_name.lower()
         
         if provider_name == "openrouter":

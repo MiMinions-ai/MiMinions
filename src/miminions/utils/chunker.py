@@ -5,7 +5,7 @@ Splits text into fixed-size chunks with configurable overlap
 for better semantic search and retrieval.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class TextChunker:
@@ -24,7 +24,7 @@ class TextChunker:
         self.chunk_size = chunk_size
         self.overlap = overlap
     
-    def chunk_text(self, text: str, metadata: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def chunk_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Split text into chunks with metadata
         
         Args:

@@ -35,7 +35,7 @@ class TransactionRecord:
     file_hash: Optional[str] = None
     file_name: Optional[str] = None
     author: Optional[str] = None
-    details: Dict[str, Any] = None
+    details: Optional[Dict[str, Any]] = None
     success: bool = True
     error_message: Optional[str] = None
     
@@ -143,8 +143,8 @@ class TransactionLog:
             f.write(json.dumps(record.to_dict()) + '\n')
             f.flush()
     
-    def log_read(self, file_id: str, file_hash: str = None, file_name: str = None, 
-                 author: str = None, details: Dict[str, Any] = None) -> None:
+    def log_read(self, file_id: str, file_hash: Optional[str] = None, file_name: Optional[str] = None, 
+                 author: Optional[str] = None, details: Optional[Dict[str, Any]] = None) -> None:
         """
         Log a file read operation.
         
@@ -167,9 +167,9 @@ class TransactionLog:
         )
         self._write_transaction_record(record)
     
-    def log_write(self, file_id: str, file_hash: str = None, file_name: str = None,
-                  author: str = None, details: Dict[str, Any] = None, success: bool = True,
-                  error_message: str = None) -> None:
+    def log_write(self, file_id: str, file_hash: Optional[str] = None, file_name: Optional[str] = None,
+                  author: Optional[str] = None, details: Optional[Dict[str, Any]] = None, success: bool = True,
+                  error_message: Optional[str] = None) -> None:
         """
         Log a file write operation.
         
@@ -196,9 +196,9 @@ class TransactionLog:
         )
         self._write_transaction_record(record)
     
-    def log_update(self, file_id: str, file_hash: str = None, file_name: str = None,
-                   author: str = None, details: Dict[str, Any] = None, success: bool = True,
-                   error_message: str = None) -> None:
+    def log_update(self, file_id: str, file_hash: Optional[str] = None, file_name: Optional[str] = None,
+                   author: Optional[str] = None, details: Optional[Dict[str, Any]] = None, success: bool = True,
+                   error_message: Optional[str] = None) -> None:
         """
         Log a file update operation.
         
@@ -225,9 +225,9 @@ class TransactionLog:
         )
         self._write_transaction_record(record)
     
-    def log_delete(self, file_id: str, file_hash: str = None, file_name: str = None,
-                   author: str = None, details: Dict[str, Any] = None, success: bool = True,
-                   error_message: str = None) -> None:
+    def log_delete(self, file_id: str, file_hash: Optional[str] = None, file_name: Optional[str] = None,
+                   author: Optional[str] = None, details: Optional[Dict[str, Any]] = None, success: bool = True,
+                   error_message: Optional[str] = None) -> None:
         """
         Log a file delete operation.
         

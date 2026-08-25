@@ -342,8 +342,8 @@ class LocalDataManager:
             metadata = self.index.get_file(file_id)
             self.transaction_log.log_update(
                 file_id=file_id,
-                file_hash=metadata.file_hash if metadata else None,
-                file_name=metadata.original_name if metadata else None,
+                file_hash=metadata.file_hash if metadata else "",
+                file_name=metadata.original_name if metadata else "",
                 author=author or self.default_author,
                 details={"updates": updates}
             )

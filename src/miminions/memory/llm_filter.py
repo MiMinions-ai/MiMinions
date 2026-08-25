@@ -77,7 +77,7 @@ def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
 
         async def _run() -> str:
             result = await extraction_agent.run(prompt)
-            return result.output if hasattr(result, "output") else str(result.data)
+            return result.output if hasattr(result, "output") else str(result.response)
 
         # Bridge async → sync safely regardless of whether a loop is running.
         try:

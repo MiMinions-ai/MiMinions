@@ -45,7 +45,7 @@ class UserController:
         """
         raise NotImplementedError("UserController.get_user not implemented")
     
-    def update_user(self, user_id: str, name: str = None) -> bool:
+    def update_user(self, user_id: str, name: Optional[str] = None) -> bool:
         """
         Update user information.
         

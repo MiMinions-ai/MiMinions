@@ -420,6 +420,8 @@ class Minion:
     def _memory_store(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         if not self._memory:
             raise ValueError("No memory attached")
+        if not metadata:
+            metadata = {"source": "manual", "timestamp": time.time()}
         return self._memory.create(text, metadata)
 
     def _memory_recall(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -596,6 +598,10 @@ class Minion:
         self._rebuild_pydantic_ai_agent()
         start = time.monotonic()
         attempt = 0
+
+        if self._pydantic_ai_agent is None:
+            raise RuntimeError("Agent not initialized; call set_model() or pass model to constructor")
+
         while True:
             try:
                 result = await self._pydantic_ai_agent.run(
@@ -620,7 +626,7 @@ class Minion:
                 self._on_turn_end(result.usage, time.monotonic() - start)
             except Exception:
                 logger.exception("on_turn_end callback failed")
-        return result.output if hasattr(result, "output") else str(result.data)
+        return result.output if hasattr(result, "output") else str(result.response)
 
     async def run_stream(
         self, prompt: str, message_history: Optional[List[Any]] = None
@@ -642,6 +648,9 @@ class Minion:
         """
         self._rebuild_pydantic_ai_agent()
         start = time.monotonic()
+
+        assert self._pydantic_ai_agent is not None, "Agent not initialized; call set_model() or pass model to constructor"
+
         async with self._pydantic_ai_agent.run_stream(
             prompt,
             message_history=message_history or None,
