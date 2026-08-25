@@ -1,15 +1,25 @@
 # Changelog
 
+<!-- markdownlint-disable MD024 -->
+
 All notable changes to MiMinions are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
 !!! tip "Current version"
-    The latest published release is **0.3.0** (requires Python &ge; 3.12). Install it with `pip install miminions`, or `pip install miminions[sqlite]` to add SQLite vector memory. See [Getting Started](getting-started.md) for the full matrix.
+    The latest published release is **0.4.0** (requires Python &ge; 3.12). Install it with `pip install miminions`, or `pip install miminions[sqlite]` to add SQLite vector memory. See [Getting Started](getting-started.md) for the full matrix.
 
 ## [Unreleased]
 
 Work in progress toward the next release.
+
+### Added
+
+- TBD
+
+## [0.4.0] - 2026-08-24
+
+Latest published release on PyPI.
 
 ### Added
 
@@ -27,15 +37,9 @@ Work in progress toward the next release.
 - `miminions agent add` derives unique agent ids: a name collision gets a `_2`, `_3`, … suffix instead of an error, and `created_at` is now a real UTC timestamp.
 - Chat errors preserve any partially streamed reply in the session transcript alongside the `[error]` marker.
 
-## [0.3.0] - 2026-07-02
-
-### Added
-
-- TBD
-
 ## [0.3.0]
 
-Latest published release on PyPI.
+Previous published release on PyPI.
 
 ### Added
 
@@ -88,9 +92,10 @@ Initial release.
 ## Version history
 
 | Version | Notes |
-|---------|-------|
-| **Unreleased** | Streaming replies, retries + timeouts + hooks, history trimming, workspace schema versioning, `MIMINIONS_HOME`, atomic JSON persistence |
-| **0.3.0** | Current published release &mdash; CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
+| ------- | ----- |
+| **Unreleased** | TBD |
+| **0.4.0** | Current published release &mdash; streaming replies, retries + timeouts + hooks, history trimming, workspace schema versioning, `MIMINIONS_HOME`, atomic JSON persistence |
+| **0.3.0** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
 | **0.2.2** | Agent, vector memory, tools, local data |
 | **0.1.0** | Initial release with core functionality |
 
