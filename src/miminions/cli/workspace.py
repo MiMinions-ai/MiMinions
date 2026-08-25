@@ -5,7 +5,7 @@ import click
 import json
 from pathlib import Path
 from miminions.core.paths import get_config_dir
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth when workspace operations become account-backed.
 from datetime import datetime, timezone
 import sys
 import os
@@ -27,7 +27,7 @@ def workspace_cli():
 
 @workspace_cli.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def list_workspaces(as_json):
     """List all workspaces."""
     manager = get_workspace_manager()
@@ -74,7 +74,7 @@ def list_workspaces(as_json):
     default=None,
     help="Optional custom root path for this workspace folder. If not set, uses ~/.miminions/workspaces/ws_<id>"
 )
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def add_workspace(name, description, sample, init_files, root_path):
     """Add a new workspace."""
     manager = get_workspace_manager()
@@ -119,7 +119,7 @@ def add_workspace(name, description, sample, init_files, root_path):
 @workspace_cli.command("show")
 @click.argument("workspace_id")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def show_workspace(workspace_id, as_json):
     """Show workspace details."""
     manager = get_workspace_manager()
@@ -202,7 +202,7 @@ def show_workspace(workspace_id, as_json):
 @click.argument("workspace_id")
 @click.option("--name", help="New workspace name")
 @click.option("--description", help="New workspace description")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def update_workspace(workspace_id, name, description):
     """Update workspace details."""
     manager = get_workspace_manager()
@@ -237,7 +237,7 @@ def update_workspace(workspace_id, name, description):
 @workspace_cli.command("remove")
 @click.argument("workspace_id")
 @click.option("--force", is_flag=True, help="Force removal without confirmation")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def remove_workspace(workspace_id, force):
     """Remove a workspace."""
     manager = get_workspace_manager()
@@ -271,7 +271,7 @@ def remove_workspace(workspace_id, force):
 @click.argument("workspace_id")
 @click.option("--key", required=True, help="State key")
 @click.option("--value", required=True, help="State value")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def set_state(workspace_id, key, value):
     """Set a state value in the workspace."""
     manager = get_workspace_manager()
@@ -322,7 +322,7 @@ def _parse_json_or_shorthand(value: str | None, label: str) -> dict:
 @click.option("--enabled/--disabled", default=True, show_default=True)
 @click.option("--condition", help='Condition JSON. Example: {"type":"state_equals","key":"x","value":1}')
 @click.option("--action", help='Action JSON. Example: {"type":"assign_task","message":"..."}')
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def add_rule(workspace_id, name, description, priority, enabled, condition, action):
     """Add a rule to a workspace."""
     manager = get_workspace_manager()
@@ -362,7 +362,7 @@ def add_rule(workspace_id, name, description, priority, enabled, condition, acti
 @workspace_cli.command("remove-rule")
 @click.argument("workspace_id")
 @click.argument("rule_id_or_name")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def remove_rule(workspace_id, rule_id_or_name):
     """Remove a rule from a workspace."""
     manager = get_workspace_manager()
@@ -405,7 +405,7 @@ def remove_rule(workspace_id, rule_id_or_name):
     default=None,
     help="Optional custom root path for this workspace folder."
 )
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workspace operations do not require sign-in yet.
 def init_files_workspace(workspace_id, custom_path):
     """Initialize prompt/memory/skills/sessions/data files for an existing workspace."""
     manager = get_workspace_manager()

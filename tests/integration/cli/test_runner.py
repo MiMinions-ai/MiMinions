@@ -42,21 +42,17 @@ def test_auth_signin_persists_auth_data():
     mock_save.assert_called_once()
 
 
-def test_agent_list_auth_gate_and_empty_state():
-    """Agent list should show auth gate and empty inventory states."""
+def test_agent_list_does_not_require_auth_and_empty_state():
+    """Agent list should run without auth and show empty inventory state."""
     runner = CliRunner()
 
-    with (
-        patch("miminions.core.auth.is_authenticated", return_value=False),
-        patch("miminions.core.auth.is_public_access_enabled", return_value=False),
-    ):
+    with patch("miminions.cli.agent.load_agents", return_value={}):
         result = runner.invoke(agent_cli, ["list"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert "Please sign in first" in result.output, f"expect agent list command requests authentication when caller is not signed in as 'Please sign in first', got {result.output}"
+    assert "No agents configured" in result.output, f"expect agent list command reports empty agent inventory when config has no agents as 'No agents configured', got {result.output}"
 
     with (
-        patch("miminions.core.auth.is_authenticated", return_value=True),
         patch("miminions.cli.agent.load_agents", return_value={}),
     ):
         result = runner.invoke(agent_cli, ["list"])

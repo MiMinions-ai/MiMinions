@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth when workflow operations become account-backed.
 
 
 def get_workflows_file():
@@ -66,7 +66,7 @@ def workflow_cli():
 
 
 @workflow_cli.command("list")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def list_workflows():
     """List all workflows."""
     workflows = load_workflows()
@@ -88,7 +88,7 @@ def list_workflows():
 @click.option("--name", prompt="Workflow name", help="Name of the workflow")
 @click.option("--description", prompt="Description", help="Description of the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def add_workflow(name, description, agents):
     """Add a new workflow."""
     workflows = load_workflows()
@@ -118,7 +118,7 @@ def add_workflow(name, description, agents):
 @click.option("--name", help="New name for the workflow")
 @click.option("--description", help="New description for the workflow")
 @click.option("--agents", help="Comma-separated list of agent IDs")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def update_workflow(workflow_id, name, description, agents):
     """Update an existing workflow."""
     workflows = load_workflows()
@@ -148,7 +148,7 @@ def update_workflow(workflow_id, name, description, agents):
 @workflow_cli.command("remove")
 @click.argument("workflow_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this workflow?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def remove_workflow(workflow_id):
     """Remove a workflow."""
     workflows = load_workflows()
@@ -164,7 +164,7 @@ def remove_workflow(workflow_id):
 
 @workflow_cli.command("start")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def start_workflow(workflow_id):
     """Start a workflow."""
     workflows = load_workflows()
@@ -192,7 +192,7 @@ def start_workflow(workflow_id):
 
 @workflow_cli.command("pause")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def pause_workflow(workflow_id):
     """Pause a running workflow."""
     workflows = load_workflows()
@@ -216,7 +216,7 @@ def pause_workflow(workflow_id):
 
 @workflow_cli.command("stop")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def stop_workflow(workflow_id):
     """Stop a workflow."""
     workflows = load_workflows()
@@ -240,7 +240,7 @@ def stop_workflow(workflow_id):
 
 @workflow_cli.command("show")
 @click.argument("workflow_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local workflow operations do not require sign-in yet.
 def show_workflow(workflow_id):
     """Show detailed information about a workflow."""
     workflows = load_workflows()

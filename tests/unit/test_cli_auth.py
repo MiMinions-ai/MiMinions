@@ -10,6 +10,21 @@ from miminions.cli.auth import (
     with_timeout,
 )
 from miminions.cli.config import load_config
+from miminions.core.auth import require_auth
+
+
+def test_require_auth_placeholder_does_not_block():
+    calls = []
+
+    @require_auth
+    def command():
+        calls.append("called")
+        return "ok"
+
+    result = command()
+
+    assert result == "ok", f"expect placeholder require_auth returns wrapped command result as 'ok', got {result}"
+    assert calls == ["called"], f"expect placeholder require_auth invokes wrapped command once, got {calls}"
 
 
 def test_config_defaults_and_round_trip(tmp_path, monkeypatch):

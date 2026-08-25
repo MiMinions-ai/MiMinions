@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth when task operations become account-backed.
 
 
 def get_tasks_file():
@@ -55,7 +55,7 @@ def task_cli():
 
 @task_cli.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def list_tasks(as_json):
     """List all tasks."""
     tasks = load_tasks()
@@ -83,7 +83,7 @@ def list_tasks(as_json):
 @click.option("--description", prompt="Description", help="Description of the task")
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), default="medium", help="Priority level")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def add_task(title, description, priority, agent):
     """Add a new task."""
     if not _validate_agent_reference_or_error(agent):
@@ -114,7 +114,7 @@ def add_task(title, description, priority, agent):
 @click.option("--priority", type=click.Choice(["low", "medium", "high"]), help="New priority level")
 @click.option("--status", type=click.Choice(["pending", "in_progress", "completed", "cancelled"]), help="New status")
 @click.option("--agent", help="Agent ID to assign the task to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def update_task(task_id, title, description, priority, status, agent):
     """Update an existing task."""
     tasks = load_tasks()
@@ -147,7 +147,7 @@ def update_task(task_id, title, description, priority, status, agent):
 @task_cli.command("remove")
 @click.argument("task_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this task?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def remove_task(task_id):
     """Remove a task."""
     tasks = load_tasks()
@@ -164,7 +164,7 @@ def remove_task(task_id):
 @task_cli.command("duplicate")
 @click.argument("task_id")
 @click.option("--title", help="Title for the duplicated task")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def duplicate_task(task_id, title):
     """Duplicate an existing task."""
     tasks = load_tasks()
@@ -193,7 +193,7 @@ def duplicate_task(task_id, title):
 @task_cli.command("show")
 @click.argument("task_id")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local task operations do not require sign-in yet.
 def show_task(task_id, as_json):
     """Show detailed information about a task."""
     tasks = load_tasks()

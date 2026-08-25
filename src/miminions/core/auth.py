@@ -1,25 +1,19 @@
+"""Placeholder authentication utilities for future account-backed features.
+
+MiMinions is currently local-first and does not require sign-in for package or
+CLI usage. The helpers remain so current auth commands keep working and future
+advanced features can opt into real access control without changing call sites.
 """
-Shared authentication utilities for MiMinions CLI modules.
 
-require_auth is centralised here so all CLI modules import from one place
-instead of each defining their own copy.
-"""
-
-import functools
-
-import click
 from miminions.cli.auth import is_authenticated, is_public_access_enabled
 
 
 def require_auth(f):
-    """
-    Decorator that gates a CLI command behind local sign-in.
+    """Compatibility decorator for commands that may require auth later.
 
-    Behavior when the user is not authenticated:
-      * If public access mode is enabled, the command runs anyway after
-        printing a one-line warning (an explicit, opt-in bypass).
-      * Otherwise the command is blocked: it prints a sign-in hint and
-        returns without running.
+    The current package does not require sign-in to use CLI commands, so this
+    decorator intentionally leaves commands unblocked while preserving the
+    call-site shape for future auth work.
 
     Usage:
         @some_group.command("my-command")
@@ -27,13 +21,4 @@ def require_auth(f):
         def my_command(...):
             ...
     """
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        if not is_authenticated():
-            if is_public_access_enabled():
-                click.echo("⚠️  Public access mode (not signed in).", err=True)
-            else:
-                click.echo("Please sign in first using 'miminions auth signin'", err=True)
-                return None
-        return f(*args, **kwargs)
-    return wrapper
+    return f

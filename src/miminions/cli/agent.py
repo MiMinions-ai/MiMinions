@@ -11,7 +11,7 @@ from enum import Enum
 
 from .persistence import load_json, save_json
 from .config import load_config
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth for account-backed advanced features.
 from miminions.core.paths import get_config_dir
 from miminions.agent import create_minion
 from miminions.tools.schemas import ToolExecutionResult
@@ -299,7 +299,7 @@ def agent_cli():
 
 @agent_cli.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent list does not require sign-in yet.
 def list_agents(as_json):
     """List all agents."""
     agents = load_agents()
@@ -335,7 +335,7 @@ def list_agents(as_json):
 @click.option("--name", prompt="Agent name", help="Name of the agent")
 @click.option("--description", prompt="Description", help="Description of the agent")
 @click.option("--type", prompt="Agent type", help="Type of agent")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent creation does not require sign-in yet.
 def add_agent(name, description, type):
     """Add a new agent."""
     agents = load_agents()
@@ -362,7 +362,7 @@ def add_agent(name, description, type):
 @click.option("--name", help="New name for the agent")
 @click.option("--description", help="New description for the agent")
 @click.option("--type", help="New type for the agent")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent updates do not require sign-in yet.
 def update_agent(agent_id, name, description, type):
     """Update an existing agent."""
     agents = load_agents()
@@ -387,7 +387,7 @@ def update_agent(agent_id, name, description, type):
 @agent_cli.command("show")
 @click.argument("agent_ref")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent inspection does not require sign-in yet.
 def show_agent(agent_ref, as_json):
     """Show one agent by id, id prefix, or exact name."""
     agents = load_agents()
@@ -430,7 +430,7 @@ def show_agent(agent_ref, as_json):
 @agent_cli.command("remove")
 @click.argument("agent_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this agent?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent removal does not require sign-in yet.
 def remove_agent(agent_id):
     """Remove an agent."""
     agents = load_agents()
@@ -449,7 +449,7 @@ def remove_agent(agent_id):
 @click.argument("server_name")
 @click.option("--command", required=True, help="MCP server executable.")
 @click.option("--arg", "args", multiple=True, help="MCP server argument; may be repeated.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
 def add_mcp_server(agent_id, server_name, command, args):
     """Register a stdio MCP server for an agent without starting it."""
     agents = load_agents()
@@ -470,7 +470,7 @@ def add_mcp_server(agent_id, server_name, command, args):
 
 @agent_cli.command("mcp-list")
 @click.argument("agent_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
 def list_mcp_servers(agent_id):
     """List MCP servers registered for an agent."""
     agent_data = _get_agent_record_or_error(agent_id)
@@ -490,7 +490,7 @@ def list_mcp_servers(agent_id):
 @click.argument("agent_id")
 @click.argument("server_name")
 @click.confirmation_option(prompt="Are you sure you want to remove this MCP server?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
 def remove_mcp_server(agent_id, server_name):
     """Remove an MCP server registration from an agent."""
     agents = load_agents()
@@ -509,7 +509,7 @@ def remove_mcp_server(agent_id, server_name):
 @agent_cli.command("set-goal")
 @click.argument("agent_id", required=False, default=None)
 @click.option("--goal", prompt="Goal", help="Goal for the agent")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent goals do not require sign-in yet.
 def set_goal(agent_id, goal):
     """Set a goal for an agent (defaults to the configured default agent)."""
     agent_id = _resolve_agent_id(agent_id)
@@ -527,7 +527,7 @@ def set_goal(agent_id, goal):
 @agent_cli.command("run")
 @click.argument("agent_id", required=False, default=None)
 @click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent runs do not require sign-in yet.
 def run_agent(agent_id, async_run):
     """Run an agent (defaults to the configured default agent)."""
     agent_id = _resolve_agent_id(agent_id)
@@ -562,7 +562,7 @@ def run_agent(agent_id, async_run):
 @agent_cli.command("ask")
 @click.argument("agent_id", required=False, default=None)
 @click.option("--prompt", required=True, help="Prompt to send to the agent.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local agent prompts do not require sign-in yet.
 def ask_agent(agent_id, prompt):
     """Ask an agent for a one-off response (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
@@ -578,7 +578,7 @@ def ask_agent(agent_id, prompt):
 
 @agent_cli.command("tool-list")
 @click.argument("agent_id", required=False, default=None)
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool inspection does not require sign-in yet.
 def list_agent_tools(agent_id):
     """List available tools for an agent runtime (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
@@ -602,7 +602,7 @@ def list_agent_tools(agent_id):
 @agent_cli.command("tool-info")
 @click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool inspection does not require sign-in yet.
 def show_agent_tool_info(agent_id, tool_name):
     """Show detailed tool information for one tool (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
@@ -631,7 +631,7 @@ def show_agent_tool_info(agent_id, tool_name):
 @agent_cli.command("tool-search")
 @click.argument("agent_id", required=False, default=None)
 @click.argument("query")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool search does not require sign-in yet.
 def search_agent_tools(agent_id, query):
     """Search tools by name or description (defaults to the configured default agent)."""
     agent_data = _get_agent_record_or_error(agent_id)
@@ -658,7 +658,7 @@ def search_agent_tools(agent_id, query):
     default="{}",
     help="JSON object with tool arguments, e.g. '{\"a\":2,\"b\":3}'.",
 )
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool execution does not require sign-in yet.
 def run_agent_tool(agent_id, tool_name, arguments):
     """Run one tool and print structured execution output."""
     agent_data = _get_agent_record_or_error(agent_id)

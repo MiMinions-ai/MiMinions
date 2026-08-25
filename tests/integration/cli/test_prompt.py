@@ -9,6 +9,11 @@ from miminions.core.workspace import Workspace, WorkspaceManager
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
+class FakeContextBuilder:
+    def build(self, workspace, root):
+        return "test context"
+
+
 def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | None = None) -> MagicMock:
     fake = fake_minion or MagicMock()
     if not hasattr(fake, "run") or not isinstance(fake.run, AsyncMock):
@@ -26,6 +31,7 @@ def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | 
         "miminions.cli.prompt.create_minion",
         lambda name, description: fake,
     )
+    monkeypatch.setattr("miminions.cli.prompt.ContextBuilder", FakeContextBuilder)
 
     return fake
 

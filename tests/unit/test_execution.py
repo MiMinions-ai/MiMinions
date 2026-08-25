@@ -257,23 +257,3 @@ class TestInteractions:
             assert "calculator" in result.output, f"expect contains 'calculator', got {result.output}"
             assert "success" in result.output, f"expect contains 'success', got {result.output}"
 
-
-# ── Auth guard ────────────────────────────────────────────────────────────────
-
-class TestAuthGuard:
-
-    def test_session_start_requires_auth(self, runner, config_dir):
-        with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "session", "start"])
-            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-            output_lower = result.output.lower()
-            target_value = "sign in"
-            assert target_value in output_lower, f"expect {target_value} in lowercased result output, got {output_lower}"
-
-    def test_run_requires_auth(self, runner, config_dir):
-        with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "run", "some_tool"])
-            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-            output_lower = result.output.lower()
-            target_value = "sign in"
-            assert target_value in output_lower, f"expect {target_value} in lowercased result output, got {output_lower}"

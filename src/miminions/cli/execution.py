@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth when execution sessions become account-backed.
 from miminions.agent import create_minion
 from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
@@ -182,7 +182,7 @@ def session():
 
 @session.command("start")
 @click.option("--name", default=None, help="Optional session name.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
 def session_start(name):
     """Start a new execution session."""
     sid, existing = _active_session()
@@ -203,7 +203,7 @@ def session_start(name):
 
 
 @session.command("stop")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
 def session_stop():
     """Stop the active session."""
     sid, s = _active_session()
@@ -219,7 +219,7 @@ def session_stop():
 
 @session.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution sessions do not require sign-in yet.
 def session_list(as_json):
     """List all sessions."""
     sessions = _load(_sessions_file())
@@ -239,7 +239,7 @@ def session_list(as_json):
 
 @execution.command("add-tool")
 @click.argument("path")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool registration does not require sign-in yet.
 def add_tool(path):
     """Register a tool module (.py) with the active session."""
     sid, s = _active_session()
@@ -268,7 +268,7 @@ def add_tool(path):
 @click.argument("tool_name")
 @click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
               help="Tool input as KEY=VALUE pairs.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local tool execution does not require sign-in yet.
 def run_tool(tool_name, inputs):
     """Execute a tool in the active session."""
     sid, session = _active_session()
@@ -315,7 +315,7 @@ def interaction():
 @interaction.command("list")
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
 def interaction_list(session_id, as_json):
     """List all recorded WorkflowRuns for a session."""
     if not session_id:
@@ -355,7 +355,7 @@ def interaction_list(session_id, as_json):
 @click.argument("index", type=int)
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
 def interaction_show(index, session_id, as_json):
     """Show full details of a recorded WorkflowRun by index."""
     if not session_id:
@@ -383,7 +383,7 @@ def interaction_show(index, session_id, as_json):
 
 @execution.command("test")
 @click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local execution tests do not require sign-in yet.
 def run_test(prompt):
     """
     Query the agent with all registered tools and record inputs/outputs.

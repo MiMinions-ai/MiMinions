@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from .persistence import load_json, save_json
 from miminions.core.paths import get_config_dir
-from miminions.core.auth import require_auth
+# TODO(auth): Re-enable require_auth when knowledge operations become account-backed.
 
 
 def get_knowledge_file():
@@ -34,7 +34,7 @@ def knowledge_cli():
 
 @knowledge_cli.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def list_knowledge(as_json):
     """List all knowledge entries."""
     knowledge = load_knowledge()
@@ -62,7 +62,7 @@ def list_knowledge(as_json):
 @click.option("--content", prompt="Content", help="Content of the knowledge entry")
 @click.option("--category", default="general", help="Category of the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def add_knowledge(title, content, category, tags):
     """Add a new knowledge entry."""
     knowledge = load_knowledge()
@@ -102,7 +102,7 @@ def add_knowledge(title, content, category, tags):
 @click.option("--content", help="New content for the knowledge entry")
 @click.option("--category", help="New category for the knowledge entry")
 @click.option("--tags", help="Comma-separated tags")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def update_knowledge(entry_id, title, content, category, tags):
     """Update an existing knowledge entry."""
     knowledge = load_knowledge()
@@ -143,7 +143,7 @@ def update_knowledge(entry_id, title, content, category, tags):
 @knowledge_cli.command("remove")
 @click.argument("entry_id")
 @click.confirmation_option(prompt="Are you sure you want to remove this knowledge entry?")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def remove_knowledge(entry_id):
     """Remove a knowledge entry."""
     knowledge = load_knowledge()
@@ -160,7 +160,7 @@ def remove_knowledge(entry_id):
 @knowledge_cli.command("revert")
 @click.argument("entry_id")
 @click.option("--version", prompt="Version to revert to", help="Version to revert to")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def revert_knowledge(entry_id, version):
     """Revert a knowledge entry to a previous version."""
     knowledge = load_knowledge()
@@ -191,7 +191,7 @@ def revert_knowledge(entry_id, version):
 
 @knowledge_cli.command("version")
 @click.argument("entry_id")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def show_versions(entry_id):
     """Show version history of a knowledge entry."""
     knowledge = load_knowledge()
@@ -212,7 +212,7 @@ def show_versions(entry_id):
 @click.argument("entry_id")
 @click.option("--template", help="Template to apply")
 @click.option("--format", type=click.Choice(["json", "markdown", "plain"]), default="plain", help="Output format")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def customize_knowledge(entry_id, template, format):
     """Customize knowledge entry format or template."""
     knowledge = load_knowledge()
@@ -245,7 +245,7 @@ def customize_knowledge(entry_id, template, format):
 @knowledge_cli.command("show")
 @click.argument("entry_id")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
-@require_auth
+# @require_auth  # TODO(auth): placeholder; local knowledge operations do not require sign-in yet.
 def show_knowledge(entry_id, as_json):
     """Show detailed information about a knowledge entry."""
     knowledge = load_knowledge()
