@@ -1,6 +1,6 @@
 """Utility functions for async operations, JSON handling, and agent execution."""
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 from miminions.task.model import (
