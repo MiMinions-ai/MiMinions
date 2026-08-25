@@ -6,8 +6,8 @@ import click
 import json
 import uuid
 from datetime import datetime, timezone
-from .auth import get_config_dir
 from .persistence import load_json, save_json
+from miminions.core.paths import get_config_dir
 from miminions.core.auth import require_auth
 
 

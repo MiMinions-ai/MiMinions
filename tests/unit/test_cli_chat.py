@@ -59,7 +59,7 @@ def test_chat_uses_default_workspace_and_records_session(tmp_path, isolated_cli_
     manager = SimpleNamespace(load_workspaces=lambda: {"ws1": workspace})
     distill_calls = []
 
-    monkeypatch.setattr("miminions.cli.chat.get_config", lambda: {"default_workspace": "ws1"})
+    monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {"default_workspace": "ws1"})
     monkeypatch.setattr("miminions.cli.chat.get_config_dir", lambda: tmp_path)
     monkeypatch.setattr("miminions.cli.chat.WorkspaceManager", lambda config_dir: manager)
     monkeypatch.setattr("miminions.cli.chat.JsonlSessionStore", MockStore)
@@ -80,7 +80,7 @@ def test_chat_uses_default_workspace_and_records_session(tmp_path, isolated_cli_
 
 def test_chat_errors_when_no_workspace_or_default_is_configured(isolated_cli_runner, monkeypatch):
     """Starting chat without --workspace should fail if no default workspace is configured."""
-    monkeypatch.setattr("miminions.cli.chat.get_config", dict)
+    monkeypatch.setattr("miminions.cli.chat.load_config", dict)
 
     no_default = isolated_cli_runner.invoke(chat_command, [])
 

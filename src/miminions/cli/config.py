@@ -3,26 +3,25 @@ General configuration commands for MiMinions CLI.
 """
 
 from __future__ import annotations
-
+from typing import Any
 from pathlib import Path
 
 import click
 
+from miminions.core.paths import get_config_dir
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 from miminions.utils.json_io import load_json, save_json
-
-from .auth import get_config_dir
 
 _ALLOWED_KEYS = ("default_workspace", "default_agent")
 
 
-def _config_file() -> Path:
+def get_config_file() -> Path:
     return get_config_dir() / "config.json"
 
 
-def _load_config() -> dict[str, object]:
+def load_config() -> dict[str, object]:
     try:
-        config = load_json(_config_file())
+        config: dict[str, Any] = load_json(get_config_file())
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -79,7 +78,7 @@ def config_cli() -> None:
 def config_get(key: str) -> None:
     """Get one config value by key."""
     _validate_key(key)
-    config = _load_config()
+    config = load_config()
     value = config.get(key)
     if value is None:
         raise click.ClickException(f"Key '{key}' is not set")
@@ -92,7 +91,7 @@ def config_get(key: str) -> None:
 def config_set(key: str, value: str) -> None:
     """Set one config value by key."""
     _validate_key(key)
-    config = _load_config()
+    config = load_config()
     config[key] = _normalized_value(key, value)
-    save_json(_config_file(), config, ensure_parent=True)
+    save_json(get_config_file(), config, ensure_parent=True)
     click.echo(f"{key} set to {config[key]}")

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .auth import get_config_dir
+from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
 from miminions.core.auth import require_auth
 from miminions.agent import create_minion
@@ -38,7 +38,7 @@ def _load(path: Path) -> Any:
 def _save(path: Path, data: Any) -> None:
     save_json(path, data)
 
-def _active_session():
+def _active_session() -> tuple[Optional[str], Optional[dict]]:
     """Return (id, session) for the current active session, else (None, None)."""
     for sid, s in _load(_sessions_file()).items():
         if s.get("status") == "active":
@@ -60,6 +60,13 @@ def _load_module(agent, path: str) -> int:
     """Load GenericTool instances from a .py file into the Minion via add_tool()."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("_dyn_module", path)
+
+    if spec is None:
+        raise click.ClickException(f"Failed to load module from {path}")
+
+    if spec.loader is None:
+        raise click.ClickException(f"Module loader is None for {path}")
+
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     count = 0
@@ -264,9 +271,13 @@ def add_tool(path):
 @require_auth
 def run_tool(tool_name, inputs):
     """Execute a tool in the active session."""
-    sid, s = _active_session()
+    sid, session = _active_session()
     if not sid:
         click.echo("No active session.")
+        return
+
+    if not session or not isinstance(session, dict):
+        click.echo("Invalid session data.")
         return
 
     parsed = {}
@@ -277,7 +288,7 @@ def run_tool(tool_name, inputs):
         k, v = item.split("=", 1)
         parsed[k.strip()] = v.strip()
 
-    workflow_run, stdout_output = _run_tool(sid, s, tool_name, parsed)
+    workflow_run, stdout_output = _run_tool(sid, session, tool_name, parsed)
     tool_calls = [r for r in workflow_run.trace.records if isinstance(r, ToolCallRecord)]
     tool_call = tool_calls[0] if tool_calls else None
 
@@ -380,12 +391,16 @@ def run_test(prompt):
     Builds the agent for the active session, runs each registered tool
     using its default parameters, and logs the full execution as a WorkflowRun.
     """
-    sid, s = _active_session()
+    sid, session = _active_session()
     if not sid:
         click.echo("No active session.")
         return
 
-    agent = _build_agent(sid, s)
+    if not session or not isinstance(session, dict):
+        click.echo("Invalid session data.")
+        return
+
+    agent = _build_agent(sid, session)
     agent_name = f"session-{sid}"
     tool_names = agent.list_tools()
 

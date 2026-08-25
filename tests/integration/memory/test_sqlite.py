@@ -1,7 +1,7 @@
 """SQLite Memory Test Suite."""
 
 from pathlib import Path
-
+from pysqlite3 import ProgrammingError
 import pytest
 
 pytest.importorskip("sqlite_vec")
@@ -12,8 +12,9 @@ pytest.importorskip("sqlite_vec")
 
 import pytest
 
+from miminions.core.paths import get_global_memory_db_path
 from miminions.agent import create_minion
-from miminions.memory.sqlite import SQLiteMemory, get_global_memory_db_path, sqlite3
+from miminions.memory.sqlite import SQLiteMemory
 from miminions.tools.schemas import ExecutionStatus
 
 
@@ -34,6 +35,8 @@ def test_crud():
     
     # Read by ID
     result = agent.execute("memory_get", id=id1)
+    assert result.result is not None, f"expect memory_get returns a valid entry for existing id, got {result.result}"
+    assert result.result["id"] == id1, f"expect memory_get returns the same id as stored, got {result.result['id']}"
     assert result.result["text"] == "Python is a programming language", f"expect memory_get returns originally stored text as 'Python is a programming language', got {result.result['text']}"
     assert result.result["meta"]["source"] == "test", f"expect memory_get returns stored metadata source field as 'test', got {result.result['meta']['source']}"
     
@@ -42,6 +45,7 @@ def test_crud():
     assert result.result is True, f"expect memory_update returns True after updating an existing memory entry, got {result.result}"
     
     result = agent.execute("memory_get", id=id1)
+    assert result.result is not None, f"expect memory_get returns a valid entry for existing id, got {result.result}"
     assert "versatile" in result.result["text"], f"expect contains 'versatile', got {result.result['text']}"
     
     # Delete
@@ -65,6 +69,7 @@ def test_list():
     agent.execute("memory_store", text="Entry 3")
     
     result = agent.execute("memory_list")
+    assert result.result is not None, f"expect memory_list returns a valid result, got {result.result}"
     listed_count = len(result.result)
     assert listed_count == 3, f"expect memory_list returns all three stored memory entries as 3, got {listed_count}"
     
@@ -83,6 +88,7 @@ def test_vector_search():
     
     result = agent.execute("memory_recall", query="What is Python?", top_k=2)
     assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS as {ExecutionStatus.SUCCESS}, got {result.status}"
+    assert result.result is not None, f"expect memory_recall returns a valid result, got {result.result}"
     recalled_count = len(result.result)
     assert recalled_count == 2, f"expect memory_recall respects top_k=2 by returning two results as 2, got {recalled_count}"
     assert "distance" in result.result[0], f"expect contains 'distance', got {result.result[0]}"
@@ -135,9 +141,10 @@ def test_context_manager_closes_connection():
     with SQLiteMemory(db_path=":memory:") as memory:
         entry_id = memory.create("Context managers are neat", metadata={"source": "test"})
         stored_entry = memory.get_by_id(entry_id)
+        assert stored_entry is not None, f"expect context-managed memory instance returns a valid entry before block exit, got {stored_entry}"
         assert stored_entry["text"] == "Context managers are neat", f"expect context-managed memory instance returns stored text as 'Context managers are neat' before block exit, got {stored_entry['text']}"
 
-    with pytest.raises(sqlite3.ProgrammingError):
+    with pytest.raises(ProgrammingError):
         memory.conn.execute("SELECT 1")
 
 
@@ -146,7 +153,7 @@ def test_context_manager_propagates_exceptions():
     with pytest.raises(ValueError, match="boom"), SQLiteMemory(db_path=":memory:") as memory:
         raise ValueError("boom")
 
-    with pytest.raises(sqlite3.ProgrammingError):
+    with pytest.raises(ProgrammingError):
         memory.conn.execute("SELECT 1")
 
 

@@ -9,23 +9,9 @@ import signal
 import time
 
 from miminions.core.paths import get_config_dir
+
+from .config import get_config_file, load_config
 from .persistence import load_json, save_json
-
-
-def get_config_file():
-    """Get the configuration file path."""
-    return get_config_dir() / "config.json"
-
-
-def get_config():
-    """Get the configuration settings.
-
-    Returns the raw file contents (or {} if the file is missing) so callers
-    that mutate-and-save don't accidentally drop unrelated keys such as the
-    bootstrap-written ``default_workspace`` / ``default_agent``. Callers apply
-    their own defaults via ``.get(key, default)``.
-    """
-    return load_json(get_config_file())
 
 
 def save_config(config):
@@ -46,13 +32,13 @@ def is_authenticated():
 
 def is_public_access_enabled():
     """Check if public access mode is enabled."""
-    config = get_config()
+    config = load_config()
     return config.get("public_access", False)
 
 
 def get_auth_timeout():
     """Get authentication timeout in seconds."""
-    config = get_config()
+    config = load_config()
     return config.get("auth_timeout", 30)
 
 
@@ -188,7 +174,7 @@ def status():
 @click.option("--auth-timeout", type=int, help="Set authentication timeout in seconds")
 def config_auth(public_access, auth_timeout):
     """Configure authentication settings."""
-    config = get_config()
+    config = load_config()
     
     if public_access is not None:
         config["public_access"] = public_access

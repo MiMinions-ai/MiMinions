@@ -10,7 +10,7 @@ import click
 
 from miminions.utils.json_io import load_json, save_json
 
-from .auth import get_config_dir
+from miminions.core.paths import get_config_dir
 
 _DATA_FILES = {
     "agents": "agents.json",

@@ -10,11 +10,11 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
+from miminions.core.paths import get_config_dir
 from miminions.cli.auth import (
     auth_cli,
     clear_auth_data,
     get_auth_file,
-    get_config_dir,
     is_authenticated,
     load_auth_data,
     save_auth_data,

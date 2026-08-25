@@ -4,7 +4,7 @@ Workspace management commands for MiMinions CLI.
 import click
 import json
 from pathlib import Path
-from .auth import get_config_dir
+from miminions.core.paths import get_config_dir
 from miminions.core.auth import require_auth
 from datetime import datetime, timezone
 import sys
@@ -252,6 +252,10 @@ def remove_workspace(workspace_id, force):
             break
     
     if not workspace:
+        click.echo(f"Workspace '{workspace_id}' not found.")
+        return
+
+    if not workspace_key:
         click.echo(f"Workspace '{workspace_id}' not found.")
         return
     

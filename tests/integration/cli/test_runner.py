@@ -19,7 +19,11 @@ def test_basic_cli_help_and_auth_status(tmp_path):
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     assert "MiMinions CLI" in result.output, f"expect cli help output includes product heading text for root command as 'MiMinions CLI', got {result.output}"
 
-    with patch("miminions.cli.auth.get_config_dir", return_value=config_dir):
+    with (
+        patch("miminions.core.paths.get_config_dir", return_value=config_dir),
+        patch("miminions.cli.auth.get_config_dir", return_value=config_dir),
+        patch("miminions.cli.config.get_config_dir", return_value=config_dir),
+    ):
         result = runner.invoke(cli, ["auth", "status"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"

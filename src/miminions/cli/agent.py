@@ -8,10 +8,13 @@ import json
 import re
 from datetime import datetime, timezone
 from enum import Enum
-from .auth import get_config, get_config_dir
+
 from .persistence import load_json, save_json
+from .config import load_config
 from miminions.core.auth import require_auth
+from miminions.core.paths import get_config_dir
 from miminions.agent import create_minion
+from miminions.tools.schemas import ToolExecutionResult
 from mcp import StdioServerParameters
 
 
@@ -197,11 +200,16 @@ def _resolve_agent_id(agent_id: str | None) -> str | None:
     """Return agent_id, falling back to default_agent from config when None."""
     if agent_id:
         return agent_id
-    default = get_config().get("default_agent")
+    default = load_config().get("default_agent")
     if not default:
         raise click.ClickException(
             "No agent id given and no default_agent configured. "
             "Pass an agent id or run 'miminions agent add' first."
+        )
+    if not isinstance(default, str) or not default.strip():
+        raise click.ClickException(
+            "Configured default_agent is invalid. "
+            "Please set a valid agent id in the config."
         )
     return default
 
@@ -584,6 +592,9 @@ def list_agent_tools(agent_id):
 
     click.echo(f"Tools for '{agent_id}':")
     for name, info in tools:
+        if not isinstance(info, dict):
+            click.echo(f"Unexpected tool info format for '{name}': {info}", err=True)
+            continue
         description = (info or {}).get("description", "No description")
         click.echo(f"  {name}: {description}")
 
@@ -605,6 +616,10 @@ def show_agent_tool_info(agent_id, tool_name):
     )
     if not info:
         click.echo(f"Tool '{tool_name}' not found for agent '{agent_id}'.", err=True)
+        return
+
+    if not isinstance(info, dict):
+        click.echo(f"Unexpected tool info format for '{tool_name}': {info}", err=True)
         return
 
     click.echo(f"Tool: {info['name']}")
@@ -668,6 +683,14 @@ def run_agent_tool(agent_id, tool_name, arguments):
             arguments=parsed_arguments,
         )
     )
+
+    if isinstance(result, str):
+        click.echo(f"Tool execution returned: {result}", err=False)
+        return
+
+    if not isinstance(result, ToolExecutionResult):
+        click.echo(f"Unexpected tool execution result format: {type(result)}", err=True)
+        return
 
     click.echo(f"Tool: {result.tool_name}")
     click.echo(f"Status: {result.status.value}")

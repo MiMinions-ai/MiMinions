@@ -18,7 +18,7 @@ def _workspace_root(config_dir: Path, config: dict) -> Path:
 def test_init_creates_default_setup(temp_config_dir):
     runner = CliRunner()
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
+    with patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(cli, ["init"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
@@ -44,7 +44,7 @@ def test_init_creates_default_setup(temp_config_dir):
 def test_init_force_repairs_missing_templates(temp_config_dir):
     runner = CliRunner()
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
+    with patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir):
         first = runner.invoke(cli, ["init"])
         assert first.exit_code == 0, f"expect first exit code 0, got {first.exit_code} with output: {first.output}"
 
@@ -57,7 +57,7 @@ def test_init_force_repairs_missing_templates(temp_config_dir):
     user_md.write_text("# customized by user\n")
     tools_md.unlink()
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
+    with patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(cli, ["init", "--force"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"

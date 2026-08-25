@@ -10,11 +10,12 @@ from typing import Any
 import click
 from pydantic_ai.usage import RunUsage
 
+from miminions.core.paths import get_config_dir
+from miminions.cli.config import load_config
 from miminions.agent import create_minion
 from miminions.memory import MemoryDistiller
 from miminions.session.store import JsonlSessionStore, trim_message_history
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.cli.auth import get_config, get_config_dir
 
 
 # ---------------------------------------------------------------------------
@@ -41,10 +42,10 @@ def _run_session_distillation(
         llm_filter = create_llm_filter(model)
     else:
         # Fallback: workspace-provided filter or empty placeholder.
-        llm_filter = getattr(workspace, "memory_llm_filter", None)
-        if not callable(llm_filter):
-            def llm_filter(**_kw):
-                return {"history_summary": "", "workspace_facts": [], "global_insights": []}
+        if hasattr(workspace, "memory_llm_filter"):
+            llm_filter = getattr(workspace, "memory_llm_filter")
+        else:
+            llm_filter = lambda **_kw: {"history_summary": "", "workspace_facts": [], "global_insights": []}
 
     MemoryDistiller(llm_filter=llm_filter).distill_session(
         workspace=workspace,
@@ -88,11 +89,18 @@ def chat_command(workspace_ref: str | None, session_id: str | None, verbose: boo
     if verbose:
         logging.basicConfig(level=logging.INFO)
     if not workspace_ref:
-        workspace_ref = get_config().get("default_workspace")
-        if not workspace_ref:
+        config = load_config()
+
+        if not isinstance(config, dict):
+            raise click.ClickException("Invalid config format; expected a dictionary.")
+
+        default_workspace = config.get("default_workspace")
+        if not isinstance(default_workspace, str) or not default_workspace:
             raise click.ClickException(
                 "No --workspace given and no default workspace configured."
             )
+        
+        workspace_ref = default_workspace
     asyncio.run(_chat_loop(workspace_ref, session_id, verbose))
 
 
