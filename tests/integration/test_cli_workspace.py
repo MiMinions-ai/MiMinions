@@ -27,21 +27,21 @@ def test_workspace_creation():
         
         # Test creating a workspace
         workspace = manager.create_workspace("Test Workspace", "A test workspace")
-        assert workspace.name == "Test Workspace", f"expect workspace.name == 'Test Workspace', got {workspace.name == 'Test Workspace'}"
-        assert workspace.description == "A test workspace", f"expect workspace.description == 'A test workspace', got {workspace.description == 'A test workspace'}"
-        assert len(workspace.nodes) == 0, f"expect len(workspace.nodes) == 0, got {len(workspace.nodes) == 0}"
-        assert len(workspace.rules) == 0, f"expect len(workspace.rules) == 0, got {len(workspace.rules) == 0}"
+        assert workspace.name == "Test Workspace", f"expect result to be {'Test Workspace'}, got {workspace.name}"
+        assert workspace.description == "A test workspace", f"expect result to be {'A test workspace'}, got {workspace.description}"
+        assert len(workspace.nodes) == 0, f"expect result to be {0}, got {len(workspace.nodes)}"
+        assert len(workspace.rules) == 0, f"expect result to be {0}, got {len(workspace.rules)}"
         
         # Test saving and loading
         workspaces = {workspace.id: workspace}
         manager.save_workspaces(workspaces)
         
         loaded_workspaces = manager.load_workspaces()
-        assert len(loaded_workspaces) == 1, f"expect len(loaded_workspaces) == 1, got {len(loaded_workspaces) == 1}"
+        assert len(loaded_workspaces) == 1, f"expect result to be {1}, got {len(loaded_workspaces)}"
         
         loaded_workspace = list(loaded_workspaces.values())[0]
-        assert loaded_workspace.name == workspace.name, f"expect loaded_workspace.name == workspace.name, got {loaded_workspace.name == workspace.name}"
-        assert loaded_workspace.description == workspace.description, f"expect loaded_workspace.description == workspace.description, got {loaded_workspace.description == workspace.description}"
+        assert loaded_workspace.name == workspace.name, f"expect result to be {workspace.name}, got {loaded_workspace.name}"
+        assert loaded_workspace.description == workspace.description, f"expect result to be {workspace.description}, got {loaded_workspace.description}"
         
         print("✓ Workspace creation test passed")
         return True
@@ -84,21 +84,21 @@ def test_node_management():
         workspace.add_node(agent_node)
         workspace.add_node(task_node)
         
-        assert len(workspace.nodes) == 2, f"expect len(workspace.nodes) == 2, got {len(workspace.nodes) == 2}"
-        assert agent_node.id in workspace.nodes, f"expect agent_node.id in workspace.nodes, got {agent_node.id in workspace.nodes}"
-        assert task_node.id in workspace.nodes, f"expect task_node.id in workspace.nodes, got {task_node.id in workspace.nodes}"
+        assert len(workspace.nodes) == 2, f"expect result to be {2}, got {len(workspace.nodes)}"
+        assert agent_node.id in workspace.nodes, f"expect agent_node.id in workspace.nodes, got {agent_node.id}"
+        assert task_node.id in workspace.nodes, f"expect task_node.id in workspace.nodes, got {task_node.id}"
         
         # Test node connections
-        assert workspace.connect_nodes(agent_node.id, task_node.id) is True, f"expect workspace.connect_nodes(agent_node.id, task_node.id) is True, got {workspace.connect_nodes(agent_node.id, task_node.id) is True}"
-        assert task_node.id in workspace.nodes[agent_node.id].connections, f"expect task_node.id in workspace.nodes[agent_node.id].connections, got {task_node.id in workspace.nodes[agent_node.id].connections}"
-        assert agent_node.id in workspace.nodes[task_node.id].connections, f"expect agent_node.id in workspace.nodes[task_node.id].connections, got {agent_node.id in workspace.nodes[task_node.id].connections}"
+        assert workspace.connect_nodes(agent_node.id, task_node.id) is True, f"expect result to be {True}, got {workspace.connect_nodes(agent_node.id, task_node.id)}"
+        assert task_node.id in workspace.nodes[agent_node.id].connections, f"expect task_node.id in workspace.nodes[agent_node.id].connections, got {task_node.id}"
+        assert agent_node.id in workspace.nodes[task_node.id].connections, f"expect agent_node.id in workspace.nodes[task_node.id].connections, got {agent_node.id}"
         
         # Test network summary
         summary = workspace.get_network_summary()
-        assert summary['total_nodes'] == 2, f"expect summary['total_nodes'] == 2, got {summary['total_nodes'] == 2}"
-        assert summary['total_connections'] == 1, f"expect summary['total_connections'] == 1, got {summary['total_connections'] == 1}"
-        assert 'agent' in summary['node_types'], f"expect 'agent' in summary['node_types'], got {'agent' in summary['node_types']}"
-        assert 'task' in summary['node_types'], f"expect 'task' in summary['node_types'], got {'task' in summary['node_types']}"
+        assert summary['total_nodes'] == 2, f"expect result to be {2}, got {summary['total_nodes']}"
+        assert summary['total_connections'] == 1, f"expect result to be {1}, got {summary['total_connections']}"
+        assert 'agent' in summary['node_types'], f"expect 'agent' in summary['node_types'], got {summary['node_types']}"
+        assert 'task' in summary['node_types'], f"expect 'task' in summary['node_types'], got {summary['node_types']}"
         
         print("✓ Node management test passed")
         return True
@@ -136,20 +136,20 @@ def test_rule_system():
         )
         
         workspace.add_rule(rule)
-        assert len(workspace.rules) == 1, f"expect len(workspace.rules) == 1, got {len(workspace.rules) == 1}"
-        assert rule.id in workspace.rules, f"expect rule.id in workspace.rules, got {rule.id in workspace.rules}"
+        assert len(workspace.rules) == 1, f"expect result to be {1}, got {len(workspace.rules)}"
+        assert rule.id in workspace.rules, f"expect rule.id in workspace.rules, got {rule.id}"
         
         # Test rule evaluation with matching state
         workspace.state = {"test_key": "test_value"}
         actions = workspace.evaluate_state_logic()
-        assert len(actions) == 1, f"expect len(actions) == 1, got {len(actions) == 1}"
-        assert actions[0]['rule_name'] == "Test Rule", f"expect actions[0]['rule_name'] == 'Test Rule', got {actions[0]['rule_name'] == 'Test Rule'}"
-        assert actions[0]['action']['message'] == "Rule triggered", f"expect actions[0]['action']['message'] == 'Rule triggered', got {actions[0]['action']['message'] == 'Rule triggered'}"
+        assert len(actions) == 1, f"expect result to be {1}, got {len(actions)}"
+        assert actions[0]['rule_name'] == "Test Rule", f"expect result to be {'Test Rule'}, got {actions[0]['rule_name']}"
+        assert actions[0]['action']['message'] == "Rule triggered", f"expect result to be {'Rule triggered'}, got {actions[0]['action']['message']}"
         
         # Test rule evaluation with non-matching state
         workspace.state = {"test_key": "different_value"}
         actions = workspace.evaluate_state_logic()
-        assert len(actions) == 0, f"expect len(actions) == 0, got {len(actions) == 0}"
+        assert len(actions) == 0, f"expect result to be {0}, got {len(actions)}"
         
         print("✓ Rule system test passed")
         return True
@@ -185,19 +185,20 @@ def test_rule_inheritance():
         # Test inheritance
         child_workspace.inherit_rules_from(parent_workspace)
         
-        assert len(child_workspace.inherited_rules) == 1, f"expect len(child_workspace.inherited_rules) == 1, got {len(child_workspace.inherited_rules) == 1}"
-        assert child_workspace.parent_workspace == parent_workspace.id, f"expect child_workspace.parent_workspace == parent_workspace.id, got {child_workspace.parent_workspace == parent_workspace.id}"
+        assert len(child_workspace.inherited_rules) == 1, f"expect result to be {1}, got {len(child_workspace.inherited_rules)}"
+        assert child_workspace.parent_workspace == parent_workspace.id, f"expect result to be {parent_workspace.id}, got {child_workspace.parent_workspace}"
         
         # Verify inherited rule properties
         inherited_rule = list(child_workspace.inherited_rules.values())[0]
-        assert inherited_rule.name == parent_rule.name, f"expect inherited_rule.name == parent_rule.name, got {inherited_rule.name == parent_rule.name}"
-        assert inherited_rule.priority == parent_rule.priority, f"expect inherited_rule.priority == parent_rule.priority, got {inherited_rule.priority == parent_rule.priority}"
-        assert inherited_rule.inherited_from.startswith("Parent:"), f"expect inherited_rule.inherited_from.startswith('Parent:'), got {inherited_rule.inherited_from.startswith('Parent:')}"
+        assert inherited_rule.name == parent_rule.name, f"expect result to be {parent_rule.name}, got {inherited_rule.name}"
+        assert inherited_rule.priority == parent_rule.priority, f"expect result to be {parent_rule.priority}, got {inherited_rule.priority}"
+        inherited_prefix_is_parent = (inherited_rule.inherited_from or "").startswith("Parent:")
+        assert inherited_prefix_is_parent, f"expect inherited rule source to start with 'Parent:', got {inherited_rule.inherited_from}"
         
         # Test that child can evaluate inherited rules
         actions = child_workspace.evaluate_state_logic()
-        assert len(actions) == 1, f"expect len(actions) == 1, got {len(actions) == 1}"
-        assert actions[0]['rule_name'] == "Parent Rule", f"expect actions[0]['rule_name'] == 'Parent Rule', got {actions[0]['rule_name'] == 'Parent Rule'}"
+        assert len(actions) == 1, f"expect result to be {1}, got {len(actions)}"
+        assert actions[0]['rule_name'] == "Parent Rule", f"expect result to be {'Parent Rule'}, got {actions[0]['rule_name']}"
         
         print("✓ Rule inheritance test passed")
         return True
@@ -222,18 +223,18 @@ def test_sample_workspace():
         workspace = manager.create_sample_workspace()
         
         # Verify sample workspace has expected components
-        assert workspace.name == "Sample Workspace", f"expect workspace.name == 'Sample Workspace', got {workspace.name == 'Sample Workspace'}"
-        assert len(workspace.nodes) == 3, f"expect len(workspace.nodes) == 3, got {len(workspace.nodes) == 3}"  # agent, task, knowledge
-        assert len(workspace.rules) == 2, f"expect len(workspace.rules) == 2, got {len(workspace.rules) == 2}"  # two sample rules
-        assert len(workspace.state) > 0, f"expect len(workspace.state) > 0, got {len(workspace.state) > 0}"   # has initial state
+        assert workspace.name == "Sample Workspace", f"expect result to be {'Sample Workspace'}, got {workspace.name}"
+        assert len(workspace.nodes) == 3, f"expect result to be {3}, got {len(workspace.nodes)}"  # agent, task, knowledge
+        assert len(workspace.rules) == 2, f"expect result to be {2}, got {len(workspace.rules)}"  # two sample rules
+        assert len(workspace.state) > 0, f"expect len(workspace.state) > 0, got {len(workspace.state)}"   # has initial state
         
         # Verify nodes are connected
         summary = workspace.get_network_summary()
-        assert summary['total_connections'] >= 2, f"expect summary['total_connections'] >= 2, got {summary['total_connections'] >= 2}"  # agent connected to task and knowledge
+        assert summary['total_connections'] >= 2, f"expect summary['total_connections'] >= 2, got {summary['total_connections']}"  # agent connected to task and knowledge
         
         # Verify rule evaluation works
         actions = workspace.evaluate_state_logic()
-        assert len(actions) > 0, f"expect len(actions) > 0, got {len(actions) > 0}"  # Should have applicable actions
+        assert len(actions) > 0, f"expect len(actions) > 0, got {len(actions)}"  # Should have applicable actions
         
         print("✓ Sample workspace test passed")
         return True

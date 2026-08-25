@@ -9,10 +9,7 @@ NONEXISTENT_WORKSPACE_REF = "workspace-does-not-exist"
 
 
 def _assert_exit_code(result, expected: int, behavior: str) -> None:
-    assert result.exit_code == expected, (
-        f"Expected {behavior} to exit with {expected} and got "
-        f"{result.exit_code}. Output: {result.output}"
-    )
+    assert result.exit_code == expected, f"expect cli exit code {expected}, got {result.exit_code} with output: {result.output}"
 
 
 class MockStore:
@@ -70,18 +67,10 @@ def test_chat_uses_default_workspace_and_records_session(tmp_path, isolated_cli_
     result = isolated_cli_runner.invoke(chat_command, [], input="hello\n/quit\n")
 
     _assert_exit_code(result, 0, "starting chat with the default workspace")
-    assert "Workspace : Default" in result.output, (
-        f"Expected default workspace name in output and got: {result.output}"
-    )
-    assert "Session   : created-session" in result.output, (
-        f"Expected created session id in output and got: {result.output}"
-    )
-    assert "assistant reply" in result.output, (
-        f"Expected assistant reply in output and got: {result.output}"
-    )
-    assert len(distill_calls) == 1, (
-        f"Expected one distillation call and got {len(distill_calls)}."
-    )
+    assert "Workspace : Default" in result.output, f"expect 'Workspace : Default' in result.output, got {result.output}"
+    assert "Session   : created-session" in result.output, f"expect 'Session   : created-session' in result.output, got {result.output}"
+    assert "assistant reply" in result.output, f"expect 'assistant reply' in result.output, got {result.output}"
+    assert len(distill_calls) == 1, f"expect result to be {1}, got {len(distill_calls)}"
 
 
 def test_chat_errors_when_no_workspace_or_default_is_configured(isolated_cli_runner, monkeypatch):
@@ -90,13 +79,8 @@ def test_chat_errors_when_no_workspace_or_default_is_configured(isolated_cli_run
 
     no_default = isolated_cli_runner.invoke(chat_command, [])
 
-    assert no_default.exit_code != 0, (
-        f"Expected no-default-workspace chat start to fail and got "
-        f"{no_default.exit_code}. Output: {no_default.output}"
-    )
-    assert "No --workspace given" in no_default.output, (
-        f"Expected missing default workspace error and got: {no_default.output}"
-    )
+    assert no_default.exit_code != 0, f"expect cli exit code != 0, got {no_default.exit_code} with output: {no_default.output}"
+    assert "No --workspace given" in no_default.output, f"expect 'No --workspace given' in no_default.output, got {no_default.output}"
 
 
 def test_chat_errors_when_workspace_ref_does_not_resolve(
@@ -111,13 +95,9 @@ def test_chat_errors_when_workspace_ref_does_not_resolve(
         chat_command, ["--workspace", NONEXISTENT_WORKSPACE_REF]
     )
 
-    assert result.exit_code != 0, (
-        f"Expected unresolved workspace ref to fail and got {result.exit_code}. "
-        f"Output: {result.output}"
-    )
-    assert f"Workspace not found: {NONEXISTENT_WORKSPACE_REF}" in result.output, (
-        f"Expected unresolved workspace error and got: {result.output}"
-    )
+    assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
+    target_value = f"Workspace not found: {NONEXISTENT_WORKSPACE_REF}"
+    assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
 def test_chat_resumes_session_and_turn_errors_are_logged(
@@ -148,26 +128,17 @@ def test_chat_resumes_session_and_turn_errors_are_logged(
     )
 
     _assert_exit_code(result, 0, "resuming a chat session with a model failure")
-    assert "Session   : existing" in result.output, (
-        f"Expected resumed session id in output and got: {result.output}"
-    )
-    assert "[error] RuntimeError: model failed" in result.output, (
-        f"Expected model failure to be printed and got: {result.output}"
-    )
-    assert MockStore.loaded_session_ids == ["existing"], (
-        f"Expected resumed session history load for ['existing'] and got "
-        f"{MockStore.loaded_session_ids}."
-    )
+    assert "Session   : existing" in result.output, f"expect 'Session   : existing' in result.output, got {result.output}"
+    assert "[error] RuntimeError: model failed" in result.output, f"expect '[error] RuntimeError: model failed' in result.output, got {result.output}"
+    assert MockStore.loaded_session_ids == ["existing"], f"expect result to be {['existing']}, got {MockStore.loaded_session_ids}"
     expected_record = (
         "existing",
         "assistant",
         "[error] RuntimeError: model failed",
         {"source": "cli-chat"},
     )
-    assert expected_record in store_instances[0].records, (
-        f"Expected assistant error record {expected_record} and got "
-        f"{store_instances[0].records}."
-    )
+    records = store_instances[0].records
+    assert expected_record in records, f"expect expected_record in store_instances[0].records, got {records}"
 
 
 def test_chat_distillation_warning_only(tmp_path, isolated_cli_runner, monkeypatch):
@@ -193,6 +164,4 @@ def test_chat_distillation_warning_only(tmp_path, isolated_cli_runner, monkeypat
     )
 
     _assert_exit_code(result, 0, "ending chat when distillation fails")
-    assert "Warning: memory distillation skipped: distiller down" in result.output, (
-        f"Expected distillation warning and got: {result.output}"
-    )
+    assert "Warning: memory distillation skipped: distiller down" in result.output, f"expect 'Warning: memory distillation skipped: distiller down' in result.output, got {result.output}"

@@ -23,21 +23,21 @@ class TestAuthFunctions:
                 mock_home.return_value = Path('/tmp/test_home')
                 with patch('pathlib.Path.mkdir') as mock_mkdir:
                     config_dir = get_config_dir()
-                    assert config_dir == Path('/tmp/test_home/.miminions'), f"expect config_dir == Path('/tmp/test_home/.miminions'), got {config_dir == Path('/tmp/test_home/.miminions')}"
+                    assert config_dir == Path('/tmp/test_home/.miminions'), f"expect result to be {Path('/tmp/test_home/.miminions')}, got {config_dir}"
                     mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
     def test_get_config_dir_honors_miminions_home_env(self):
         """MIMINIONS_HOME overrides the default ~/.miminions location."""
         with patch.dict(os.environ, {'MIMINIONS_HOME': '/tmp/custom_home'}):
             with patch('pathlib.Path.mkdir'):
-                assert get_config_dir() == Path('/tmp/custom_home'), f"expect get_config_dir() == Path('/tmp/custom_home'), got {get_config_dir() == Path('/tmp/custom_home')}"
+                assert get_config_dir() == Path('/tmp/custom_home'), f"expect result to be {Path('/tmp/custom_home')}, got {get_config_dir()}"
 
     def test_get_auth_file(self):
         """Test that get_auth_file returns correct path."""
         with patch('miminions.cli.auth.get_config_dir') as mock_get_config_dir:
             mock_get_config_dir.return_value = Path('/tmp/test_config')
             auth_file = get_auth_file()
-            assert auth_file == Path('/tmp/test_config/auth.json'), f"expect auth_file == Path('/tmp/test_config/auth.json'), got {auth_file == Path('/tmp/test_config/auth.json')}"
+            assert auth_file == Path('/tmp/test_config/auth.json'), f"expect result to be {Path('/tmp/test_config/auth.json')}, got {auth_file}"
 
     def test_is_authenticated_no_file(self):
         """Test is_authenticated returns False when no auth file exists."""
@@ -46,7 +46,7 @@ class TestAuthFunctions:
             mock_auth_file.exists.return_value = False
             mock_get_auth_file.return_value = mock_auth_file
             
-            assert is_authenticated() is False, f"expect is_authenticated() is False, got {is_authenticated() is False}"
+            assert is_authenticated() is False, f"expect result to be {False}, got {is_authenticated()}"
 
     def test_is_authenticated_empty_file(self):
         """Test is_authenticated returns False for empty auth file."""
@@ -58,7 +58,7 @@ class TestAuthFunctions:
             mock_auth_file.stat.return_value = mock_stat
             mock_get_auth_file.return_value = mock_auth_file
             
-            assert is_authenticated() is False, f"expect is_authenticated() is False, got {is_authenticated() is False}"
+            assert is_authenticated() is False, f"expect result to be {False}, got {is_authenticated()}"
 
     def test_is_authenticated_valid_file(self):
         """Test is_authenticated returns True for valid auth file."""
@@ -70,7 +70,7 @@ class TestAuthFunctions:
             mock_auth_file.stat.return_value = mock_stat
             mock_get_auth_file.return_value = mock_auth_file
             
-            assert is_authenticated() is True, f"expect is_authenticated() is True, got {is_authenticated() is True}"
+            assert is_authenticated() is True, f"expect result to be {True}, got {is_authenticated()}"
 
     def test_save_auth_data(self):
         """Test save_auth_data writes data to file."""
@@ -87,7 +87,7 @@ class TestAuthFunctions:
                 with open(tmp_path, 'r') as f:
                     saved_data = json.load(f)
                 
-                assert saved_data == test_data, f"expect saved_data == test_data, got {saved_data == test_data}"
+                assert saved_data == test_data, f"expect result to be {test_data}, got {saved_data}"
         finally:
             os.unlink(tmp_path)
 
@@ -98,7 +98,7 @@ class TestAuthFunctions:
             mock_auth_file.exists.return_value = False
             mock_get_auth_file.return_value = mock_auth_file
             
-            assert load_auth_data() is None, f"expect load_auth_data() is None, got {load_auth_data() is None}"
+            assert load_auth_data() is None, f"expect result to be {None}, got {load_auth_data()}"
 
     def test_load_auth_data_valid_file(self):
         """Test load_auth_data returns data from file."""
@@ -113,7 +113,7 @@ class TestAuthFunctions:
                 mock_get_auth_file.return_value = Path(tmp_path)
                 
                 loaded_data = load_auth_data()
-                assert loaded_data == test_data, f"expect loaded_data == test_data, got {loaded_data == test_data}"
+                assert loaded_data == test_data, f"expect result to be {test_data}, got {loaded_data}"
         finally:
             os.unlink(tmp_path)
 
@@ -127,12 +127,12 @@ class TestAuthFunctions:
                 mock_get_auth_file.return_value = Path(tmp_path)
                 
                 # Verify file exists
-                assert os.path.exists(tmp_path), f"expect os.path.exists(tmp_path), got {os.path.exists(tmp_path)}"
+                assert os.path.exists(tmp_path), f"expect truthy value, got {os.path.exists(tmp_path)}"
                 
                 clear_auth_data()
                 
                 # Verify file is removed
-                assert not os.path.exists(tmp_path), f"expect not os.path.exists(tmp_path), got {not os.path.exists(tmp_path)}"
+                assert not os.path.exists(tmp_path), f"expect falsy value, got {os.path.exists(tmp_path)}"
         except FileNotFoundError:
             # File already removed, which is expected
             pass
@@ -150,21 +150,21 @@ class TestAuthCLI:
         with patch('miminions.cli.auth.save_auth_data') as mock_save:
             result = self.runner.invoke(auth_cli, ['signin', '--username', 'testuser', '--password', 'testpass'])
             
-            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-            assert 'Successfully signed in as testuser' in result.output, f"expect 'Successfully signed in as testuser' in result.output, got {'Successfully signed in as testuser' in result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Successfully signed in as testuser' in result.output, f"expect 'Successfully signed in as testuser' in result.output, got {result.output}"
             mock_save.assert_called_once()
 
     def test_signin_missing_username(self):
         """Test signin with missing username."""
         result = self.runner.invoke(auth_cli, ['signin', '--password', 'testpass'])
         
-        assert result.exit_code != 0, f"expect result.exit_code != 0, got {result.exit_code != 0}"
+        assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
 
     def test_signin_missing_password(self):
         """Test signin with missing password."""
         result = self.runner.invoke(auth_cli, ['signin', '--username', 'testuser'])
         
-        assert result.exit_code != 0, f"expect result.exit_code != 0, got {result.exit_code != 0}"
+        assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
 
     def test_signout_authenticated(self):
         """Test signout when authenticated."""
@@ -176,8 +176,8 @@ class TestAuthCLI:
                     
                     result = self.runner.invoke(auth_cli, ['signout'])
                     
-                    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-                    assert 'Successfully signed out testuser' in result.output, f"expect 'Successfully signed out testuser' in result.output, got {'Successfully signed out testuser' in result.output}"
+                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+                    assert 'Successfully signed out testuser' in result.output, f"expect 'Successfully signed out testuser' in result.output, got {result.output}"
                     mock_clear.assert_called_once()
 
     def test_signout_not_authenticated(self):
@@ -187,8 +187,8 @@ class TestAuthCLI:
             
             result = self.runner.invoke(auth_cli, ['signout'])
             
-            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-            assert 'You are not currently signed in' in result.output, f"expect 'You are not currently signed in' in result.output, got {'You are not currently signed in' in result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'You are not currently signed in' in result.output, f"expect 'You are not currently signed in' in result.output, got {result.output}"
 
     def test_status_authenticated(self):
         """Test status when authenticated."""
@@ -199,8 +199,8 @@ class TestAuthCLI:
                 
                 result = self.runner.invoke(auth_cli, ['status'])
                 
-                assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-                assert 'Signed in as: testuser' in result.output, f"expect 'Signed in as: testuser' in result.output, got {'Signed in as: testuser' in result.output}"
+                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+                assert 'Signed in as: testuser' in result.output, f"expect 'Signed in as: testuser' in result.output, got {result.output}"
 
     def test_status_not_authenticated(self):
         """Test status when not authenticated."""
@@ -209,5 +209,5 @@ class TestAuthCLI:
             
             result = self.runner.invoke(auth_cli, ['status'])
             
-            assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-            assert 'Not signed in' in result.output, f"expect 'Not signed in' in result.output, got {'Not signed in' in result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Not signed in' in result.output, f"expect 'Not signed in' in result.output, got {result.output}"

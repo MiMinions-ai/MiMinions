@@ -18,8 +18,8 @@ def test_corrupt_workspaces_file_returns_empty_and_warns(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         result = manager.load_workspaces()
 
-    assert result == {}
-    assert any("workspaces" in r.message.lower() for r in caplog.records)
+    assert result == {}, f"expect {{}}, got {result}"
+    assert any("workspaces" in r.message.lower() for r in caplog.records), f"expect at least one item matching 'workspaces' in r.message.lower(), got none in {caplog.records}"
 
 
 def test_missing_workspaces_file_returns_empty_silently(tmp_path, caplog):
@@ -29,15 +29,15 @@ def test_missing_workspaces_file_returns_empty_silently(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         result = manager.load_workspaces()
 
-    assert result == {}
-    assert not caplog.records
+    assert result == {}, f"expect {{}}, got {result}"
+    assert not caplog.records, f"expect caplog.records empty, got {caplog.records}"
 
 
 def test_to_dict_stamps_current_schema_version():
     """Every persisted record must carry the current schema version."""
     workspace = Workspace(name="Stamped")
 
-    assert workspace.to_dict()["schema_version"] == WORKSPACE_SCHEMA_VERSION
+    assert workspace.to_dict()["schema_version"] == WORKSPACE_SCHEMA_VERSION, f"expect WORKSPACE_SCHEMA_VERSION, got {workspace.to_dict()['schema_version']}"
 
 
 def test_legacy_record_without_schema_version_loads_silently(tmp_path, caplog):
@@ -49,8 +49,8 @@ def test_legacy_record_without_schema_version_loads_silently(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         result = manager.load_workspaces()
 
-    assert result["ws1"].name == "Legacy"
-    assert not caplog.records
+    assert result["ws1"].name == "Legacy", f"expect 'Legacy', got {result['ws1'].name}"
+    assert not caplog.records, f"expect caplog.records empty, got {caplog.records}"
 
 
 def test_save_stamps_schema_version_and_leaves_no_tmp_file(tmp_path):
@@ -61,8 +61,9 @@ def test_save_stamps_schema_version_and_leaves_no_tmp_file(tmp_path):
     manager.save_workspaces({workspace.id: workspace})
 
     raw = json.loads((tmp_path / "workspaces.json").read_text())
-    assert raw[workspace.id]["schema_version"] == WORKSPACE_SCHEMA_VERSION
-    assert not (tmp_path / "workspaces.tmp").exists()
+    assert raw[workspace.id]["schema_version"] == WORKSPACE_SCHEMA_VERSION, f"expect WORKSPACE_SCHEMA_VERSION, got {raw[workspace.id]['schema_version']}"
+    temp_file_exists = (tmp_path / "workspaces.tmp").exists()
+    assert not temp_file_exists, f"expect save_workspaces atomic replace removes workspaces.tmp, got {temp_file_exists}"
 
 
 def test_invalid_schema_version_warns_but_does_not_discard_file(tmp_path, caplog):
@@ -77,9 +78,9 @@ def test_invalid_schema_version_warns_but_does_not_discard_file(tmp_path, caplog
     with caplog.at_level(logging.WARNING):
         result = manager.load_workspaces()
 
-    assert result["bad"].name == "Tampered"
-    assert result["good"].name == "Fine"
-    assert any("invalid schema_version" in r.message for r in caplog.records)
+    assert result["bad"].name == "Tampered", f"expect 'Tampered', got {result['bad'].name}"
+    assert result["good"].name == "Fine", f"expect 'Fine', got {result['good'].name}"
+    assert any("invalid schema_version" in r.message for r in caplog.records), f"expect at least one item matching 'invalid schema_version' in r.message, got none in {caplog.records}"
 
 
 def test_newer_schema_version_warns_but_loads(tmp_path, caplog):
@@ -91,5 +92,5 @@ def test_newer_schema_version_warns_but_loads(tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         result = manager.load_workspaces()
 
-    assert result["ws1"].name == "Future"
-    assert any("schema_version" in r.message for r in caplog.records)
+    assert result["ws1"].name == "Future", f"expect 'Future', got {result['ws1'].name}"
+    assert any("schema_version" in r.message for r in caplog.records), f"expect at least one item matching 'schema_version' in r.message, got none in {caplog.records}"
