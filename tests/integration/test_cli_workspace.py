@@ -97,8 +97,8 @@ def test_node_management():
         summary = workspace.get_network_summary()
         assert summary['total_nodes'] == 2, f"expect result to be {2}, got {summary['total_nodes']}"
         assert summary['total_connections'] == 1, f"expect result to be {1}, got {summary['total_connections']}"
-        assert 'agent' in summary['node_types'], f"expect 'agent' in summary['node_types'], got {summary['node_types']}"
-        assert 'task' in summary['node_types'], f"expect 'task' in summary['node_types'], got {summary['node_types']}"
+        assert 'agent' in summary['node_types'], f"expect workspace network summary node_types includes 'agent', got {summary['node_types']}"
+        assert 'task' in summary['node_types'], f"expect workspace network summary node_types includes 'task', got {summary['node_types']}"
         
         print("✓ Node management test passed")
         return True

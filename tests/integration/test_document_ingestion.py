@@ -27,14 +27,15 @@ Natural language processing enables computers to understand human language.""")
     try:
         result = agent.execute("ingest_document", filepath=str(test_file))
         
-        assert result.status == ExecutionStatus.SUCCESS
-        assert result.result['status'] == 'success'
-        assert result.result['file_type'] == 'text'
-        assert result.result['chunks_stored'] >= 1
-        assert result.execution_time_ms is not None
+        assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS as {ExecutionStatus.SUCCESS}, got {result.status}"
+        assert result.result['status'] == 'success', f"expect ingest_document returns success status for valid text file input as 'success', got {result.result['status']}"
+        assert result.result['file_type'] == 'text', f"expect ingest_document classifies plain text file input as file_type text as 'text', got {result.result['file_type']}"
+        assert result.result['chunks_stored'] >= 1, f"expect result.result['chunks_stored'] >= 1, got {result.result['chunks_stored']}"
+        assert result.execution_time_ms is not None, f"expect value is not None, got {result.execution_time_ms}"
         
         results = agent.recall_knowledge("machine learning", top_k=3)
-        assert len(results) > 0
+        result_count = len(results)
+        assert result_count > 0, f"expect len(results) > 0, got {result_count}"
         print("PASSED")
     finally:
         test_file.unlink()
@@ -55,9 +56,9 @@ async def test_ingest_pdf():
     try:
         result = agent.execute("ingest_document", filepath=str(pdf_path))
         
-        assert result.status == ExecutionStatus.SUCCESS
-        assert result.result['file_type'] == 'pdf'
-        assert result.result['chunks_stored'] > 0
+        assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS as {ExecutionStatus.SUCCESS}, got {result.status}"
+        assert result.result['file_type'] == 'pdf', f"expect ingest_document classifies PDF input as file_type pdf as 'pdf', got {result.result['file_type']}"
+        assert result.result['chunks_stored'] > 0, f"expect result.result['chunks_stored'] > 0, got {result.result['chunks_stored']}"
         print("PASSED")
     finally:
         await agent.cleanup()
@@ -70,9 +71,10 @@ async def test_ingest_error():
     
     result = agent.execute("ingest_document", filepath="nonexistent.pdf")
     
-    assert result.status == ExecutionStatus.ERROR
-    assert result.error is not None
-    assert "not found" in result.error.lower()
+    assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR as {ExecutionStatus.ERROR}, got {result.status}"
+    assert result.error is not None, f"expect value is not None, got {result.error}"
+    error_text_lower = result.error.lower()
+    assert "not found" in error_text_lower, f"expect contains 'not found', got {error_text_lower}"
     
     await agent.cleanup()
     print("PASSED")

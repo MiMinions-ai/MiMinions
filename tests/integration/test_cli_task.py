@@ -42,8 +42,8 @@ def test_task_add_rejects_unknown_agent(temp_config_dir):
                 ],
             )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "Agent 'missing' not found." in result.output, f"expect \"Agent 'missing' not found.\" in result.output, got {"Agent 'missing' not found." in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "Agent 'missing' not found." in result.output, f"expect \"Agent 'missing' not found.\" in result.output, got {result.output}"
 
 
 def test_task_add_accepts_existing_agent(temp_config_dir):
@@ -67,8 +67,8 @@ def test_task_add_accepts_existing_agent(temp_config_dir):
                 ],
             )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "Task 'Task A' added successfully" in result.output, f"expect \"Task 'Task A' added successfully\" in result.output, got {"Task 'Task A' added successfully" in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "Task 'Task A' added successfully" in result.output, f"expect \"Task 'Task A' added successfully\" in result.output, got {result.output}"
 
 def test_task_update_rejects_unknown_agent(temp_config_dir):
     runner = CliRunner()
@@ -92,11 +92,11 @@ def test_task_update_rejects_unknown_agent(temp_config_dir):
         with patch("miminions.cli.task.get_config_dir", return_value=temp_config_dir):
             result = runner.invoke(task_cli, ["update", "task1", "--agent", "missing"])
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "Agent 'missing' not found." in result.output, f"expect \"Agent 'missing' not found.\" in result.output, got {"Agent 'missing' not found." in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "Agent 'missing' not found." in result.output, f"expect \"Agent 'missing' not found.\" in result.output, got {result.output}"
 
     tasks = _read(temp_config_dir / "tasks.json")
-    assert tasks["task1"]["agent"] == "known", f"expect tasks['task1']['agent'] == 'known', got {tasks['task1']['agent'] == 'known'}"
+    assert tasks["task1"]["agent"] == "known", f"expect result to be {'known'}, got {tasks['task1']['agent']}"
 
 
 def test_task_list_and_show_json_output():
@@ -118,12 +118,12 @@ def test_task_list_and_show_json_output():
             list_result = runner.invoke(task_cli, ["list", "--json"])
             show_result = runner.invoke(task_cli, ["show", "task01", "--json"])
 
-    assert list_result.exit_code == 0, f"expect list_result.exit_code == 0, got {list_result.exit_code == 0}"
-    assert show_result.exit_code == 0, f"expect show_result.exit_code == 0, got {show_result.exit_code == 0}"
+    assert list_result.exit_code == 0, f"expect cli exit code 0, got {list_result.exit_code} with output: {list_result.output}"
+    assert show_result.exit_code == 0, f"expect cli exit code 0, got {show_result.exit_code} with output: {show_result.output}"
 
     list_payload = json.loads(list_result.output)
     show_payload = json.loads(show_result.output)
 
-    assert list_payload[0]["id"] == "task01", f"expect list_payload[0]['id'] == 'task01', got {list_payload[0]['id'] == 'task01'}"
-    assert show_payload["id"] == "task01", f"expect show_payload['id'] == 'task01', got {show_payload['id'] == 'task01'}"
-    assert show_payload["title"] == "Write docs", f"expect show_payload['title'] == 'Write docs', got {show_payload['title'] == 'Write docs'}"
+    assert list_payload[0]["id"] == "task01", f"expect result to be {'task01'}, got {list_payload[0]['id']}"
+    assert show_payload["id"] == "task01", f"expect result to be {'task01'}, got {show_payload['id']}"
+    assert show_payload["title"] == "Write docs", f"expect result to be {'Write docs'}, got {show_payload['title']}"

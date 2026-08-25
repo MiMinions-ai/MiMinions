@@ -69,10 +69,10 @@ def test_import_merge_adds_records(temp_config_dir, tmp_path):
     tasks = _read(temp_config_dir / "tasks.json")
     knowledge = _read(temp_config_dir / "knowledge.json")
 
-    assert "existing" in agents, f"expect 'existing' in agents, got {agents}"
-    assert "new" in agents, f"expect 'new' in agents, got {agents}"
-    assert "t1" in tasks, f"expect 't1' in tasks, got {tasks}"
-    assert "k1" in knowledge, f"expect 'k1' in knowledge, got {knowledge}"
+    assert "existing" in agents, f"expect import --mode merge preserves existing agent key 'existing', got {agents}"
+    assert "new" in agents, f"expect import --mode merge adds backup agent key 'new', got {agents}"
+    assert "t1" in tasks, f"expect import --mode merge adds backup task key 't1', got {tasks}"
+    assert "k1" in knowledge, f"expect import --mode merge adds backup knowledge key 'k1', got {knowledge}"
 
 
 def test_import_replace_overwrites_records(temp_config_dir, tmp_path):
@@ -103,10 +103,10 @@ def test_import_replace_overwrites_records(temp_config_dir, tmp_path):
     tasks = _read(temp_config_dir / "tasks.json")
     knowledge = _read(temp_config_dir / "knowledge.json")
 
-    assert "existing" not in agents, f"expect 'existing' not in agents, got {agents}"
-    assert "old" not in tasks, f"expect 'old' not in tasks, got {tasks}"
-    assert "old" not in knowledge, f"expect 'old' not in knowledge, got {knowledge}"
+    assert "existing" not in agents, f"expect import --mode replace removes pre-existing agent key 'existing', got {agents}"
+    assert "old" not in tasks, f"expect import --mode replace removes pre-existing task key 'old', got {tasks}"
+    assert "old" not in knowledge, f"expect import --mode replace removes pre-existing knowledge key 'old', got {knowledge}"
 
-    assert "new" in agents, f"expect 'new' in agents, got {agents}"
-    assert "t1" in tasks, f"expect 't1' in tasks, got {tasks}"
-    assert "k1" in knowledge, f"expect 'k1' in knowledge, got {knowledge}"
+    assert "new" in agents, f"expect import --mode replace writes backup agent key 'new', got {agents}"
+    assert "t1" in tasks, f"expect import --mode replace writes backup task key 't1', got {tasks}"
+    assert "k1" in knowledge, f"expect import --mode replace writes backup knowledge key 'k1', got {knowledge}"

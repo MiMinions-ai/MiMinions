@@ -21,8 +21,9 @@ def test_chat_cli_requires_root_path(monkeypatch):
     runner = CliRunner()
     result = runner.invoke(chat_command, ["--workspace", "ws1"])
 
-    assert result.exit_code != 0, f"Expected non-zero exit code, but got {result.exit_code}"
-    assert "workspace init-files" in result.output.lower(), f"Expected 'workspace init-files' in the output, but got: {result.output}"
+    assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
+    output_lower = result.output.lower()
+    assert "workspace init-files" in output_lower, f"expect contains 'workspace init-files', got {output_lower}"
 
 
 def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch):
@@ -64,19 +65,20 @@ def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch)
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0, f"Expected exit code 0, but got {result.exit_code}"
-    assert "Session   :" in result.output, f"Expected 'Session   :' in output, but got: {result.output}"
-    assert "assistant reply" in result.output, f"Expected 'assistant reply' in output, but got: {result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "Session   :" in result.output, f"expect contains 'Session   :', got {result.output}"
+    assert "assistant reply" in result.output, f"expect contains 'assistant reply', got {result.output}"
 
     sessions_dir = tmp_path / "sessions"
     session_files = list(sessions_dir.glob("*.jsonl"))
-    assert len(session_files) == 1, f"Expected 1 session file, but found {len(session_files)}"
+    session_file_count = len(session_files)
+    assert session_file_count == 1, f"expect chat session creates exactly one session jsonl file as 1, got {session_file_count}"
 
     contents = session_files[0].read_text(encoding="utf-8")
-    assert '"role": "user"' in contents, f"Expected 'role' to be in the contents, but got: {contents}"
-    assert '"content": "hello"' in contents, f"Expected 'content' to be in the contents, but got: {contents}"
-    assert '"role": "assistant"' in contents, f"Expected 'role: assistant' in contents, but got: {contents}"
-    assert '"content": "assistant reply"' in contents, f"Expected 'content: assistant reply' in contents, but got: {contents}"
+    assert '"role": "user"' in contents, f"expect contains '\"role\": \"user\"', got {contents}"
+    assert '"content": "hello"' in contents, f"expect contains '\"content\": \"hello\"', got {contents}"
+    assert '"role": "assistant"' in contents, f"expect contains '\"role\": \"assistant\"', got {contents}"
+    assert '"content": "assistant reply"' in contents, f"expect contains '\"content\": \"assistant reply\"', got {contents}"
 
 
 def test_chat_cli_streams_deltas_incrementally(tmp_path: Path, monkeypatch):
@@ -119,11 +121,11 @@ def test_chat_cli_streams_deltas_incrementally(tmp_path: Path, monkeypatch):
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "foobar" in result.output, f"expect 'foobar' in result.output, got {'foobar' in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "foobar" in result.output, f"expect contains 'foobar', got {result.output}"
 
     contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert '"content": "foobar"' in contents, f"expect '\"content\": \"foobar\"' in contents, got {'"content": "foobar"' in contents}"
+    assert '"content": "foobar"' in contents, f"expect contains '\"content\": \"foobar\"', got {contents}"
 
 
 def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, monkeypatch):
@@ -166,12 +168,12 @@ def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, mon
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "[error] RuntimeError: stream died" in result.output, f"expect '[error] RuntimeError: stream died' in result.output, got {'[error] RuntimeError: stream died' in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "[error] RuntimeError: stream died" in result.output, f"expect contains '[error] RuntimeError: stream died', got {result.output}"
 
     contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert "partial text" in contents, f"expect 'partial text' in contents, got {'partial text' in contents}"
-    assert "[error] RuntimeError: stream died" in contents, f"expect '[error] RuntimeError: stream died' in contents, got {'[error] RuntimeError: stream died' in contents}"
+    assert "partial text" in contents, f"expect contains 'partial text', got {contents}"
+    assert "[error] RuntimeError: stream died" in contents, f"expect contains '[error] RuntimeError: stream died', got {contents}"
 
 
 def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
@@ -219,9 +221,11 @@ def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
         input="/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert callable(captured_kwargs["on_tool_call"]), f"expect callable(captured_kwargs['on_tool_call']), got {callable(captured_kwargs['on_tool_call'])}"
-    assert callable(captured_kwargs["on_turn_end"]), f"expect callable(captured_kwargs['on_turn_end']), got {callable(captured_kwargs['on_turn_end'])}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    on_tool_call_is_callable = callable(captured_kwargs["on_tool_call"])
+    assert on_tool_call_is_callable, f"expect create_minion receives callable on_tool_call in verbose mode, got {on_tool_call_is_callable}"
+    on_turn_end_is_callable = callable(captured_kwargs["on_turn_end"])
+    assert on_turn_end_is_callable, f"expect create_minion receives callable on_turn_end in verbose mode, got {on_turn_end_is_callable}"
 
     captured_kwargs.clear()
     result = runner.invoke(
@@ -230,9 +234,9 @@ def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
         input="/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert captured_kwargs["on_tool_call"] is None, f"expect captured_kwargs['on_tool_call'] is None, got {captured_kwargs['on_tool_call'] is None}"
-    assert captured_kwargs["on_turn_end"] is None, f"expect captured_kwargs['on_turn_end'] is None, got {captured_kwargs['on_turn_end'] is None}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert captured_kwargs["on_tool_call"] is None, f"expect non-verbose chat creates minion with on_tool_call callback as None, got {captured_kwargs['on_tool_call']}"
+    assert captured_kwargs["on_turn_end"] is None, f"expect non-verbose chat creates minion with on_turn_end callback as None, got {captured_kwargs['on_turn_end']}"
 
 
 def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
@@ -280,11 +284,13 @@ def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
         input="hello\n/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert len(calls) == 1, f"expect len(calls) == 1, got {len(calls) == 1}"
-    assert calls[0][0] == "ws1", f"expect calls[0][0] == 'ws1', got {calls[0][0] == 'ws1'}"
-    assert calls[0][1] == tmp_path, f"expect calls[0][1] == tmp_path, got {calls[0][1] == tmp_path}"
-    assert calls[0][2], f"expect calls[0][2], got {calls[0][2]}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    call_count = len(calls)
+    assert call_count == 1, f"expect chat exit runs session distillation exactly once as 1, got {call_count}"
+    assert calls[0][0] == "ws1", f"expect distillation receives workspace id from active chat workspace as 'ws1', got {calls[0][0]}"
+    assert calls[0][1] == tmp_path, f"expect tmp_path, got {calls[0][1]}"
+    session_id_value = calls[0][2]
+    assert session_id_value, f"expect distillation call includes a non-empty session_id, got {session_id_value}"
 
 
 def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch):
@@ -331,5 +337,5 @@ def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch
         input="/quit\n",
     )
 
-    assert result.exit_code == 0, f"expect result.exit_code == 0, got {result.exit_code == 0}"
-    assert "Warning: memory distillation skipped" in result.output, f"expect 'Warning: memory distillation skipped' in result.output, got {'Warning: memory distillation skipped' in result.output}"
+    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+    assert "Warning: memory distillation skipped" in result.output, f"expect contains 'Warning: memory distillation skipped', got {result.output}"

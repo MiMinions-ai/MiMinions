@@ -37,6 +37,7 @@ async def test_stdio_server_can_list_tools_and_disconnect_cleanly():
         tools = await adapter.get_tools_from_server("lifecycle-test")
         await adapter.close_all_connections()
 
-        assert [tool.name for tool in tools] == ["greet"]
-        assert adapter.sessions == {}
-        assert adapter._connection_tasks == {}
+        tool_names = [tool.name for tool in tools]
+        assert tool_names == ["greet"], f"expect MCP stdio lifecycle flow discovers exported tool list as ['greet'], got {tool_names}"
+        assert adapter.sessions == {}, f"expect close_all_connections clears active adapter sessions as {{}}, got {adapter.sessions}"
+        assert adapter._connection_tasks == {}, f"expect close_all_connections clears pending connection task registry as {{}}, got {adapter._connection_tasks}"

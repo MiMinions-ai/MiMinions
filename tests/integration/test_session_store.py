@@ -35,8 +35,10 @@ def _tool_return() -> ModelRequest:
 
 def test_create_session_id_format():
     session_id = create_session_id()
-    assert "_" in session_id, f"Expected session_id to contain '_', but got: {session_id}"
-    assert len(session_id.split("_", 1)[1]) == 8, f"Expected session_id to have 8 characters after '_', but got: {session_id}"
+    assert "_" in session_id, f"expect create_session_id includes underscore separator between timestamp and random suffix as '_', got {session_id}"
+    session_suffix = session_id.split("_", 1)[1]
+    suffix_length = len(session_suffix)
+    assert suffix_length == 8, f"expect create_session_id random suffix length is exactly 8 characters, got {suffix_length}"
 
 
 def test_jsonl_session_store_append_and_iter(tmp_path: Path):
@@ -48,28 +50,32 @@ def test_jsonl_session_store_append_and_iter(tmp_path: Path):
     second = store.append(session_id, "assistant", "hi there", meta={"source": "test"})
 
     session_path = store.path_for(session_id)
-    assert session_path.exists(), f"Expected session file to exist at {session_path}, but it does not."
-    assert session_path.parent == (tmp_path / "sessions"), f"Expected session file to be in {tmp_path / 'sessions'}, but got {session_path.parent}"
+    session_file_exists = session_path.exists()
+    assert session_file_exists, f"expect append creates session jsonl file as True, got {session_file_exists}"
+    assert session_path.parent == (tmp_path / "sessions"), f"expect tmp_path / 'sessions', got {session_path.parent}"
 
     messages = list(store.iter_messages(session_id))
-    assert len(messages) == 2, f"Expected 2 messages in the session, but got {len(messages)}"
-    assert messages[0]["role"] == "user", f"Expected first message role to be 'user', but got: {messages[0]['role']}"
-    assert messages[0]["content"] == "hello", f"Expected first message content to be 'hello', but got: {messages[0]['content']}"
-    assert messages[1]["role"] == "assistant", f"Expected second message role to be 'assistant', but got: {messages[1]['role']}"
-    assert messages[1]["meta"] == {"source": "test"}, f"Expected second message meta to be {{'source': 'test'}}, but got: {messages[1]['meta']}"
-    assert first["session_id"] == session_id, f"Expected first message session_id to be {session_id}, but got: {first['session_id']}"
-    assert second["session_id"] == session_id, f"Expected second message session_id to be {session_id}, but got: {second['session_id']}"
+    message_count = len(messages)
+    assert message_count == 2, f"expect iter_messages returns both appended user and assistant records as 2, got {message_count}"
+    assert messages[0]["role"] == "user", f"expect first iterated session record role is user as 'user', got {messages[0]['role']}"
+    assert messages[0]["content"] == "hello", f"expect first iterated session record content matches appended user text as 'hello', got {messages[0]['content']}"
+    assert messages[1]["role"] == "assistant", f"expect second iterated session record role is assistant as 'assistant', got {messages[1]['role']}"
+    assert messages[1]["meta"] == {"source": "test"}, f"expect assistant record metadata keeps appended source field as {'source': 'test'}, got {messages[1]['meta']}"
+    assert first["session_id"] == session_id, f"expect append return payload carries original session_id for first append call as {session_id}, got {first['session_id']}"
+    assert second["session_id"] == session_id, f"expect append return payload carries original session_id for second append call as {session_id}, got {second['session_id']}"
 
 
 def test_jsonl_session_store_missing_session_returns_empty(tmp_path: Path):
     init_workspace(tmp_path)
     store = JsonlSessionStore(tmp_path)
-    assert list(store.iter_messages("does-not-exist")) == [], f"Expected iter_messages for non-existent session to return empty list, but got: {list(store.iter_messages('does-not-exist'))}"
+    messages = list(store.iter_messages("does-not-exist"))
+    assert messages == [], f"expect iter_messages returns empty list for missing session id as [], got {messages}"
 
 
 def test_trim_under_limit_returns_history_unchanged():
     messages = [_user("u1"), _assistant("a1")]
-    assert trim_message_history(messages, max_messages=40) is messages
+    trimmed = trim_message_history(messages, max_messages=40)
+    assert trimmed is messages, f"expect trim_message_history returns original history object when message count is under limit as {messages}, got {trimmed}"
 
 
 def test_trim_cuts_at_a_user_turn_boundary():
@@ -80,10 +86,14 @@ def test_trim_cuts_at_a_user_turn_boundary():
 
     trimmed = trim_message_history(messages, max_messages=40)
 
-    assert len(trimmed) <= 40
+    trimmed_count = len(trimmed)
+    assert trimmed_count <= 40, f"expect len(trimmed) <= 40, got {trimmed_count}"
     first = trimmed[0]
-    assert isinstance(first, ModelRequest)
-    assert any(isinstance(part, UserPromptPart) for part in first.parts)
+    first_is_model_request = isinstance(first, ModelRequest)
+    first_type = type(first)
+    assert first_is_model_request, f"expect trimmed history starts with ModelRequest as {True}, got {first_is_model_request} with first type {first_type}"
+    has_user_prompt_part = any(isinstance(part, UserPromptPart) for part in first.parts)
+    assert has_user_prompt_part, f"expect trimmed first ModelRequest contains at least one UserPromptPart as {True}, got {has_user_prompt_part} with parts {first.parts}"
 
 
 def test_trim_never_starts_mid_tool_exchange():
@@ -96,10 +106,12 @@ def test_trim_never_starts_mid_tool_exchange():
     # the trim must skip forward to the next user turn instead.
     trimmed = trim_message_history(messages, max_messages=6)
 
-    assert trimmed[0] is messages[4]
-    assert len(trimmed) == 4
+    assert trimmed[0] is messages[4], f"expect trim starts from next user turn boundary instead of mid tool exchange as {messages[4]}, got {trimmed[0]}"
+    trimmed_count = len(trimmed)
+    assert trimmed_count == 4, f"expect trimmed history contains one complete user-tool-assistant exchange after boundary cut as 4, got {trimmed_count}"
 
 
 def test_trim_without_user_boundary_returns_history_unchanged():
     messages = [_assistant(f"a{i}") for i in range(10)]
-    assert trim_message_history(messages, max_messages=4) is messages
+    trimmed = trim_message_history(messages, max_messages=4)
+    assert trimmed is messages, f"expect trim_message_history returns original history when no user-turn boundary exists in tail window as {messages}, got {trimmed}"

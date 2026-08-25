@@ -33,4 +33,4 @@ def test_workspace_list_and_show_json_output():
 
     assert list_payload[0]["id"] == ws.id, f"expect result to be {ws.id}, got {list_payload[0]['id']}"
     assert show_payload["id"] == ws.id, f"expect result to be {ws.id}, got {show_payload['id']}"
-    assert "network_summary" in show_payload, f"expect 'network_summary' in show_payload, got {show_payload}"
+    assert "network_summary" in show_payload, f"expect workspace show --json payload includes 'network_summary' field for graph metadata, got {show_payload}"

@@ -22,6 +22,8 @@ Later, when this is stable, we can convert it into a stricter global standard.
 - [Keep tests aligned with actual product behavior.](#keep-tests-aligned-with-actual-product-behavior)
 - [Use CliRunner only for Click commands.](#use-clirunner-only-for-click-commands)
 - [For boolean assertions, describe expected behavior from the execution source.](#for-boolean-assertions-describe-the-expected-behavior-from-the-execution-source)
+- [Expectation messages should describe the scenario, not only the literal expected value.](#expectation-messages-should-describe-the-scenario-not-only-the-literal-expected-value)
+- [The got value must come from the exact asserted expression.](#the-got-value-must-come-from-the-exact-asserted-expression)
 - [Reuse a named expected variable (for example target_value).](#reuse-a-named-expected-variable-for-example-target_value)
 - [For membership checks, show the full collection in got (not the target literal).](#for-membership-checks-show-the-full-collection-in-got-not-the-target-literal)
 
@@ -104,6 +106,92 @@ Why this helps:
 - Makes intent explicit (what behavior is expected).
 - Makes debugging faster (which execution produced the value).
 - Avoids ambiguous "truthy/falsy" wording in failure output.
+
+### Expectation messages should describe the scenario, not only the literal expected value
+
+The `expect` text should explain what case/behavior is being verified.
+It should also include the exact target value that the assertion expects.
+Do not use messages that only restate a literal expected value or only describe intent.
+
+Avoid:
+
+```python
+assert restored.id == "w1", f"expect 'w1', got {restored.id}"
+```
+
+Prefer:
+
+```python
+assert restored.id == "w1", (
+    f"expect the workspace id after generated from serialized workspace is 'w1', got {restored.id}"
+)
+```
+
+Also avoid intent-only wording that omits the target value:
+
+```python
+# Missing explicit target value in expect text
+f"expect workspace id is preserved after serialization round-trip, got {restored.id}"
+```
+
+Prefer intent + target together:
+
+```python
+assert restored.id == "w1", (
+    f"expect workspace id is preserved as 'w1' after serialization round-trip, got {restored.id}"
+)
+```
+
+Another example:
+
+```python
+assert result.exit_code == 0, (
+    f"expect prompt ask exits with code 0 for initialized workspace flow, got {result.exit_code} with output: {result.output}"
+)
+```
+
+Why this helps:
+
+- Captures test intent directly in failure output.
+- Preserves the exact target value in failure output for faster mismatch diagnosis.
+- Makes CI failures understandable without opening the test body.
+- Avoids low-signal messages that only echo literal values.
+
+### The got value must come from the exact asserted expression
+
+The `got` part must report the actual evaluated result of the assertion expression.
+Do not put placeholder/debug artifacts or unrelated values in `got`.
+
+Avoid:
+
+```python
+assert any(isinstance(part, UserPromptPart) for part in first.parts), (
+    f"expect trimmed first ModelRequest contains at least one UserPromptPart as {True}, got {[' ', '+', ' ', 'i', 't', 'e', 'r', 'a', 'b', 'l', 'e', ' ', '+', ' ']}"
+)
+```
+
+Prefer:
+
+```python
+has_user_prompt_part = any(isinstance(part, UserPromptPart) for part in first.parts)
+assert has_user_prompt_part, (
+    f"expect trimmed first ModelRequest contains at least one UserPromptPart as {True}, got {has_user_prompt_part}"
+)
+```
+
+Optional (when useful): append supporting context after the real `got` value.
+
+```python
+assert has_user_prompt_part, (
+    f"expect ... as {True}, got {has_user_prompt_part} with parts {first.parts}"
+)
+```
+
+Why this helps:
+
+- Keeps failure output logically consistent with the assertion.
+- Prevents misleading diagnostics that cannot explain why the assertion failed.
+- Makes CI logs trustworthy for root-cause analysis.
 
 ### Reuse a named expected variable (for example `target_value`)
 
