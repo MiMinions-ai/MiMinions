@@ -1,6 +1,12 @@
 import pytest
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace, ToolCallRecord
+
 from miminions.workflow.controller import WorkflowController
+from miminions.workflow.models import (
+    AgentRunRecord,
+    ToolCallRecord,
+    WorkflowRun,
+    WorkflowTrace,
+)
 
 
 class FakeToolExecutionResult:

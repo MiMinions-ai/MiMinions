@@ -25,10 +25,10 @@ async def test_on_tool_call_fires_with_name_and_args():
 
     await minion.run("use the echo tool")
 
-    assert calls, "expected at least one tool-call event"
+    assert calls, f"expect calls to be non-empty, got {calls}"
     name, args = calls[0]
-    assert name == "echo"
-    assert "text" in args
+    assert name == "echo", f"expect the first tool call has name 'echo', got {name}"
+    assert "text" in args, f"expect the first tool call arguments to contain 'text', got {args}"
 
 
 async def test_on_turn_end_receives_usage_and_latency():
@@ -37,10 +37,11 @@ async def test_on_turn_end_receives_usage_and_latency():
 
     await minion.run("hello")
 
-    assert len(turns) == 1
+    no_turns = len(turns)
+    assert no_turns == 1, f"expect the number of turns to be 1, got {no_turns}"
     usage, latency = turns[0]
-    assert usage.requests >= 1
-    assert latency >= 0
+    assert usage.requests >= 1, f"expect usage.requests >= 1, got {usage.requests}"
+    assert latency >= 0, f"expect latency >= 0, got {latency}"
 
 
 async def test_raising_callbacks_do_not_break_the_turn():
@@ -51,10 +52,11 @@ async def test_raising_callbacks_do_not_break_the_turn():
 
     reply = await minion.run("hello")
 
-    assert isinstance(reply, str)
+    assert isinstance(reply, str), f"expect the minion.run() result to be a string, got {type(reply)}"
 
 
 def test_handler_is_none_without_callback():
     minion = _make_minion()
+    result = minion._make_event_stream_handler()
 
-    assert minion._make_event_stream_handler() is None
+    assert result is None, f"expect the event stream handler to be None, got {result}"

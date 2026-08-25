@@ -2,14 +2,19 @@
 Unit tests for the MiMinions CLI execution module.
 """
 
-import pytest
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 from click.testing import CliRunner
 
 from miminions.cli.main import cli
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
-
+from miminions.workflow.models import (
+    AgentRunRecord,
+    ToolCallRecord,
+    WorkflowRun,
+    WorkflowTrace,
+)
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -89,23 +94,23 @@ class TestExecutionHelp:
 
     def test_execution_help(self, runner):
         result = runner.invoke(cli, ["execution", "--help"])
-        assert result.exit_code == 0
-        assert "session" in result.output
-        assert "interaction" in result.output
-        assert "test" in result.output
+        assert result.exit_code == 0, f"expect cli execution --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        assert "session" in result.output, f"expect the result to contain 'session', got {result.output}"
+        assert "interaction" in result.output, f"expect the result to contain 'interaction', got {result.output}"
+        assert "test" in result.output, f"expect the result to contain 'test', got {result.output}"
 
     def test_session_help(self, runner):
         result = runner.invoke(cli, ["execution", "session", "--help"])
-        assert result.exit_code == 0
-        assert "start" in result.output
-        assert "stop" in result.output
-        assert "list" in result.output
+        assert result.exit_code == 0, f"expect cli execution session --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        assert "start" in result.output, f"expect the result to contain 'start', got {result.output}"
+        assert "stop" in result.output, f"expect the result to contain 'stop', got {result.output}"
+        assert "list" in result.output, f"expect the result to contain 'list', got {result.output}"
 
     def test_interactions_help(self, runner):
         result = runner.invoke(cli, ["execution", "interaction", "--help"])
-        assert result.exit_code == 0
-        assert "list" in result.output
-        assert "show" in result.output
+        assert result.exit_code == 0, f"expect cli execution interaction --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        assert "list" in result.output, f"expect the result to contain 'list', got {result.output}"
+        assert "show" in result.output, f"expect the result to contain 'show', got {result.output}"
 
 
 # ── Session management ────────────────────────────────────────────────────────
@@ -116,47 +121,47 @@ class TestSessionManagement:
         with patch("miminions.cli.auth.get_config_dir", return_value=authenticated), \
              patch("miminions.cli.execution.get_config_dir", return_value=authenticated):
             result = runner.invoke(cli, ["execution", "session", "start", "--name", "my-session"])
-            assert result.exit_code == 0
-            assert "Session started" in result.output
+            assert result.exit_code == 0, f"expect cli execution session start --name my-session to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "Session started" in result.output, f"expect the result to contain 'Session started', got {result.output}"
 
     def test_start_session_blocks_duplicate(self, runner, authenticated, active_session):
         config_dir, _ = active_session
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "session", "start", "--name", "new-session"])
-            assert result.exit_code == 0
-            assert "already active" in result.output
+            assert result.exit_code == 0, f"expect cli execution session start --name new-session to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "already active" in result.output, f"expect the result to contain 'already active', got {result.output}"
 
     def test_list_sessions_empty(self, runner, authenticated):
         with patch("miminions.cli.auth.get_config_dir", return_value=authenticated), \
              patch("miminions.cli.execution.get_config_dir", return_value=authenticated):
             result = runner.invoke(cli, ["execution", "session", "list"])
-            assert result.exit_code == 0
-            assert "No sessions found" in result.output
+            assert result.exit_code == 0, f"expect cli execution session list to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "No sessions found" in result.output, f"expect the result to contain 'No sessions found', got {result.output}"
 
     def test_list_sessions_shows_active(self, runner, authenticated, active_session):
-        config_dir, session_id = active_session
+        config_dir, _session_id = active_session
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "session", "list"])
-            assert result.exit_code == 0
-            assert "test-session" in result.output
-            assert "active" in result.output
+            assert result.exit_code == 0, f"expect cli execution session list to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "test-session" in result.output, f"expect the result to contain 'test-session', got {result.output}"
+            assert "active" in result.output, f"expect the result to contain 'active', got {result.output}"
 
     def test_stop_active_session(self, runner, authenticated, active_session):
         config_dir, _ = active_session
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "session", "stop"])
-            assert result.exit_code == 0
-            assert "stopped" in result.output
+            assert result.exit_code == 0, f"expect cli execution session stop to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "stopped" in result.output, f"expect the result to contain 'stopped', got {result.output}"
 
     def test_stop_no_active_session(self, runner, authenticated):
         with patch("miminions.cli.auth.get_config_dir", return_value=authenticated), \
              patch("miminions.cli.execution.get_config_dir", return_value=authenticated):
             result = runner.invoke(cli, ["execution", "session", "stop"])
-            assert result.exit_code == 0
-            assert "No active session" in result.output
+            assert result.exit_code == 0, f"expect cli execution session stop to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "No active session" in result.output, f"expect the result to contain 'No active session', got {result.output}"
 
 
 # ── Tool execution ────────────────────────────────────────────────────────────
@@ -167,8 +172,8 @@ class TestToolExecution:
         with patch("miminions.cli.auth.get_config_dir", return_value=authenticated), \
              patch("miminions.cli.execution.get_config_dir", return_value=authenticated):
             result = runner.invoke(cli, ["execution", "run", "calculator"])
-            assert result.exit_code == 0
-            assert "No active session" in result.output
+            assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "No active session" in result.output, f"expect the result to contain 'No active session', got {result.output}"
 
     def test_run_tool_not_found(self, runner, authenticated, active_session, mock_agent):
         config_dir, _ = active_session
@@ -178,8 +183,8 @@ class TestToolExecution:
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution._build_agent", return_value=mock_agent):
             result = runner.invoke(cli, ["execution", "run", "nonexistent_tool"])
-            assert result.exit_code == 0
-            assert "not found" in result.output
+            assert result.exit_code == 0, f"expect cli execution run nonexistent_tool to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "not found" in result.output, f"expect the result to contain 'not found', got {result.output}"
 
     def test_run_tool_success(self, runner, authenticated, active_session, mock_agent):
         config_dir, _ = active_session
@@ -187,8 +192,8 @@ class TestToolExecution:
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution._build_agent", return_value=mock_agent):
             result = runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
-            assert result.exit_code == 0
-            assert "42" in result.output
+            assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert "42" in result.output, f"expect contains '42', got {result.output}"
 
     def test_run_tool_logs_interaction_as_workflow_run(self, runner, authenticated, active_session, mock_agent):
         """Interactions are now persisted as WorkflowRun objects, not raw dicts."""
@@ -198,18 +203,19 @@ class TestToolExecution:
              patch("miminions.cli.execution._build_agent", return_value=mock_agent):
             runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
             interactions_file = config_dir / "interactions.json"
-            assert interactions_file.exists(), "interactions.json should be created after a run"
+            file_exists = interactions_file.exists()
+            assert file_exists, f"expect interactions.json should be created after a run, got {file_exists}"
             raw = json.loads(interactions_file.read_text())
-            assert session_id in raw, f"Expected session_id '{session_id}' as a key in interactions.json"
+            assert session_id in raw, f"expect the created interactions file to contain session_id, got {raw}"
             runs = raw[session_id]
-            assert len(runs) == 1, f"Expected 1 recorded WorkflowRun, got {len(runs)}"
+            no_runs = len(runs)
+            assert no_runs == 1, f"expect the number of runs to be 1, got {no_runs}"
             wf = WorkflowRun.from_dict(runs[0])
             tool_calls = [r for r in wf.trace.records if isinstance(r, ToolCallRecord)]
-            assert len(tool_calls) == 1, f"Expected 1 tool call, got {len(tool_calls)}"
-            assert tool_calls[0].tool_name == "calculator", \
-                f"Expected tool_name 'calculator', got '{tool_calls[0].tool_name}'"
-            assert tool_calls[0].status == "success", \
-                f"Expected status 'success', got '{tool_calls[0].status}'"
+            no_tool_calls = len(tool_calls)
+            assert no_tool_calls == 1, f"expect the number of tool calls to be 1, got {no_tool_calls}"
+            assert tool_calls[0].tool_name == "calculator", f"expect the first tool call has name 'calculator', got {tool_calls[0].tool_name}"
+            assert tool_calls[0].status == "success", f"expect the first tool call has status 'success', got {tool_calls[0].status}"
 
 
 # ── Interactions ──────────────────────────────────────────────────────────────
@@ -221,7 +227,7 @@ class TestInteractions:
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "interaction", "list"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
 
     def test_show_interaction_index_out_of_range(self, runner, authenticated, active_session):
         """show takes an integer index — passing 99 on an empty log returns not found."""
@@ -229,8 +235,8 @@ class TestInteractions:
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "interaction", "show", "99"])
-            assert result.exit_code == 0
-            assert "No interaction at index" in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert "No interaction at index" in result.output, f"expect contains 'No interaction at index', got {result.output}"
 
     def test_show_interaction_found(self, runner, authenticated, active_session):
         """interactions.json now stores WorkflowRun dicts keyed by session_id."""
@@ -242,11 +248,9 @@ class TestInteractions:
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "interaction", "show", "0",
                                          "--session-id", session_id])
-            assert result.exit_code == 0, f"Unexpected output: {result.output}"
-            assert "calculator" in result.output, \
-                f"Expected 'calculator' in output, got: {result.output}"
-            assert "success" in result.output, \
-                f"Expected 'success' in output, got: {result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert "calculator" in result.output, f"expect contains 'calculator', got {result.output}"
+            assert "success" in result.output, f"expect contains 'success', got {result.output}"
 
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
@@ -257,12 +261,16 @@ class TestAuthGuard:
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "session", "start"])
-            assert result.exit_code == 0
-            assert "sign in" in result.output.lower()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            output_lower = result.output.lower()
+            target_value = "sign in"
+            assert target_value in output_lower, f"expect {target_value} in lowercased result output, got {output_lower}"
 
     def test_run_requires_auth(self, runner, config_dir):
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "run", "some_tool"])
-            assert result.exit_code == 0
-            assert "sign in" in result.output.lower()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            output_lower = result.output.lower()
+            target_value = "sign in"
+            assert target_value in output_lower, f"expect {target_value} in lowercased result output, got {output_lower}"

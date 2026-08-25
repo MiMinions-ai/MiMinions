@@ -8,12 +8,11 @@ Run:
 """
 
 import asyncio
-
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from miminions.tools.mcp_adapter import MCPToolAdapter, MCPTool
+import pytest
 
+from miminions.tools.mcp_adapter import MCPTool, MCPToolAdapter
 
 # -----------------------------
 # Fixtures (mock MCP-like objects)
@@ -53,14 +52,16 @@ def mock_mcp_tool():
 
 def test_extract_result_single_text_item_returns_string(make_mock_result):
     adapter = MCPToolAdapter()
-    out = adapter._extract_result(make_mock_result(["hello"]))
-    assert out == "hello"
+    prompt = "hello"
+    out = adapter._extract_result(make_mock_result([prompt]))
+    assert out == prompt, f"expect the adapter._extract_result to return '{prompt}', got {out}"
 
 
 def test_extract_result_multiple_text_items_returns_list(make_mock_result):
     adapter = MCPToolAdapter()
-    out = adapter._extract_result(make_mock_result(["a", "b", "c"]))
-    assert out == ["a", "b", "c"]
+    items = ["a", "b", "c"]
+    out = adapter._extract_result(make_mock_result(items))
+    assert out == items, f"expect the adapter._extract_result to return {items}, got {out}"
 
 
 def test_mcp_tool_to_dict_prefers_input_schema_when_present():
@@ -81,12 +82,12 @@ def test_mcp_tool_to_dict_prefers_input_schema_when_present():
     )
 
     d = tool.to_dict()
-    assert d["name"] == "search"
-    assert d["description"] == "Search tool"
+    assert d["name"] == "search", f"expect the created tool to have name 'search', got {d['name']}"
+    assert d["description"] == "Search tool", f"expect the created tool to have description 'Search tool', got {d['description']}"
     # Your MCPTool overrides to_dict to return MCP inputSchema as parameters.
-    assert d["parameters"]["type"] == "object"
-    assert d["parameters"]["properties"]["query"]["type"] == "string"
-    assert "query" in d["parameters"].get("required", [])
+    assert d["parameters"]["type"] == "object", f"expect the parameters type to be 'object', got {d['parameters']['type']}"
+    assert d["parameters"]["properties"]["query"]["type"] == "string", f"expect the parameters query type to be 'string', got {d['parameters']['properties']['query']['type']}"
+    assert "query" in d["parameters"].get("required", []), f"expect the parameters to contain 'query' in required, got {d['parameters'].get('required', [])}"
 
 
 @pytest.mark.asyncio
@@ -110,9 +111,9 @@ async def test_convert_mcp_tool_to_generic_success_returns_ok_true_and_result(
     tool = await adapter.convert_mcp_tool_to_generic(mock_mcp_tool, "serverA")
 
     out = await tool.arun(query="hi")
-    assert out["ok"] is True
-    assert out["result"] == "ok!"
-    assert "raw" in out  # raw MCP result returned for debugging
+    assert out["ok"] is True, f"expect after calling tool.arun(), the output['ok'] to be True, got {out['ok']}"
+    assert out["result"] == "ok!", f"expect the output['result'] to be 'ok!', got {out['result']}"
+    assert "raw" in out, f"expect the output to contain 'raw', got {out}"  # raw MCP result returned for debugging
 
 
 @pytest.mark.asyncio
@@ -135,9 +136,9 @@ async def test_convert_mcp_tool_to_generic_error_returns_ok_false_and_error_info
     tool = await adapter.convert_mcp_tool_to_generic(mcp_tool, "serverA")
 
     out = await tool.arun(query="hi")
-    assert out["ok"] is False
-    assert out["error"]["type"] == "RuntimeError"
-    assert "boom" in out["error"]["message"]
+    assert out["ok"] is False, f"expect after calling tool.arun(), the output['ok'] to be False, got {out['ok']}"
+    assert out["error"]["type"] == "RuntimeError", f"expect the output['error']['type'] to be 'RuntimeError', got {out['error']['type']}"
+    assert "boom" in out["error"]["message"], f"expect the output['error']['message'] to contain 'boom', got {out['error']['message']}"
 
 
 @pytest.mark.asyncio
@@ -170,8 +171,8 @@ async def test_load_all_tools_from_server_converts_all_tools():
     adapter.sessions["serverA"] = session
 
     tools = await adapter.load_all_tools_from_server("serverA")
-    assert [t.name for t in tools] == ["t1", "t2"]
-    assert all(isinstance(t, MCPTool) for t in tools)
+    assert [t.name for t in tools] == ["t1", "t2"], f"expect after calling adapter.load_all_tools_from_server('serverA'), the tool names to be ['t1', 't2'], got {[t.name for t in tools]}"
+    assert all(isinstance(t, MCPTool) for t in tools), f"expect all items to be instances of MCPTool, got {[type(t) for t in tools]}"
 
 
 def test_mcp_tool_run_raises_async_only_runtime_error():
@@ -208,12 +209,14 @@ async def test_connection_contexts_open_and_close_in_their_owner_task():
         side_effect=lambda: owner_tasks.append(asyncio.current_task())
     )
 
-    with patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context):
-        with patch('miminions.tools.mcp_adapter.ClientSession', return_value=session):
-            await adapter.connect_to_server("serverA", MagicMock())
-            await adapter.close_all_connections()
+    with (
+        patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context),
+        patch('miminions.tools.mcp_adapter.ClientSession', return_value=session),
+    ):
+        await adapter.connect_to_server("serverA", MagicMock())
+        await adapter.close_all_connections()
 
-    assert len(owner_tasks) == 3
-    assert len(set(owner_tasks)) == 1
-    assert adapter.sessions == {}
-    assert adapter._connection_tasks == {}
+    assert len(owner_tasks) == 3, f"expect the length of owner_tasks to be 3, got {len(owner_tasks)}"
+    assert len(set(owner_tasks)) == 1, f"expect all owner_tasks to be the same, got {len(set(owner_tasks))}"
+    assert adapter.sessions == {}, f"expect adapter.sessions to be {{}}, got {adapter.sessions}"
+    assert adapter._connection_tasks == {}, f"expect adapter._connection_tasks to be {{}}, got {adapter._connection_tasks}"

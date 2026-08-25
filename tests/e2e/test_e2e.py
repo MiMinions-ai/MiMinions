@@ -3,11 +3,12 @@ End-to-end tests for the MiMinions CLI.
 These tests simulate real user workflows and interactions.
 """
 
-import tempfile
 import json
+import tempfile
 from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
+
 from click.testing import CliRunner
 
 from miminions.cli.main import cli
@@ -212,22 +213,23 @@ class TestCLIEndToEnd:
                 '--description', 'Agent to test persistence',
                 '--type', 'general'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             
             # Verify the agent was saved by checking the file directly
             agents_file = self.config_dir / "agents.json"
-            assert agents_file.exists()
+            agents_file_exists = agents_file.exists()
+            assert agents_file_exists, f"expect data persistence writes agents.json after add command, got {agents_file_exists}"
             
             with open(agents_file, 'r') as f:
                 agents_data = json.load(f)
             
-            assert 'persistent_agent' in agents_data
-            assert agents_data['persistent_agent']['name'] == 'Persistent Agent'
+            assert 'persistent_agent' in agents_data, f"expect contains 'persistent_agent', got {agents_data}"
+            assert agents_data['persistent_agent']['name'] == 'Persistent Agent', f"expect 'Persistent Agent', got {agents_data['persistent_agent']['name']}"
             
             # Verify the agent can be listed in a new CLI invocation
             result = self.runner.invoke(cli, ['agent', 'list'])
-            assert result.exit_code == 0
-            assert 'persistent_agent: Persistent Agent (inactive)' in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'persistent_agent: Persistent Agent (inactive)' in result.output, f"expect contains 'persistent_agent: Persistent Agent (inactive)', got {result.output}"
 
     # TODO: Re-enable this test once error handling is fully implemented and stable.
     # def test_error_handling_workflow(self):
@@ -293,7 +295,7 @@ class TestCLIEndToEnd:
                 '--description', 'Original description',
                 '--priority', 'medium'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             task_id = self._extract_task_id(result.output)
             
             # Update the task
@@ -303,16 +305,16 @@ class TestCLIEndToEnd:
                 '--title', 'Updated Task',
                 '--status', 'in_progress'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             
             # Show the updated task
             result = self.runner.invoke(cli, [
                 'task', 'show',
                 task_id
             ])
-            assert result.exit_code == 0
-            assert 'Updated Task' in result.output
-            assert 'in_progress' in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Updated Task' in result.output, f"expect contains 'Updated Task', got {result.output}"
+            assert 'in_progress' in result.output, f"expect contains 'in_progress', got {result.output}"
             
             # Duplicate the task
             result = self.runner.invoke(cli, [
@@ -320,13 +322,13 @@ class TestCLIEndToEnd:
                 task_id,
                 '--title', 'Duplicated Task'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             
             # List tasks (should have 2 tasks)
             result = self.runner.invoke(cli, ['task', 'list'])
-            assert result.exit_code == 0
-            assert 'Updated Task' in result.output
-            assert 'Duplicated Task' in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Updated Task' in result.output, f"expect contains 'Updated Task', got {result.output}"
+            assert 'Duplicated Task' in result.output, f"expect contains 'Duplicated Task', got {result.output}"
 
     def test_knowledge_versioning_workflow(self):
         """Test knowledge versioning workflow."""
@@ -346,7 +348,7 @@ class TestCLIEndToEnd:
                 '--content', 'Original content',
                 '--category', 'testing'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             entry_id = self._extract_knowledge_id(result.output)
             
             # Update the knowledge (should create new version)
@@ -355,17 +357,17 @@ class TestCLIEndToEnd:
                 entry_id,
                 '--content', 'Updated content'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             
             # Check version history
             result = self.runner.invoke(cli, [
                 'knowledge', 'version',
                 entry_id
             ])
-            assert result.exit_code == 0
-            assert 'v1' in result.output
-            assert 'v2' in result.output
-            assert '(current)' in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'v1' in result.output, f"expect contains 'v1', got {result.output}"
+            assert 'v2' in result.output, f"expect contains 'v2', got {result.output}"
+            assert '(current)' in result.output, f"expect contains '(current)', got {result.output}"
 
             # Revert to previous version
             result = self.runner.invoke(cli, [
@@ -373,15 +375,15 @@ class TestCLIEndToEnd:
                 entry_id,
                 '--version', '1'
             ])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             
             # Verify reverted content
             result = self.runner.invoke(cli, [
                 'knowledge', 'show',
                 entry_id
             ])
-            assert result.exit_code == 0
-            assert 'Original content' in result.output
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Original content' in result.output, f"expect contains 'Original content', got {result.output}"
 
     def _extract_workflow_id(self, output):
         """Extract workflow ID from command output."""

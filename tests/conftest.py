@@ -3,11 +3,12 @@ Pytest configuration for MiMinions CLI tests.
 """
 
 import os
-import sys
-import pytest
-import tempfile
 import shutil
+import sys
+import tempfile
 from pathlib import Path
+
+import pytest
 
 # Provide placeholder credentials so model clients (OpenAI/OpenRouter/etc.)
 # can be constructed during tests without real secrets. Newer openai SDKs

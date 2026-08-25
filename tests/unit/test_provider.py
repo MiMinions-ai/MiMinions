@@ -19,7 +19,7 @@ def test_openrouter_builds_model_with_api_key(monkeypatch):
 
     model = ModelFactory.create("openrouter")
 
-    assert model is not None
+    assert model is not None, f"expect the model to be not None, got {model}"
 
 
 def test_unknown_provider_raises():

@@ -1,10 +1,10 @@
 """Agent Test Suite - Core functionality tests."""
-
 import asyncio
-import sys
 import threading
 import time
+from unittest.mock import patch
 
+import pytest
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -13,19 +13,18 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from pydantic_ai.models.function import FunctionModel
-from unittest.mock import patch
 
 from miminions.agent import (
     create_minion,
 )
+from miminions.tools.mcp_adapter import MCPTool
 from miminions.tools.schemas import (
+    ExecutionStatus,
+    ParameterType,
     ToolDefinition,
     ToolExecutionRequest,
     ToolExecutionResult,
-    ExecutionStatus,
-    ParameterType,
 )
-from miminions.tools.mcp_adapter import MCPTool
 
 
 def _cleanup(agent):
@@ -38,13 +37,13 @@ def test_agent_creation():
     print("test_agent_creation")
     agent = create_minion("TestAgent", "A test agent")
     
-    assert agent.name == "TestAgent"
-    assert agent.description == "A test agent"
+    assert agent.name == "TestAgent", f"expect 'TestAgent', got {agent.name}"
+    assert agent.description == "A test agent", f"expect 'A test agent', got {agent.description}"
     
     state = agent.get_state()
-    assert state.tool_count == 1
-    assert state.has_memory is False
-    assert "cli_run_command" in agent.list_tools()
+    assert state.tool_count == 1, f"expect 1, got {state.tool_count}"
+    assert state.has_memory is False, f"expect False, got {state.has_memory}"
+    assert "cli_run_command" in agent.list_tools(), f"expect contains 'cli_run_command', got {agent.list_tools()}"
     
     _cleanup(agent)
     print("PASSED")
@@ -65,17 +64,18 @@ def test_tool_registration():
     agent.register_tool("greet", "Greet someone", greet)
     
     # Verify tool definition
-    assert isinstance(add_def, ToolDefinition)
-    assert add_def.name == "add"
+    add_def_is_tool_definition = isinstance(add_def, ToolDefinition)
+    assert add_def_is_tool_definition, f"expect register_tool returns ToolDefinition, got {type(add_def)}"
+    assert add_def.name == "add", f"expect 'add', got {add_def.name}"
     
     # Verify schema extraction
     a_param = next(p for p in add_def.schema_def.parameters if p.name == "a")
-    assert a_param.type == ParameterType.INTEGER
-    assert a_param.required is True
+    assert a_param.type == ParameterType.INTEGER, f"expect ParameterType.INTEGER, got {a_param.type}"
+    assert a_param.required is True, f"expect True, got {a_param.required}"
     
     tools = agent.list_tools()
-    assert "add" in tools
-    assert "greet" in tools
+    assert "add" in tools, f"expect contains 'add', got {tools}"
+    assert "greet" in tools, f"expect contains 'greet', got {tools}"
     
     _cleanup(agent)
     print("PASSED")
@@ -92,23 +92,24 @@ def test_tool_execution():
     agent.register_tool("multiply", "Multiply two numbers", multiply)
     
     result = agent.execute("multiply", a=3.0, b=4.0)
-    assert isinstance(result, ToolExecutionResult)
-    assert result.status == ExecutionStatus.SUCCESS
-    assert result.result == 12.0
-    assert result.execution_time_ms >= 0
+    result_is_execution_result = isinstance(result, ToolExecutionResult)
+    assert result_is_execution_result, f"expect execute returns ToolExecutionResult, got {type(result)}"
+    assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {result.status}"
+    assert result.result == 12.0, f"expect 12.0, got {result.result}"
+    assert result.execution_time_ms >= 0, f"expect result.execution_time_ms >= 0, got {result.execution_time_ms}"
     
     # With arguments dict
     result2 = agent.execute("multiply", arguments={"a": 5.0, "b": 2.0})
-    assert result2.result == 10.0
+    assert result2.result == 10.0, f"expect 10.0, got {result2.result}"
     
     # Raw execution (returns value directly)
     raw = agent.execute_tool("multiply", a=2.0, b=3.0)
-    assert raw == 6.0
+    assert raw == 6.0, f"expect 6.0, got {raw}"
     
     # Via ToolExecutionRequest
     request = ToolExecutionRequest(tool_name="multiply", arguments={"a": 7.0, "b": 2.0})
     result3 = agent.handle_tool_execution_request(request)
-    assert result3.result == 14.0
+    assert result3.result == 14.0, f"expect 14.0, got {result3.result}"
     
     _cleanup(agent)
     print("PASSED")
@@ -138,13 +139,9 @@ async def test_parallel_sync_tool_execution():
     elapsed = time.perf_counter() - started
 
     actual_values = [result.result for result in results]
-    assert elapsed < 0.27, f"Expected elapsed time under 0.27s, got {elapsed:.3f}s"
-    assert actual_values == ["first", "second"], (
-        f"Expected ordered results ['first', 'second'], got {actual_values!r}"
-    )
-    assert threading.get_ident() not in thread_ids, (
-        f"Expected worker thread IDs, got main thread in {thread_ids!r}"
-    )
+    assert elapsed < 0.27, f"expect elapsed < 0.27, got {elapsed}"
+    assert actual_values == ["first", "second"], f"expect ['first', 'second'], got {actual_values}"
+    assert threading.get_ident() not in thread_ids, f"expect not contains threading.get_ident(), got {thread_ids}"
     await agent.cleanup()
 
 
@@ -173,10 +170,8 @@ async def test_parallel_async_tools_preserve_request_order():
     elapsed = time.perf_counter() - started
 
     actual_values = [result.result for result in results]
-    assert elapsed < 0.2, f"Expected elapsed time under 0.2s, got {elapsed:.3f}s"
-    assert actual_values == ["slow", "fast"], (
-        f"Expected ordered results ['slow', 'fast'], got {actual_values!r}"
-    )
+    assert elapsed < 0.2, f"expect elapsed < 0.2, got {elapsed}"
+    assert actual_values == ["slow", "fast"], f"expect ['slow', 'fast'], got {actual_values}"
     await agent.cleanup()
 
 
@@ -210,10 +205,8 @@ async def test_parallel_batch_respects_concurrency_limit():
     results = await agent.execute_many_async(requests, max_concurrency=2)
     actual_values = [result.result for result in results]
 
-    assert max_active == 2, f"Expected at most 2 active tools, got {max_active}"
-    assert actual_values == list(range(6)), (
-        f"Expected ordered results {list(range(6))!r}, got {actual_values!r}"
-    )
+    assert max_active == 2, f"expect 2, got {max_active}"
+    assert actual_values == list(range(6)), f"expect list(range(6)), got {actual_values}"
     await agent.cleanup()
 
 
@@ -223,13 +216,10 @@ async def test_parallel_batch_rejects_invalid_concurrency_limit():
 
     try:
         await agent.execute_many_async([], max_concurrency=0)
-        assert False, "Expected ValueError, got no exception"
+        pytest.fail("expect execute_many_async to reject non-positive max_concurrency")
     except ValueError as exc:
         actual_message = str(exc)
-        assert actual_message == "max_concurrency must be greater than zero", (
-            "Expected max_concurrency validation error, "
-            f"got {actual_message!r}"
-        )
+        assert actual_message == "max_concurrency must be greater than zero", f"expect 'max_concurrency must be greater than zero', got {actual_message}"
 
     await agent.cleanup()
 
@@ -253,18 +243,10 @@ async def test_parallel_batch_isolates_failures():
         ToolExecutionRequest(tool_name="succeed"),
     ])
 
-    assert results[0].status == ExecutionStatus.ERROR, (
-        f"Expected first status error, got {results[0].status!r}"
-    )
-    assert results[0].error == "broken tool", (
-        f"Expected error 'broken tool', got {results[0].error!r}"
-    )
-    assert results[1].status == ExecutionStatus.SUCCESS, (
-        f"Expected second status success, got {results[1].status!r}"
-    )
-    assert results[1].result == "ok", (
-        f"Expected successful result 'ok', got {results[1].result!r}"
-    )
+    assert results[0].status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {results[0].status}"
+    assert results[0].error == "broken tool", f"expect 'broken tool', got {results[0].error}"
+    assert results[1].status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {results[1].status}"
+    assert results[1].result == "ok", f"expect 'ok', got {results[1].result}"
     await agent.cleanup()
 
 
@@ -294,22 +276,14 @@ async def test_llm_parallel_results_are_injected_together():
             "work",
             "fail_for_model",
         ]
-        assert actual_tool_names == expected_tool_names, (
-            f"Expected tool returns {expected_tool_names!r}, got {actual_tool_names!r}"
-        )
+        assert actual_tool_names == expected_tool_names, f"expect expected_tool_names, got {actual_tool_names}"
         actual_success_content = [part.content for part in returns[:2]]
-        assert actual_success_content == ["first", "second"], (
-            "Expected successful content ['first', 'second'], "
-            f"got {actual_success_content!r}"
-        )
+        assert actual_success_content == ["first", "second"], f"expect ['first', 'second'], got {actual_success_content}"
         expected_error_content = {
             "status": "error",
             "error": "model-visible failure",
         }
-        assert returns[2].content == expected_error_content, (
-            f"Expected error content {expected_error_content!r}, "
-            f"got {returns[2].content!r}"
-        )
+        assert returns[2].content == expected_error_content, f"expect expected_error_content, got {returns[2].content}"
         model_saw_results = True
         return ModelResponse(parts=[TextPart("all tools completed")])
 
@@ -333,13 +307,9 @@ async def test_llm_parallel_results_are_injected_together():
 
     reply = await agent.run("Run all tools")
 
-    assert reply == "all tools completed", (
-        f"Expected final reply 'all tools completed', got {reply!r}"
-    )
-    assert max_active == 2, f"Expected 2 concurrent LLM tools, got {max_active}"
-    assert model_saw_results is True, (
-        f"Expected model_saw_results True, got {model_saw_results!r}"
-    )
+    assert reply == "all tools completed", f"expect 'all tools completed', got {reply}"
+    assert max_active == 2, f"expect 2, got {max_active}"
+    assert model_saw_results is True, f"expect True, got {model_saw_results}"
     await agent.cleanup()
 
 
@@ -355,18 +325,18 @@ def test_error_handling():
     
     # execute() captures errors
     result = agent.execute("fail")
-    assert result.status == ExecutionStatus.ERROR
-    assert "always fails" in result.error.lower()
+    assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result.status}"
+    assert "always fails" in result.error.lower(), f"expect contains 'always fails', got {result.error.lower()}"
     
     # execute() on nonexistent tool
     result2 = agent.execute("nonexistent")
-    assert result2.status == ExecutionStatus.ERROR
-    assert "not found" in result2.error.lower()
+    assert result2.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result2.status}"
+    assert "not found" in result2.error.lower(), f"expect contains 'not found', got {result2.error.lower()}"
     
     # execute_tool() raises exceptions
     try:
         agent.execute_tool("fail")
-        assert False, "Should have raised"
+        pytest.fail("expect execute_tool to raise RuntimeError for failing tool")
     except RuntimeError:
         pass
     
@@ -385,14 +355,14 @@ def test_tool_schema_json():
     agent.register_tool("search", "Search for items", search)
     
     schemas = agent.get_tools_schema()
-    assert len(schemas) == 2
+    assert len(schemas) == 2, f"expect 2, got {len(schemas)}"
     
     schema = next(s for s in schemas if s["name"] == "search")
-    assert schema["name"] == "search"
-    assert "parameters" in schema
-    assert "query" in schema["parameters"]["properties"]
-    assert "query" in schema["parameters"]["required"]
-    assert "max_results" not in schema["parameters"]["required"]
+    assert schema["name"] == "search", f"expect 'search', got {schema['name']}"
+    assert "parameters" in schema, f"expect contains 'parameters', got {schema}"
+    assert "query" in schema["parameters"]["properties"], f"expect contains 'query', got {schema['parameters']['properties']}"
+    assert "query" in schema["parameters"]["required"], f"expect contains 'query', got {schema['parameters']['required']}"
+    assert "max_results" not in schema["parameters"]["required"], f"expect not contains 'max_results', got {schema['parameters']['required']}"
     
     _cleanup(agent)
     print("PASSED")
@@ -407,9 +377,9 @@ def test_command_tool_schema_hides_permission_policy():
         if item["name"] == "cli_run_command"
     )
     properties = schema["parameters"]["properties"]
-    assert "command" in properties
-    assert "timeout" in properties
-    assert "policy" not in properties
+    assert "command" in properties, f"expect contains 'command', got {properties}"
+    assert "timeout" in properties, f"expect contains 'timeout', got {properties}"
+    assert "policy" not in properties, f"expect not contains 'policy', got {properties}"
 
     _cleanup(agent)
     print("PASSED")
@@ -429,7 +399,7 @@ def test_command_tool_uses_subprocess_reported_timing():
     )
     result = agent.execute("cli_run_command", command="python --version")
 
-    assert result.execution_time_ms == 12.5
+    assert result.execution_time_ms == 12.5, f"expect 12.5, got {result.execution_time_ms}"
     _cleanup(agent)
 
 
@@ -440,9 +410,9 @@ def test_rejected_command_reports_zero_execution_time():
     with patch("miminions.tools.default.click.confirm", return_value=False):
         result = agent.execute("cli_run_command", command="python --version")
 
-    assert result.status == ExecutionStatus.ERROR
-    assert "not approved" in result.error
-    assert result.execution_time_ms == 0.0
+    assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result.status}"
+    assert "not approved" in result.error, f"expect contains 'not approved', got {result.error}"
+    assert result.execution_time_ms == 0.0, f"expect 0.0, got {result.execution_time_ms}"
     _cleanup(agent)
 
 
@@ -456,11 +426,11 @@ def test_tool_management():
     agent.register_tool("string_concat", "Concatenate strings", lambda a, b: a + b)
     
     math_tools = agent.search_tools("math")
-    assert len(math_tools) == 2
+    assert len(math_tools) == 2, f"expect 2, got {len(math_tools)}"
     
-    assert agent.unregister_tool("math_add") is True
-    assert "math_add" not in agent.list_tools()
-    assert agent.unregister_tool("nonexistent") is False
+    assert agent.unregister_tool("math_add") is True, f"expect True, got {agent.unregister_tool('math_add')}"
+    assert "math_add" not in agent.list_tools(), f"expect not contains 'math_add', got {agent.list_tools()}"
+    assert agent.unregister_tool("nonexistent") is False, f"expect False, got {agent.unregister_tool('nonexistent')}"
     
     _cleanup(agent)
     print("PASSED")
@@ -489,47 +459,10 @@ async def test_async_generic_tool_registration_uses_async_execution_and_schema()
 
     result = await agent.execute_async("greet", arguments={"name": "MiMinions"})
 
-    assert result.status == ExecutionStatus.SUCCESS
-    assert result.result == "Hello, MiMinions!"
+    assert result.status == ExecutionStatus.SUCCESS, f"expect ExecutionStatus.SUCCESS, got {result.status}"
+    assert result.result == "Hello, MiMinions!", f"expect 'Hello, MiMinions!', got {result.result}"
     info = agent.get_tool_info("greet")
-    assert info["parameters"]["properties"]["name"]["type"] == "string"
-    assert "name" in info["parameters"]["required"]
+    assert info["parameters"]["properties"]["name"]["type"] == "string", f"expect 'string', got {info['parameters']['properties']['name']['type']}"
+    assert "name" in info["parameters"]["required"], f"expect contains 'name', got {info['parameters']['required']}"
     await agent.cleanup()
 
-
-async def main():
-    print("Agent Tests")
-    tests = [
-        test_agent_creation,
-        test_tool_registration,
-        test_tool_execution,
-        test_parallel_sync_tool_execution,
-        test_parallel_async_tools_preserve_request_order,
-        test_parallel_batch_respects_concurrency_limit,
-        test_parallel_batch_rejects_invalid_concurrency_limit,
-        test_parallel_batch_isolates_failures,
-        test_llm_parallel_results_are_injected_together,
-        test_error_handling,
-        test_tool_schema_json,
-        test_command_tool_schema_hides_permission_policy,
-        test_command_tool_uses_subprocess_reported_timing,
-        test_rejected_command_reports_zero_execution_time,
-        test_tool_management,
-    ]
-    
-    passed = 0
-    for test in tests:
-        try:
-            test()
-            passed += 1
-        except Exception as e:
-            print(f"FAILED: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    print(f"\nTests completed: {passed}/{len(tests)} passed")
-    return 0 if passed == len(tests) else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

@@ -49,9 +49,9 @@ async def test_transient_errors_are_retried_then_succeed(monkeypatch):
 
     reply = await minion.run("hello")
 
-    assert reply == "ok"
-    assert fake.calls == 3
-    assert minion._last_messages == ["message"]
+    assert reply == "ok", f"expect the minion.run() result to be 'ok', got {reply}"
+    assert fake.calls == 3, f"expect the number of calls to be 3, got {fake.calls}"
+    assert minion._last_messages == ["message"], f"expect the minion._last_messages to be ['message'], got {minion._last_messages}"
 
 
 async def test_non_retryable_error_raises_immediately(monkeypatch):
@@ -62,7 +62,7 @@ async def test_non_retryable_error_raises_immediately(monkeypatch):
     with pytest.raises(ModelHTTPError):
         await minion.run("hello")
 
-    assert fake.calls == 1
+    assert fake.calls == 1, f"expect the number of calls to be 1, got {fake.calls}"
 
 
 async def test_exhausted_retries_reraise(monkeypatch):
@@ -73,7 +73,7 @@ async def test_exhausted_retries_reraise(monkeypatch):
     with pytest.raises(ModelHTTPError):
         await minion.run("hello")
 
-    assert fake.calls == 2
+    assert fake.calls == 2, f"expect the number of calls to be 2, got {fake.calls}"
 
 
 async def test_connection_errors_are_retried(monkeypatch):
@@ -83,8 +83,8 @@ async def test_connection_errors_are_retried(monkeypatch):
 
     reply = await minion.run("hello")
 
-    assert reply == "ok"
-    assert fake.calls == 2
+    assert reply == "ok", f"expect the minion.run() result to be 'ok', got {reply}"
+    assert fake.calls == 2, f"expect the number of calls to be 2, got {fake.calls}"
 
 
 async def test_backoff_delays_double_per_attempt(monkeypatch):
@@ -101,8 +101,8 @@ async def test_backoff_delays_double_per_attempt(monkeypatch):
 
     reply = await minion.run("hello")
 
-    assert reply == "ok"
-    assert delays == [0.5, 1.0]
+    assert reply == "ok", f"expect the minion.run() result to be 'ok', got {reply}"
+    assert delays == [0.5, 1.0], f"expect the delays to be [0.5, 1.0], got {delays}"
 
 
 @pytest.mark.parametrize(
@@ -118,7 +118,7 @@ async def test_backoff_delays_double_per_attempt(monkeypatch):
     ],
 )
 def test_is_retryable_error(exc, expected):
-    assert _is_retryable_error(exc) is expected
+    assert _is_retryable_error(exc) is expected, f"expect the result of _is_retryable_error to be {expected}, got {_is_retryable_error(exc)}"
 
 
 def test_rebuild_passes_request_timeout(monkeypatch):
@@ -133,7 +133,7 @@ def test_rebuild_passes_request_timeout(monkeypatch):
 
     minion._rebuild_pydantic_ai_agent()
 
-    assert captured["model_settings"] == {"timeout": 12.5}
+    assert captured["model_settings"] == {"timeout": 12.5}, f"expect the captured model_settings to be {{'timeout': 12.5}}, got {captured['model_settings']}"
 
 
 def test_rebuild_omits_model_settings_without_timeout(monkeypatch):
@@ -148,4 +148,4 @@ def test_rebuild_omits_model_settings_without_timeout(monkeypatch):
 
     minion._rebuild_pydantic_ai_agent()
 
-    assert captured["model_settings"] is None
+    assert captured["model_settings"] is None, f"expect the captured model_settings to be None, got {captured['model_settings']}"
