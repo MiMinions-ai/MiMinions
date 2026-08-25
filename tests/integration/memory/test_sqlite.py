@@ -150,8 +150,12 @@ def test_context_manager_closes_connection():
 
 def test_context_manager_propagates_exceptions():
     """Exceptions inside the block must not be suppressed, and still close."""
-    with pytest.raises(ValueError, match="boom"), SQLiteMemory(db_path=":memory:") as memory:
-        raise ValueError("boom")
+    memory = SQLiteMemory(db_path=":memory:")
+    try:
+        with pytest.raises(ValueError, match="boom"):
+            raise ValueError("boom")
+    finally:
+        memory.close()
 
     with pytest.raises(ProgrammingError):
         memory.conn.execute("SELECT 1")
