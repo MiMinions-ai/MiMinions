@@ -70,7 +70,7 @@ class MCPToolAdapter:
                         self.sessions[server_name] = session
                         ready.set_result(None)
                         await stop_event.wait()
-            except BaseException as exc:
+            except Exception as exc:
                 if not ready.done():
                     ready.set_exception(exc)
                 else:
@@ -83,7 +83,7 @@ class MCPToolAdapter:
         self._stop_events[server_name] = stop_event
         try:
             await ready
-        except BaseException:
+        except Exception:
             self._connection_tasks.pop(server_name, None)
             self._stop_events.pop(server_name, None)
             if not task.done():
