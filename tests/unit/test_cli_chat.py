@@ -46,6 +46,11 @@ class MockMinion:
             raise RuntimeError("model failed")
         return self.replies.pop(0)
 
+    async def run_stream(self, text, message_history=None):
+        if self.fail:
+            raise RuntimeError("model failed")
+        yield self.replies.pop(0)
+
 
 def test_chat_uses_default_workspace_and_records_session(tmp_path, isolated_cli_runner, monkeypatch):
     """Chat should use the configured default workspace and persist the conversation."""

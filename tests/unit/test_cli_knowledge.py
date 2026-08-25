@@ -54,7 +54,7 @@ def test_knowledge_add_list_show_update_and_versions(
     assert "Knowledge entry 'Guide' added successfully with ID: abcd1234" in added.output, f"expect knowledge add command reports created entry id for the new entry as {"Knowledge entry 'Guide' added successfully with ID: abcd1234"}, got {added.output}"
 
     listed = isolated_cli_runner.invoke(knowledge_cli, ["list"])
-    assert "abcd1234: Guide (v1.0, docs, active)" in listed.output, f"expect knowledge list output includes created entry id, title, version, category, and status as 'abcd1234: Guide (v1.0, docs, active)', got {listed.output}"
+    assert "abcd1234: Guide (v1, docs, active)" in listed.output, f"expect knowledge list output includes created entry id, title, version, category, and status as 'abcd1234: Guide (v1, docs, active)', got {listed.output}"
 
     shown = isolated_cli_runner.invoke(knowledge_cli, ["show", "abcd1234"])
     assert "Tags: cli, tests" in shown.output, f"expect knowledge show output lists configured tags for selected entry as 'Tags: cli, tests', got {shown.output}"
@@ -78,12 +78,12 @@ def test_knowledge_add_list_show_update_and_versions(
 
     data = json.loads((tmp_path / "knowledge.json").read_text(encoding="utf-8"))
     assert data["abcd1234"]["title"] == "Guide v2", f"expect updated knowledge title is persisted to storage after knowledge update command as 'Guide v2', got {data['abcd1234']['title']}"
-    assert data["abcd1234"]["version"] == "1.1", f"expect knowledge entry semantic version increments after content update as '1.1', got {data['abcd1234']['version']}"
+    assert data["abcd1234"]["version"] == "2", f"expect knowledge entry version increments after content update as '2', got {data['abcd1234']['version']}"
     assert data["abcd1234"]["versions"][-1]["content"] == "Second", f"expect latest version history record stores updated content text as 'Second', got {data['abcd1234']['versions'][-1]['content']}"
 
     versions = isolated_cli_runner.invoke(knowledge_cli, ["version", "abcd1234"])
-    assert "v1.0" in versions.output, f"expect version command output includes original version history entry as 'v1.0', got {versions.output}"
-    assert "v1.1 (current)" in versions.output, f"expect version command output marks latest version as current as 'v1.1 (current)', got {versions.output}"
+    assert "v1" in versions.output, f"expect version command output includes original version history entry as 'v1', got {versions.output}"
+    assert "v2 (current)" in versions.output, f"expect version command output marks latest version as current as 'v2 (current)', got {versions.output}"
 
 
 def test_knowledge_revert_customize_remove_and_missing_paths(

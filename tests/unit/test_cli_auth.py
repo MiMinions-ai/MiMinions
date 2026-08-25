@@ -15,7 +15,7 @@ from miminions.cli.auth import (
 def test_config_defaults_and_round_trip(tmp_path, monkeypatch):
     monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
 
-    target_config = {"public_access": False, "auth_timeout": 30}
+    target_config = {}
     current_config = get_config()
     public_access_enabled = is_public_access_enabled()
     auth_timeout = get_auth_timeout()

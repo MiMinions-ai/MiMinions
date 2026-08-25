@@ -18,6 +18,10 @@ def test_task_crud_commands_persist_json(isolated_cli_runner, tmp_path, monkeypa
     monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
     monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
     monkeypatch.setattr("miminions.cli.task.uuid.uuid4", lambda: "12345678-aaaa")
+    (tmp_path / "agents.json").write_text(
+        json.dumps({"agent1": {"name": "Agent One"}}),
+        encoding="utf-8",
+    )
 
     added = isolated_cli_runner.invoke(
         task_cli,
