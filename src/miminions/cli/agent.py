@@ -152,6 +152,7 @@ async def _execute_agent_action(runtime_agent, operation, **params):
         return await runtime_agent.execute_async(
             params["tool_name"], arguments=params["arguments"]
         )
+    raise click.ClickException(f"Unhandled agent action: {action.value}")
 
 
 async def _run_with_agent_runtime(agent_data, operation, **params):
