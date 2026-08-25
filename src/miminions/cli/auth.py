@@ -11,7 +11,7 @@ import time
 from miminions.core.paths import get_config_dir
 
 from .config import get_config_file, load_config
-from .persistence import load_json, save_json
+from .persistence import save_json
 
 
 def save_config(config):
