@@ -1,11 +1,16 @@
 """Unit tests for task.control module (TaskRuntime)."""
-import pytest
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+import pytest
+
 from miminions.task.control import TaskRuntime
-from miminions.task.model import AgentTask, TaskStatus, TaskPriority
+from miminions.task.model import AgentTask, TaskPriority, TaskStatus
+
+
+class TaskRuntimeTestError(Exception):
+    """Test-only exception raised by mock task agents."""
 
 
 class TestTaskRuntimeInitialization:
@@ -274,7 +279,7 @@ class TestTaskRuntimeUpdateTask:
         task = AgentTask()
         runtime.add_task(task)
         
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         runtime.update_task(task.id, start_time=start_time)
         
         assert task.start_time == start_time, f"expect after update task, task start_time to be {start_time}, got {task.start_time}"
@@ -285,7 +290,7 @@ class TestTaskRuntimeUpdateTask:
         task = AgentTask()
         runtime.add_task(task)
         
-        end_time = datetime.now()
+        end_time = datetime.now(UTC)
         runtime.update_task(task.id, end_time=end_time)
         
         assert task.end_time == end_time, f"expect after update task, task end_time to be {end_time}, got {task.end_time}"
@@ -467,7 +472,7 @@ class TestTaskRuntimeAsyncExecution:
         mock_agent = MagicMock()
         
         async def mock_run_fail(*args, **kwargs):
-            raise Exception("Task failed")
+            raise TaskRuntimeTestError("Task failed")
         
         mock_agent.run = mock_run_fail
         
@@ -476,8 +481,12 @@ class TestTaskRuntimeAsyncExecution:
         runtime.add_task(task)
         
         # Run tasks - should handle exception
-        with pytest.raises(Exception):
+        with pytest.raises(ExceptionGroup) as exc_info:
             await runtime.run()
+        inner_errors = exc_info.value.exceptions
+        assert len(inner_errors) == 1, f"expect runtime.run failure group contains one inner error as 1, got {len(inner_errors)}"
+        assert isinstance(inner_errors[0], TaskRuntimeTestError), f"expect runtime.run failure wraps TaskRuntimeTestError, got {type(inner_errors[0])}"
+        assert str(inner_errors[0]) == "Task failed", f"expect runtime.run failure message is 'Task failed', got {inner_errors[0]}"
 
     @pytest.mark.asyncio
     async def test_get_task_status_all_tasks(self):

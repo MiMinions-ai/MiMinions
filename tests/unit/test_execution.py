@@ -2,14 +2,19 @@
 Unit tests for the MiMinions CLI execution module.
 """
 
-import pytest
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 from click.testing import CliRunner
 
 from miminions.cli.main import cli
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
-
+from miminions.workflow.models import (
+    AgentRunRecord,
+    ToolCallRecord,
+    WorkflowRun,
+    WorkflowTrace,
+)
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -135,7 +140,7 @@ class TestSessionManagement:
             assert "No sessions found" in result.output, f"expect the result to contain 'No sessions found', got {result.output}"
 
     def test_list_sessions_shows_active(self, runner, authenticated, active_session):
-        config_dir, session_id = active_session
+        config_dir, _session_id = active_session
         with patch("miminions.cli.auth.get_config_dir", return_value=config_dir), \
              patch("miminions.cli.execution.get_config_dir", return_value=config_dir):
             result = runner.invoke(cli, ["execution", "session", "list"])

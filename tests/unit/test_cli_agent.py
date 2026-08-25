@@ -9,7 +9,6 @@ from miminions.cli.agent import (
     save_agents,
 )
 
-
 NONEXISTENT_AGENT_ID = "agent-does-not-exist"
 NONEXISTENT_TOOL_NAME = "tool-does-not-exist"
 

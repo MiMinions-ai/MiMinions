@@ -1,14 +1,14 @@
 """Unit tests for task.model module."""
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from miminions.task.model import (
-    TaskStatus,
-    TaskPriority,
-    Task,
     AgentTask,
+    Task,
     TaskInput,
     TaskOutput,
+    TaskPriority,
+    TaskStatus,
 )
 
 
@@ -108,7 +108,7 @@ class TestTask:
         custom_description = "A test task description"
         custom_status = TaskStatus.RUNNING
         custom_priority = TaskPriority.HIGH
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         
         task = Task(
             id=custom_id,
@@ -162,11 +162,11 @@ class TestTask:
         assert task.start_time is None, f"expect the task.start_time to be {None}, got {task.start_time}"
         assert task.end_time is None, f"expect the task.end_time to be {None}, got {task.end_time}"
         
-        start = datetime.now()
+        start = datetime.now(UTC)
         task.start_time = start
         assert task.start_time == start, f"expect the task.start_time to be {start}, got {task.start_time}"
         
-        end = datetime.now()
+        end = datetime.now(UTC)
         task.end_time = end
         assert task.end_time == end, f"expect the task.end_time to be {end}, got {task.end_time}"
         assert task.end_time >= task.start_time, f"expect the task.end_time to be >= {task.start_time}, got {task.end_time}"
@@ -424,13 +424,13 @@ class TestTaskDataclassIntegration:
         
         # Start task
         task.status = TaskStatus.RUNNING
-        task.start_time = datetime.now()
+        task.start_time = datetime.now(UTC)
         assert task.status == TaskStatus.RUNNING, f"expect the task.status to be {TaskStatus.RUNNING}, got {task.status}"
         assert task.start_time is not None, f"expect the task.start_time is not None, got {task.start_time}"
         
         # Complete task
         task.status = TaskStatus.COMPLETED
-        task.end_time = datetime.now()
+        task.end_time = datetime.now(UTC)
         assert task.status == TaskStatus.COMPLETED, f"expect the task.status to be {TaskStatus.COMPLETED}, got {task.status}"
         assert task.end_time is not None, f"expect the task.end_time is not None, got {task.end_time}"
         assert task.end_time >= task.start_time, f"expect the task.end_time >= task.start_time, got {task.end_time}"

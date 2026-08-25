@@ -1,9 +1,11 @@
 """Unit tests for gateway.services module (CronService)."""
+import asyncio
 import json
-import pytest
-import time
 import tempfile
+import time
 from pathlib import Path
+
+import pytest
 
 from miminions.core.gateway.services import (
     CronJob,
@@ -16,7 +18,6 @@ from miminions.core.gateway.services import (
     _now_ms,
     _validate_schedule,
 )
-
 
 # ── Data model tests ─────────────────────────────────────────────────
 
@@ -501,7 +502,7 @@ class TestCronServiceRunJob:
 
             # Verify error was recorded
             store = svc._load_store()
-            executed = [j for j in store.jobs if j.id == job.id][0]
+            executed = next(j for j in store.jobs if j.id == job.id)
             assert executed.state.last_status == "error", f"expect run_job records callback failure status as 'error', got {executed.state.last_status}"
             assert "handler error" in executed.state.last_error, f"expect contains 'handler error', got {executed.state.last_error}"
             await svc.stop()
@@ -523,7 +524,7 @@ class TestCronServiceRunJob:
             assert ok is True, f"expect run_job returns True for existing job when no callback is configured, got {ok}"
 
             store = svc._load_store()
-            executed = [j for j in store.jobs if j.id == job.id][0]
+            executed = next(j for j in store.jobs if j.id == job.id)
             assert executed.state.last_status == "ok", f"expect run_job without callback records successful status as 'ok', got {executed.state.last_status}"
             await svc.stop()
 
@@ -590,7 +591,7 @@ class TestCronServiceExecuteJob:
             assert ok is True, f"expect recurring job executes successfully when run manually as True, got {ok}"
 
             store = svc._load_store()
-            updated = [j for j in store.jobs if j.id == job.id][0]
+            updated = next(j for j in store.jobs if j.id == job.id)
             assert updated.state.next_run_at_ms is not None, f"expect value is not None, got {updated.state.next_run_at_ms}"
             assert updated.state.next_run_at_ms >= original_next, f"expect updated.state.next_run_at_ms >= original_next as {original_next}, got {updated.state.next_run_at_ms}"
             assert updated.state.last_run_at_ms is not None, f"expect value is not None, got {updated.state.last_run_at_ms}"
@@ -683,8 +684,7 @@ class TestCronServiceStoreIO:
             assert initial_jobs_count == 1, f"expect precondition before external clear has one listed job as 1, got {initial_jobs_count}"
 
             # Externally clear the file
-            import time as _time
-            _time.sleep(0.05)
+            await asyncio.sleep(0.05)
             path.write_text(json.dumps({"version": 1, "jobs": []}), encoding="utf-8")
 
             # Force reload

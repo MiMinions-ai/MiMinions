@@ -22,7 +22,13 @@ from miminions.cli.gateway import (
     _validate_name_and_message,
     gateway_cli,
 )
-from miminions.core.gateway import CronJob, CronJobState, CronPayload, CronSchedule, SessionManager
+from miminions.core.gateway import (
+    CronJob,
+    CronJobState,
+    CronPayload,
+    CronSchedule,
+    SessionManager,
+)
 
 
 class DummyManager:

@@ -7,15 +7,15 @@ import unittest
 from pathlib import Path
 
 from miminions.data.local import (
-    LocalDataManager, 
-    MasterIndex, 
-    StorageBackend, 
-    TransactionLog,
-    FileMetadata,
+    CSVFileHandler,
     FileHandlerRegistry,
-    TextFileHandler,
+    FileMetadata,
+    LocalDataManager,
     MarkdownFileHandler,
-    CSVFileHandler
+    MasterIndex,
+    StorageBackend,
+    TextFileHandler,
+    TransactionLog,
 )
 
 

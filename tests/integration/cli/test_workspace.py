@@ -2,7 +2,14 @@
 Basic test for workspace functionality.
 """
 
-from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule, NodeType, RulePriority
+from miminions.core.workspace import (
+    Node,
+    NodeType,
+    Rule,
+    RulePriority,
+    Workspace,
+    WorkspaceManager,
+)
 
 
 def test_workspace_creation(tmp_path):
@@ -25,7 +32,7 @@ def test_workspace_creation(tmp_path):
     loaded_workspaces = manager.load_workspaces()
     assert len(loaded_workspaces) == 1, f"expect result to be {1}, got {len(loaded_workspaces)}"
 
-    loaded_workspace = list(loaded_workspaces.values())[0]
+    loaded_workspace = next(iter(loaded_workspaces.values()))
     assert loaded_workspace.name == workspace.name, f"expect result to be {workspace.name}, got {loaded_workspace.name}"
     assert loaded_workspace.description == workspace.description, f"expect result to be {workspace.description}, got {loaded_workspace.description}"
 
@@ -144,7 +151,7 @@ def test_rule_inheritance():
     assert child_workspace.parent_workspace == parent_workspace.id, f"expect result to be {parent_workspace.id}, got {child_workspace.parent_workspace}"
 
     # Verify inherited rule properties
-    inherited_rule = list(child_workspace.inherited_rules.values())[0]
+    inherited_rule = next(iter(child_workspace.inherited_rules.values()))
     assert inherited_rule.name == parent_rule.name, f"expect result to be {parent_rule.name}, got {inherited_rule.name}"
     assert inherited_rule.priority == parent_rule.priority, f"expect result to be {parent_rule.priority}, got {inherited_rule.priority}"
     inherited_prefix_is_parent = (inherited_rule.inherited_from or "").startswith("Parent:")

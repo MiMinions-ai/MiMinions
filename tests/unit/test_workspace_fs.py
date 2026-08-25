@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from miminions.workspace_fs import (
@@ -29,7 +27,7 @@ def test_workspace_layout_resolves_standard_paths(tmp_path):
 def test_init_workspace_creates_templates_and_skips_existing_files(tmp_path):
     first = init_workspace(tmp_path)
 
-    assert first["root"] == str(tmp_path.resolve()), f"expect {str(tmp_path.resolve())}, got {first['root']}"
+    assert first["root"] == str(tmp_path.resolve()), f"expect {tmp_path.resolve()!s}, got {first['root']}"
     assert len(first["created"]) >= 7, f"expect the number of created files to be at least 7, got {len(first['created'])}"
     assert first["skipped"] == [], f"expect no skipped files, got {first['skipped']}"
     for filename in BOOTSTRAP_PROMPT_FILES:
@@ -45,7 +43,7 @@ def test_init_workspace_creates_templates_and_skips_existing_files(tmp_path):
     second = init_workspace(tmp_path)
 
     assert second["created"] == [], f"expect no created files, got {second['created']}"
-    assert str(user_file) in second["skipped"], f"expect {str(user_file)} exists in skipped files, got {second['skipped']}"
+    assert str(user_file) in second["skipped"], f"expect {user_file!s} exists in skipped files, got {second['skipped']}"
     assert user_file.read_text(encoding="utf-8") == "custom", f"expect 'custom' in the user_file, got {user_file.read_text(encoding='utf-8')}"
 
 
@@ -56,7 +54,7 @@ def test_init_workspace_overwrite_replaces_existing_templates(tmp_path):
 
     result = init_workspace(tmp_path, overwrite=True)
 
-    assert str(user_file) in result["created"], f"expect {str(user_file)} exists in created files, got {result['created']}"
+    assert str(user_file) in result["created"], f"expect {user_file!s} exists in created files, got {result['created']}"
     assert user_file.read_text(encoding="utf-8").startswith("# USER"), f"expect '# USER' at the start of the user_file, got {user_file.read_text(encoding='utf-8').startswith('# USER')}"
 
 

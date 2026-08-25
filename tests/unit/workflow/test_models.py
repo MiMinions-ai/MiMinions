@@ -1,4 +1,9 @@
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace, ToolCallRecord
+from miminions.workflow.models import (
+    AgentRunRecord,
+    ToolCallRecord,
+    WorkflowRun,
+    WorkflowTrace,
+)
 
 
 def test_records_prompt_tools_and_output():

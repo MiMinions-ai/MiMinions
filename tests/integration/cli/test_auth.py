@@ -3,13 +3,22 @@ Unit tests for the MiMinions CLI authentication module.
 """
 
 import json
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from click.testing import CliRunner
 
-from miminions.cli.auth import auth_cli, get_config_dir, get_auth_file, is_authenticated, save_auth_data, load_auth_data, clear_auth_data
+from miminions.cli.auth import (
+    auth_cli,
+    clear_auth_data,
+    get_auth_file,
+    get_config_dir,
+    is_authenticated,
+    load_auth_data,
+    save_auth_data,
+)
 
 
 class TestAuthFunctions:

@@ -138,7 +138,7 @@ def test_workspace_manager_save_load_and_corrupt_file(tmp_path):
     manager.save_workspaces({workspace.id: workspace})
 
     loaded = manager.load_workspaces()
-    loaded_workspace_name = list(loaded.values())[0].name
+    loaded_workspace_name = next(iter(loaded.values())).name
     assert loaded_workspace_name == "Saved", f"expect loaded workspace name matches saved workspace name as 'Saved', got {loaded_workspace_name}"
 
     (tmp_path / "workspaces.json").write_text("{ broken", encoding="utf-8")
@@ -186,7 +186,7 @@ def test_ensure_workspace_create_init_and_error_paths(tmp_path):
     agents_file_exists = (created_root / "prompt" / "AGENTS.md").exists()
     assert agents_file_exists, f"expect ensure_workspace(init_files=True) creates prompt/AGENTS.md, got {agents_file_exists}"
     stored = json.loads((tmp_path / "workspaces.json").read_text(encoding="utf-8"))
-    assert stored[created_workspace.id]["root_path"] == str(created_root), f"expect ensure_workspace persists created workspace root_path to workspaces.json as {str(created_root)}, got {stored[created_workspace.id]['root_path']}"
+    assert stored[created_workspace.id]["root_path"] == str(created_root), f"expect ensure_workspace persists created workspace root_path to workspaces.json as {created_root!s}, got {stored[created_workspace.id]['root_path']}"
 
     no_root = Workspace(id="no-root", name="No Root")
     manager.save_workspaces({"no-root": no_root})

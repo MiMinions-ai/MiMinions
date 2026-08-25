@@ -7,20 +7,20 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import click
 import pytest
 from click.testing import CliRunner
 
 from miminions.cli.agent import (
-    agent_cli,
-    load_agents,
-    save_agents,
-    get_agents_file,
     AgentAction,
     _execute_agent_action,
     _run_with_agent_runtime,
+    agent_cli,
+    get_agents_file,
+    load_agents,
+    save_agents,
 )
 
 

@@ -8,12 +8,11 @@ Run:
 """
 
 import asyncio
-
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from miminions.tools.mcp_adapter import MCPToolAdapter, MCPTool
+import pytest
 
+from miminions.tools.mcp_adapter import MCPTool, MCPToolAdapter
 
 # -----------------------------
 # Fixtures (mock MCP-like objects)

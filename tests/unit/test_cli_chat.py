@@ -1,9 +1,9 @@
 from pathlib import Path
 from types import SimpleNamespace
+from typing import ClassVar
 
 from miminions.cli.chat import chat_command
 from miminions.workspace_fs import init_workspace
-
 
 NONEXISTENT_WORKSPACE_REF = "workspace-does-not-exist"
 
@@ -13,7 +13,7 @@ def _assert_exit_code(result, expected: int, behavior: str) -> None:
 
 
 class MockStore:
-    loaded_session_ids = []
+    loaded_session_ids: ClassVar[list[str]] = []
 
     def __init__(self, root):
         self.root = Path(root)
@@ -80,7 +80,7 @@ def test_chat_uses_default_workspace_and_records_session(tmp_path, isolated_cli_
 
 def test_chat_errors_when_no_workspace_or_default_is_configured(isolated_cli_runner, monkeypatch):
     """Starting chat without --workspace should fail if no default workspace is configured."""
-    monkeypatch.setattr("miminions.cli.chat.get_config", lambda: {})
+    monkeypatch.setattr("miminions.cli.chat.get_config", dict)
 
     no_default = isolated_cli_runner.invoke(chat_command, [])
 
@@ -92,7 +92,7 @@ def test_chat_errors_when_workspace_ref_does_not_resolve(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
     """A workspace ref that is absent from storage should produce a clear error."""
-    manager = SimpleNamespace(load_workspaces=lambda: {})
+    manager = SimpleNamespace(load_workspaces=dict)
     monkeypatch.setattr("miminions.cli.chat.get_config_dir", lambda: tmp_path)
     monkeypatch.setattr("miminions.cli.chat.WorkspaceManager", lambda config_dir: manager)
 

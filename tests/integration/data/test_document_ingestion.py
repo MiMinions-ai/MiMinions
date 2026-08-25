@@ -1,6 +1,5 @@
 """Document ingestion tests for Minion Agent."""
 
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -8,18 +7,15 @@ import pytest
 pytest.importorskip("sqlite_vec")
 
 from miminions.agent import create_minion
-from miminions.tools.schemas import ExecutionStatus
-import pytest
-
-pytest.importorskip("sqlite_vec")
 from miminions.memory.sqlite import SQLiteMemory
+from miminions.tools.schemas import ExecutionStatus
 
 
-async def test_ingest_text():
+async def test_ingest_text(tmp_path):
     print("test_ingest_text")
     agent = create_minion("ChunkAgent", memory=SQLiteMemory(db_path=":memory:"))
     
-    test_file = Path("test_chunked.txt")
+    test_file = tmp_path / "test_chunked.txt"
     test_file.write_text("""Machine learning is a subset of artificial intelligence.
 Deep learning uses neural networks with multiple layers.
 Natural language processing enables computers to understand human language.""")
@@ -38,9 +34,7 @@ Natural language processing enables computers to understand human language.""")
         assert result_count > 0, f"expect len(results) > 0, got {result_count}"
         print("PASSED")
     finally:
-        test_file.unlink()
         await agent.cleanup()
-    return True
 
 
 async def test_ingest_pdf():
@@ -48,8 +42,7 @@ async def test_ingest_pdf():
     pdf_path = Path(__file__).parent.parent.parent / "examples" / "example_files" / "resume.pdf"
     
     if not pdf_path.exists():
-        print("SKIPPED (no PDF)")
-        return True
+        pytest.skip("no PDF fixture")
     
     agent = create_minion("PDFAgent", memory=SQLiteMemory(db_path=":memory:"))
     
@@ -62,7 +55,6 @@ async def test_ingest_pdf():
         print("PASSED")
     finally:
         await agent.cleanup()
-    return True
 
 
 async def test_ingest_error():
@@ -78,23 +70,3 @@ async def test_ingest_error():
     
     await agent.cleanup()
     print("PASSED")
-    return True
-
-
-async def main():
-    print("Pydantic Agent Document Ingestion Tests")
-    tests = [test_ingest_text, test_ingest_pdf, test_ingest_error]
-    
-    passed = 0
-    for test in tests:
-        try:
-            if await test():
-                passed += 1
-        except Exception as e:
-            print(f"FAILED: {e}")
-    
-    print(f"\n{passed}/{len(tests)} tests passed")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

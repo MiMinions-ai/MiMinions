@@ -3,11 +3,12 @@ End-to-end tests for the MiMinions CLI.
 These tests simulate real user workflows and interactions.
 """
 
-import tempfile
 import json
+import tempfile
 from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
+
 from click.testing import CliRunner
 
 from miminions.cli.main import cli

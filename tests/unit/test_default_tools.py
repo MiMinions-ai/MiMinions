@@ -1,7 +1,7 @@
 """Tests for built-in Minion tools."""
 
-import subprocess
 import shlex
+import subprocess
 import sys
 from unittest.mock import patch
 

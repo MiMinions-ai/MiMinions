@@ -81,7 +81,7 @@ def test_workspace_add_sample_and_init_files_with_custom_root(
     assert agents_file_exists, f"expect workspace sample init creates prompt/AGENTS.md, got {agents_file_exists}"
     data = json.loads((tmp_path / "workspaces.json").read_text(encoding="utf-8"))
     workspace_data = next(iter(data.values()))
-    assert workspace_data["root_path"] == str(root.resolve()), f"expect result to be {str(root.resolve())}, got {workspace_data['root_path']}"
+    assert workspace_data["root_path"] == str(root.resolve()), f"expect result to be {root.resolve()!s}, got {workspace_data['root_path']}"
     assert len(workspace_data["nodes"]) == 3, f"expect result to be {3}, got {len(workspace_data['nodes'])}"
     assert len(workspace_data["rules"]) == 2, f"expect result to be {2}, got {len(workspace_data['rules'])}"
 
@@ -232,7 +232,7 @@ def test_workspace_init_files_existing_workspace_custom_path(
     memory_file_exists = (root / "memory" / "MEMORY.md").exists()
     assert memory_file_exists, f"expect init-files creates memory/MEMORY.md at explicit root path, got {memory_file_exists}"
     data = json.loads((tmp_path / "workspaces.json").read_text(encoding="utf-8"))
-    assert data["ws1"]["root_path"] == str(root.resolve()), f"expect result to be {str(root.resolve())}, got {data['ws1']['root_path']}"
+    assert data["ws1"]["root_path"] == str(root.resolve()), f"expect result to be {root.resolve()!s}, got {data['ws1']['root_path']}"
 
     missing = isolated_cli_runner.invoke(
         workspace_cli, ["init-files", "missing", "--path", str(tmp_path / "x")]

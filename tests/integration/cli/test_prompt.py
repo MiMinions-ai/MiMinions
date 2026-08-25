@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 from click.testing import CliRunner
 
-from miminions.core.workspace import Workspace, WorkspaceManager
 from miminions.cli.main import cli
+from miminions.core.workspace import Workspace, WorkspaceManager
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
@@ -71,7 +71,7 @@ def test_prompt_ask_creates_default_workspace_files_logs_and_prints(tmp_path, mo
     assert workspace["name"] == "default", f"expect auto-created workspace uses default workspace name as 'default', got {workspace['name']}"
 
     root = tmp_path / "workspaces" / f"ws_{workspace_id}"
-    assert workspace["root_path"] == str(root), f"expect workspace root_path points to generated ws directory under configured workspaces root as {str(root)}, got {workspace['root_path']}"
+    assert workspace["root_path"] == str(root), f"expect workspace root_path points to generated ws directory under configured workspaces root as {root!s}, got {workspace['root_path']}"
     agents_file_exists = (root / "prompt" / "AGENTS.md").exists()
     assert agents_file_exists, f"expect init_workspace creates prompt/AGENTS.md as True, got {agents_file_exists}"
     memory_file_exists = (root / "memory" / "MEMORY.md").exists()
@@ -103,7 +103,7 @@ def test_prompt_ask_initializes_existing_workspace_without_root_path(tmp_path, m
     workspace_data = _read_workspace_data(config_dir)
     saved_workspace = workspace_data[workspace.id]
     root = tmp_path / "workspaces" / f"ws_{workspace.id}"
-    assert saved_workspace["root_path"] == str(root), f"expect prompt ask backfills root_path for existing workspace without root_path as {str(root)}, got {saved_workspace['root_path']}"
+    assert saved_workspace["root_path"] == str(root), f"expect prompt ask backfills root_path for existing workspace without root_path as {root!s}, got {saved_workspace['root_path']}"
     agents_file_exists = (root / "prompt" / "AGENTS.md").exists()
     assert agents_file_exists, f"expect prompt command initializes prompt/AGENTS.md for workspace without root_path as True, got {agents_file_exists}"
     sessions_dir_exists = (root / "sessions").exists()
@@ -128,7 +128,7 @@ def test_prompt_ask_reuses_existing_initialized_workspace_root(tmp_path, monkeyp
 
     workspace_data = _read_workspace_data(config_dir)
     root_path = workspace_data[workspace.id]["root_path"]
-    assert root_path == str(root), f"expect prompt ask preserves configured workspace root_path for already initialized workspace as {str(root)}, got {root_path}"
+    assert root_path == str(root), f"expect prompt ask preserves configured workspace root_path for already initialized workspace as {root!s}, got {root_path}"
     records = _session_records(root)
     assert records[0]["content"] == "hello", f"expect user prompt content is logged to session for existing initialized workspace flow as 'hello', got {records[0]['content']}"
 

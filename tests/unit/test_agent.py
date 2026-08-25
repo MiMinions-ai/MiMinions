@@ -1,10 +1,10 @@
 """Agent Test Suite - Core functionality tests."""
-
 import asyncio
-import sys
 import threading
 import time
+from unittest.mock import patch
 
+import pytest
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -13,19 +13,18 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from pydantic_ai.models.function import FunctionModel
-from unittest.mock import patch
 
 from miminions.agent import (
     create_minion,
 )
+from miminions.tools.mcp_adapter import MCPTool
 from miminions.tools.schemas import (
+    ExecutionStatus,
+    ParameterType,
     ToolDefinition,
     ToolExecutionRequest,
     ToolExecutionResult,
-    ExecutionStatus,
-    ParameterType,
 )
-from miminions.tools.mcp_adapter import MCPTool
 
 
 def _cleanup(agent):
@@ -467,40 +466,3 @@ async def test_async_generic_tool_registration_uses_async_execution_and_schema()
     assert "name" in info["parameters"]["required"], f"expect contains 'name', got {info['parameters']['required']}"
     await agent.cleanup()
 
-
-async def main():
-    print("Agent Tests")
-    tests = [
-        test_agent_creation,
-        test_tool_registration,
-        test_tool_execution,
-        test_parallel_sync_tool_execution,
-        test_parallel_async_tools_preserve_request_order,
-        test_parallel_batch_respects_concurrency_limit,
-        test_parallel_batch_rejects_invalid_concurrency_limit,
-        test_parallel_batch_isolates_failures,
-        test_llm_parallel_results_are_injected_together,
-        test_error_handling,
-        test_tool_schema_json,
-        test_command_tool_schema_hides_permission_policy,
-        test_command_tool_uses_subprocess_reported_timing,
-        test_rejected_command_reports_zero_execution_time,
-        test_tool_management,
-    ]
-    
-    passed = 0
-    for test in tests:
-        try:
-            test()
-            passed += 1
-        except Exception as e:
-            print(f"FAILED: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    print(f"\nTests completed: {passed}/{len(tests)} passed")
-    return 0 if passed == len(tests) else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

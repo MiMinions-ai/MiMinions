@@ -1,18 +1,18 @@
 """Unit tests for session memory distillation pipeline."""
 
-import sys
 import logging
+import sys
 from types import SimpleNamespace
+from typing import ClassVar, Self
 
 import pytest
 
 from miminions.memory import DistillationResult, MemoryDistiller
-
 from miminions.utils.session import append_transcript
 
 
 class _FakeSQLiteMemory:
-    created: list[tuple[str, dict]] = []
+    created: ClassVar[list[tuple[str, dict]]] = []
 
     def __init__(self, db_path: str):
         self.db_path = db_path
@@ -24,7 +24,7 @@ class _FakeSQLiteMemory:
     def close(self) -> None:
         return None
 
-    def __enter__(self) -> "_FakeSQLiteMemory":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

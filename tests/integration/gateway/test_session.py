@@ -1,7 +1,6 @@
 """Unit tests for gateway.session module."""
 import json
 import logging
-import pytest
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +11,6 @@ from miminions.core.gateway.session import (
     SessionMessage,
     _safe_filename,
 )
-
 
 # ── SessionMessage tests ─────────────────────────────────────────────
 

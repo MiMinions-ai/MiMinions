@@ -15,17 +15,13 @@ async def test_stdio_server_can_list_tools_and_disconnect_cleanly():
     with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp_dir:
         server_file = Path(temp_dir) / "test_mcp_server.py"
         server_file.write_text(
-            "\n".join(
-                [
-                    "from mcp.server.fastmcp import FastMCP",
-                    "server = FastMCP('lifecycle-test')",
-                    "@server.tool()",
-                    "def greet(name: str) -> str:",
-                    "    return f'Hello, {name}!'",
-                    "if __name__ == '__main__':",
-                    "    server.run(transport='stdio')",
-                ]
-            ),
+            """from mcp.server.fastmcp import FastMCP
+server = FastMCP('lifecycle-test')
+@server.tool()
+def greet(name: str) -> str:
+    return f'Hello, {name}!'
+if __name__ == '__main__':
+    server.run(transport='stdio')""",
             encoding="utf-8",
         )
         adapter = MCPToolAdapter()

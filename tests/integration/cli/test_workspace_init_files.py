@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from click.testing import CliRunner
 
 from miminions.cli.workspace import workspace_cli
@@ -40,7 +41,7 @@ def test_workspace_add_with_init_files_creates_root_path_and_files(tmp_path, mon
     workspace_count = len(data)
     assert workspace_count == 1, f"expect result to be {1}, got {workspace_count}"
 
-    workspace_id, workspace_data = next(iter(data.items()))
+    _workspace_id, workspace_data = next(iter(data.items()))
     assert workspace_data["name"] == "phase6-test", f"expect result to be {'phase6-test'}, got {workspace_data['name']}"
     assert workspace_data["root_path"] is not None, f"expect workspace_data['root_path'] is not None, got {workspace_data['root_path']}"
 
