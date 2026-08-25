@@ -25,20 +25,19 @@ def test_workflow_add_rejects_unknown_agents(temp_config_dir):
     runner = CliRunner()
     _write(temp_config_dir / "agents.json", {"a1": {"name": "Agent One"}})
 
-    with _patch_auth_enabled():
-        with patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
-            result = runner.invoke(
-                workflow_cli,
-                [
-                    "add",
-                    "--name",
-                    "Flow",
-                    "--description",
-                    "Desc",
-                    "--agents",
-                    "a1,missing",
-                ],
-            )
+    with _patch_auth_enabled(), patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
+        result = runner.invoke(
+            workflow_cli,
+            [
+                "add",
+                "--name",
+                "Flow",
+                "--description",
+                "Desc",
+                "--agents",
+                "a1,missing",
+            ],
+        )
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     assert "Unknown agent id(s): missing" in result.output, f"expect workflow add command validates agent ids and reports unknown ids in user-facing output as 'Unknown agent id(s): missing', got {result.output}"
@@ -62,9 +61,8 @@ def test_workflow_update_rejects_unknown_agents(temp_config_dir):
         },
     )
 
-    with _patch_auth_enabled():
-        with patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
-            result = runner.invoke(workflow_cli, ["update", "wf1", "--agents", "missing"])
+    with _patch_auth_enabled(), patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
+        result = runner.invoke(workflow_cli, ["update", "wf1", "--agents", "missing"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     assert "Unknown agent id(s): missing" in result.output, f"expect workflow update command validates agent ids and reports unknown ids in user-facing output as 'Unknown agent id(s): missing', got {result.output}"

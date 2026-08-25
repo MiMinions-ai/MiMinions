@@ -34,10 +34,9 @@ def test_knowledge_list_and_show_json_output():
         }
     }
 
-    with _auth_enabled():
-        with patch("miminions.cli.knowledge.load_knowledge", return_value=knowledge):
-            list_result = runner.invoke(knowledge_cli, ["list", "--json"])
-            show_result = runner.invoke(knowledge_cli, ["show", "kn01", "--json"])
+    with _auth_enabled(), patch("miminions.cli.knowledge.load_knowledge", return_value=knowledge):
+        list_result = runner.invoke(knowledge_cli, ["list", "--json"])
+        show_result = runner.invoke(knowledge_cli, ["show", "kn01", "--json"])
 
     assert list_result.exit_code == 0, f"expect cli exit code 0, got {list_result.exit_code} with output: {list_result.output}"
     assert show_result.exit_code == 0, f"expect cli exit code 0, got {show_result.exit_code} with output: {show_result.output}"

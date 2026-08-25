@@ -104,14 +104,16 @@ class TestAgentFunctions:
             "files": {"command": "python", "args": ["-m", "files_server"]}
         }}
 
-        with patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime):
-            with patch(
+        with (
+            patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime),
+            patch(
                 'miminions.cli.agent._execute_agent_action',
                 new=AsyncMock(return_value="done"),
-            ) as action:
-                result = await _run_with_agent_runtime(
-                    agent_data, AgentAction.TOOL_LIST
-                )
+            ) as action,
+        ):
+            result = await _run_with_agent_runtime(
+                agent_data, AgentAction.TOOL_LIST
+            )
 
         assert result == "done", f"expect result to be {'done'}, got {result}"
         params = runtime.connect_mcp_server.await_args.args[1]
@@ -127,12 +129,14 @@ class TestAgentFunctions:
         runtime.connect_mcp_server = AsyncMock(side_effect=RuntimeError("offline"))
         runtime.cleanup = AsyncMock()
 
-        with patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime):
-            with pytest.raises(Exception, match="Failed to load MCP server 'files'"):
-                await _run_with_agent_runtime(
-                    {"mcp_servers": {"files": {"command": "python", "args": []}}},
-                    AgentAction.TOOL_LIST,
-                )
+        with (
+            patch('miminions.cli.agent._build_cli_extension_agent', return_value=runtime),
+            pytest.raises(Exception, match="Failed to load MCP server 'files'"),
+        ):
+            await _run_with_agent_runtime(
+                {"mcp_servers": {"files": {"command": "python", "args": []}}},
+                AgentAction.TOOL_LIST,
+            )
 
         runtime.cleanup.assert_awaited_once_with(rebuild=False)
 
@@ -179,15 +183,17 @@ class TestAgentCLI:
 
     def test_list_agents_empty(self):
         """Test list agents when no agents exist."""
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = {}
-                
-                result = self.runner.invoke(agent_cli, ['list'])
-                
-                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                assert 'No agents configured' in result.output, f"expect agent list with no saved agents prints 'No agents configured', got {result.output}"
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {}
+
+            result = self.runner.invoke(agent_cli, ['list'])
+
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'No agents configured' in result.output, f"expect agent list with no saved agents prints 'No agents configured', got {result.output}"
 
     def test_list_agents_not_authenticated(self):
         """Test list agents when not authenticated."""
@@ -220,36 +226,40 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = test_agents
-                
-                result = self.runner.invoke(agent_cli, ['list'])
-                
-                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                assert 'Agents:' in result.output, f"expect agent list with saved agents prints heading 'Agents:', got {result.output}"
-                assert 'test_agent: Test Agent (inactive)' in result.output, f"expect agent list includes inactive test_agent row as 'test_agent: Test Agent (inactive)', got {result.output}"
-                assert 'another_agent: Another Agent (running)' in result.output, f"expect agent list includes running another_agent row as 'another_agent: Another Agent (running)', got {result.output}"
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = test_agents
+
+            result = self.runner.invoke(agent_cli, ['list'])
+
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Agents:' in result.output, f"expect agent list with saved agents prints heading 'Agents:', got {result.output}"
+            assert 'test_agent: Test Agent (inactive)' in result.output, f"expect agent list includes inactive test_agent row as 'test_agent: Test Agent (inactive)', got {result.output}"
+            assert 'another_agent: Another Agent (running)' in result.output, f"expect agent list includes running another_agent row as 'another_agent: Another Agent (running)', got {result.output}"
 
     def test_add_agent_success(self):
         """Test successful agent addition."""
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = {}
-                    
-                    result = self.runner.invoke(agent_cli, [
-                        'add',
-                        '--name', 'Test Agent',
-                        '--description', 'A test agent',
-                        '--type', 'general'
-                    ])
-                    
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'Agent \'Test Agent\' added successfully' in result.output, f"expect \"Agent 'Test Agent' added successfully\" in result.output, got {result.output}"
-                    mock_save.assert_called_once()
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {}
+
+            result = self.runner.invoke(agent_cli, [
+                'add',
+                '--name', 'Test Agent',
+                '--description', 'A test agent',
+                '--type', 'general'
+            ])
+
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Agent \'Test Agent\' added successfully' in result.output, f"expect \"Agent 'Test Agent' added successfully\" in result.output, got {result.output}"
+            mock_save.assert_called_once()
 
     def test_add_agent_duplicate_id_gets_unique_suffix(self):
         """A name whose slug already exists gets a unique suffixed ID."""
@@ -262,24 +272,26 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = existing_agents
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = existing_agents
 
-                    result = self.runner.invoke(agent_cli, [
-                        'add',
-                        '--name', 'Test Agent',  # slug "test_agent" already exists
-                        '--description', 'A test agent',
-                        '--type', 'general'
-                    ])
+            result = self.runner.invoke(agent_cli, [
+                'add',
+                '--name', 'Test Agent',  # slug "test_agent" already exists
+                '--description', 'A test agent',
+                '--type', 'general'
+            ])
 
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'ID: test_agent_2' in result.output, f"expect add agent duplicate slug reports generated id as 'ID: test_agent_2', got {result.output}"
-                    saved = mock_save.call_args[0][0]
-                    assert 'test_agent_2' in saved, f"expect add agent duplicate slug saves new generated key 'test_agent_2', got {saved}"
-                    assert 'test_agent' in saved, f"expect add agent duplicate slug preserves original key 'test_agent', got {saved}"  # original preserved
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'ID: test_agent_2' in result.output, f"expect add agent duplicate slug reports generated id as 'ID: test_agent_2', got {result.output}"
+            saved = mock_save.call_args[0][0]
+            assert 'test_agent_2' in saved, f"expect add agent duplicate slug saves new generated key 'test_agent_2', got {saved}"
+            assert 'test_agent' in saved, f"expect add agent duplicate slug preserves original key 'test_agent', got {saved}"  # original preserved
 
     def test_add_agent_not_authenticated(self):
         """Test adding agent when not authenticated."""
@@ -311,38 +323,42 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = existing_agents
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = existing_agents
                     
-                    result = self.runner.invoke(agent_cli, [
-                        'update',
-                        'test_agent',
-                        '--name', 'Updated Agent',
-                        '--description', 'Updated description'
-                    ])
+            result = self.runner.invoke(agent_cli, [
+                'update',
+                'test_agent',
+                '--name', 'Updated Agent',
+                '--description', 'Updated description'
+            ])
                     
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'Agent \'test_agent\' updated successfully' in result.output, f"expect \"Agent 'test_agent' updated successfully\" in result.output, got {result.output}"
-                    mock_save.assert_called_once()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Agent \'test_agent\' updated successfully' in result.output, f"expect \"Agent 'test_agent' updated successfully\" in result.output, got {result.output}"
+            mock_save.assert_called_once()
 
     def test_update_agent_not_found(self):
         """Test updating non-existent agent."""
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = {}
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {}
                 
-                result = self.runner.invoke(agent_cli, [
-                    'update',
-                    'nonexistent_agent',
-                    '--name', 'Updated Agent'
-                ])
+            result = self.runner.invoke(agent_cli, [
+                'update',
+                'nonexistent_agent',
+                '--name', 'Updated Agent'
+            ])
                 
-                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                assert 'not found' in result.output, f"expect update for unknown agent reports 'not found', got {result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'not found' in result.output, f"expect update for unknown agent reports 'not found', got {result.output}"
 
     def test_remove_agent_success(self):
         """Test successful agent removal."""
@@ -355,46 +371,52 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = existing_agents
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = existing_agents
                     
-                    result = self.runner.invoke(agent_cli, [
-                        'remove',
-                        'test_agent',
-                        '--yes'  # Skip confirmation
-                    ])
+            result = self.runner.invoke(agent_cli, [
+                'remove',
+                'test_agent',
+                '--yes'  # Skip confirmation
+            ])
                     
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'Agent \'test_agent\' removed successfully' in result.output, f"expect \"Agent 'test_agent' removed successfully\" in result.output, got {result.output}"
-                    mock_save.assert_called_once()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Agent \'test_agent\' removed successfully' in result.output, f"expect \"Agent 'test_agent' removed successfully\" in result.output, got {result.output}"
+            mock_save.assert_called_once()
 
     def test_remove_agent_not_found(self):
         """Test removing non-existent agent."""
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = {}
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {}
                 
-                result = self.runner.invoke(agent_cli, [
-                    'remove',
-                    'nonexistent_agent',
-                    '--yes'
-                ])
+            result = self.runner.invoke(agent_cli, [
+                'remove',
+                'nonexistent_agent',
+                '--yes'
+            ])
                 
-                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                assert 'not found' in result.output, f"expect remove for unknown agent reports 'not found', got {result.output}"
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'not found' in result.output, f"expect remove for unknown agent reports 'not found', got {result.output}"
 
     def test_mcp_add_persists_minimal_config_and_argument_order(self):
         agents = {"test_agent": {"name": "Test Agent"}}
-        with patch('miminions.cli.agent.load_agents', return_value=agents):
-            with patch('miminions.cli.agent.save_agents') as mock_save:
-                result = self.runner.invoke(agent_cli, [
-                    'mcp-add', 'test_agent', 'files', '--command', 'python',
-                    '--arg', '-m', '--arg', 'files_server',
-                ])
+        with (
+            patch('miminions.cli.agent.load_agents', return_value=agents),
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            result = self.runner.invoke(agent_cli, [
+                'mcp-add', 'test_agent', 'files', '--command', 'python',
+                '--arg', '-m', '--arg', 'files_server',
+            ])
 
         assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
         saved = mock_save.call_args.args[0]
@@ -440,21 +462,23 @@ class TestAgentCLI:
             }
         }
         
-        with patch('miminions.core.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = existing_agents
+        with (
+            patch('miminions.core.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = existing_agents
                     
-                    result = self.runner.invoke(agent_cli, [
-                        'set-goal',
-                        'test_agent',
-                        '--goal', 'Complete the task'
-                    ])
+            result = self.runner.invoke(agent_cli, [
+                'set-goal',
+                'test_agent',
+                '--goal', 'Complete the task'
+            ])
                     
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'Goal set for agent \'test_agent\': Complete the task' in result.output, f"expect \"Goal set for agent 'test_agent': Complete the task\" in result.output, got {result.output}"
-                    mock_save.assert_called_once()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Goal set for agent \'test_agent\': Complete the task' in result.output, f"expect \"Goal set for agent 'test_agent': Complete the task\" in result.output, got {result.output}"
+            mock_save.assert_called_once()
 
     def test_show_agent_by_exact_id(self):
         """Show should resolve by exact agent id."""
@@ -657,15 +681,17 @@ class TestAgentCLI:
         }
         arguments = json.dumps({"command": f"{sys.executable} --version"})
 
-        with patch('miminions.core.auth.is_authenticated', return_value=True):
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.tools.default.subprocess.run') as mock_run:
-                    mock_load.return_value = existing_agents
-                    result = self.runner.invoke(
-                        agent_cli,
-                        ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
-                        input='n\n',
-                    )
+        with (
+            patch('miminions.core.auth.is_authenticated', return_value=True),
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.tools.default.subprocess.run') as mock_run,
+        ):
+            mock_load.return_value = existing_agents
+            result = self.runner.invoke(
+                agent_cli,
+                ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                input='n\n',
+            )
 
         assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
         assert "Status: error" in result.output, f"expect denied command execution reports 'Status: error', got {result.output}"
@@ -731,14 +757,16 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.core.auth.is_authenticated', return_value=True):
-            with patch('miminions.cli.agent.load_agents') as mock_load:
-                with patch('miminions.cli.agent.save_agents') as mock_save:
-                    mock_load.return_value = existing_agents
+        with (
+            patch('miminions.core.auth.is_authenticated', return_value=True),
+            patch('miminions.cli.agent.load_agents') as mock_load,
+            patch('miminions.cli.agent.save_agents') as mock_save,
+        ):
+            mock_load.return_value = existing_agents
 
-                    result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
+            result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
 
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {result.output}"
-                    assert "Agent response: Used tool cli_add -> 15" in result.output, f"expect run arithmetic fallback reports cli_add result as 'Agent response: Used tool cli_add -> 15', got {result.output}"
-                    mock_save.assert_called_once()
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {result.output}"
+            assert "Agent response: Used tool cli_add -> 15" in result.output, f"expect run arithmetic fallback reports cli_add result as 'Agent response: Used tool cli_add -> 15', got {result.output}"
+            mock_save.assert_called_once()

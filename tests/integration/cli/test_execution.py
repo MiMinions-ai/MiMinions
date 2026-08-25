@@ -25,9 +25,8 @@ def test_execution_interaction_list_json_output():
             return {"s1": [run.to_dict()]}
         return {}
 
-    with _auth_enabled():
-        with patch("miminions.cli.execution._load", side_effect=_fake_load):
-            result = runner.invoke(execution, ["interaction", "list", "--session-id", "s1", "--json"])
+    with _auth_enabled(), patch("miminions.cli.execution._load", side_effect=_fake_load):
+        result = runner.invoke(execution, ["interaction", "list", "--session-id", "s1", "--json"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     payload = json.loads(result.output)

@@ -209,10 +209,12 @@ async def test_connection_contexts_open_and_close_in_their_owner_task():
         side_effect=lambda: owner_tasks.append(asyncio.current_task())
     )
 
-    with patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context):
-        with patch('miminions.tools.mcp_adapter.ClientSession', return_value=session):
-            await adapter.connect_to_server("serverA", MagicMock())
-            await adapter.close_all_connections()
+    with (
+        patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context),
+        patch('miminions.tools.mcp_adapter.ClientSession', return_value=session),
+    ):
+        await adapter.connect_to_server("serverA", MagicMock())
+        await adapter.close_all_connections()
 
     assert len(owner_tasks) == 3, f"expect the length of owner_tasks to be 3, got {len(owner_tasks)}"
     assert len(set(owner_tasks)) == 1, f"expect all owner_tasks to be the same, got {len(set(owner_tasks))}"

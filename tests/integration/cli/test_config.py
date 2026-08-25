@@ -23,9 +23,11 @@ def test_config_get_returns_existing_default_workspace(temp_config_dir):
         first = runner.invoke(cli, ["init"])
         assert first.exit_code == 0, f"expect first exit code 0, got {first.exit_code} with output: {first.output}"
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
-        with patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir):
-            result = runner.invoke(cli, ["config", "get", "default_workspace"])
+    with (
+        patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+    ):
+        result = runner.invoke(cli, ["config", "get", "default_workspace"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     config = _load_json(temp_config_dir / "config.json")
@@ -40,9 +42,11 @@ def test_config_set_default_workspace_resolves_name_to_id(temp_config_dir):
     workspace = manager.create_workspace("project-alpha", "")
     manager.save_workspaces({workspace.id: workspace})
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
-        with patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir):
-            result = runner.invoke(cli, ["config", "set", "default_workspace", "project-alpha"])
+    with (
+        patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+    ):
+        result = runner.invoke(cli, ["config", "set", "default_workspace", "project-alpha"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     config = _load_json(temp_config_dir / "config.json")
@@ -54,10 +58,12 @@ def test_config_set_default_agent_requires_existing_agent(temp_config_dir):
     agents_file = temp_config_dir / "agents.json"
     agents_file.write_text(json.dumps({"researcher": {"name": "Researcher"}}), encoding="utf-8")
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
-        with patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir):
-            ok = runner.invoke(cli, ["config", "set", "default_agent", "researcher"])
-            fail = runner.invoke(cli, ["config", "set", "default_agent", "missing"])
+    with (
+        patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+    ):
+        ok = runner.invoke(cli, ["config", "set", "default_agent", "researcher"])
+        fail = runner.invoke(cli, ["config", "set", "default_agent", "missing"])
 
     assert ok.exit_code == 0, f"expect cli ok exit code 0, got {ok.exit_code} with output: {ok.output}"
     assert fail.exit_code != 0, f"expect cli error exit code != 0, got {fail.exit_code} with output: {fail.output}"
@@ -70,9 +76,11 @@ def test_config_set_default_agent_requires_existing_agent(temp_config_dir):
 def test_config_rejects_unknown_key(temp_config_dir):
     runner = CliRunner()
 
-    with patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir):
-        with patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir):
-            result = runner.invoke(cli, ["config", "set", "public_access", "true"])
+    with (
+        patch("miminions.cli.main.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+    ):
+        result = runner.invoke(cli, ["config", "set", "public_access", "true"])
 
     assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
     assert "Unsupported key 'public_access'" in result.output, f"expect \"Unsupported key 'public_access'\" in result.output, got {result.output}"

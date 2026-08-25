@@ -28,21 +28,25 @@ class TestAuthFunctions:
         """Test that get_config_dir creates the config directory."""
         with patch.dict(os.environ, {}, clear=False) as _env:
             os.environ.pop('MIMINIONS_HOME', None)
-            with patch('pathlib.Path.home') as mock_home:
+            with (
+                patch('pathlib.Path.home') as mock_home,
+                patch('pathlib.Path.mkdir') as mock_mkdir,
+            ):
                 mock_home.return_value = Path('/tmp/test_home')
-                with patch('pathlib.Path.mkdir') as mock_mkdir:
-                    config_dir = get_config_dir()
-                    expected_path = Path('/tmp/test_home/.miminions')
-                    assert config_dir == expected_path, f"expect result to be {expected_path}, got {config_dir}"
-                    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+                config_dir = get_config_dir()
+                expected_path = Path('/tmp/test_home/.miminions')
+                assert config_dir == expected_path, f"expect result to be {expected_path}, got {config_dir}"
+                mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
     def test_get_config_dir_honors_miminions_home_env(self):
         """MIMINIONS_HOME overrides the default ~/.miminions location."""
-        with patch.dict(os.environ, {'MIMINIONS_HOME': '/tmp/custom_home'}):
-            with patch('pathlib.Path.mkdir'):
-                config_dir = get_config_dir()
-                expected_path = Path('/tmp/custom_home')
-                assert config_dir == expected_path, f"expect result to be {expected_path}, got {config_dir}"
+        with (
+            patch.dict(os.environ, {'MIMINIONS_HOME': '/tmp/custom_home'}),
+            patch('pathlib.Path.mkdir'),
+        ):
+            config_dir = get_config_dir()
+            expected_path = Path('/tmp/custom_home')
+            assert config_dir == expected_path, f"expect result to be {expected_path}, got {config_dir}"
 
     def test_get_auth_file(self):
         """Test that get_auth_file returns correct path."""
@@ -187,17 +191,19 @@ class TestAuthCLI:
 
     def test_signout_authenticated(self):
         """Test signout when authenticated."""
-        with patch('miminions.cli.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.auth.load_auth_data') as mock_load:
-                with patch('miminions.cli.auth.clear_auth_data') as mock_clear:
-                    mock_is_auth.return_value = True
-                    mock_load.return_value = {"username": "testuser"}
-                    
-                    result = self.runner.invoke(auth_cli, ['signout'])
-                    
-                    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                    assert 'Successfully signed out testuser' in result.output, f"expect signout command confirms signed-out username when credentials exist as 'Successfully signed out testuser', got {result.output}"
-                    mock_clear.assert_called_once()
+        with (
+            patch('miminions.cli.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.auth.load_auth_data') as mock_load,
+            patch('miminions.cli.auth.clear_auth_data') as mock_clear,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {"username": "testuser"}
+
+            result = self.runner.invoke(auth_cli, ['signout'])
+
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Successfully signed out testuser' in result.output, f"expect signout command confirms signed-out username when credentials exist as 'Successfully signed out testuser', got {result.output}"
+            mock_clear.assert_called_once()
 
     def test_signout_not_authenticated(self):
         """Test signout when not authenticated."""
@@ -211,15 +217,17 @@ class TestAuthCLI:
 
     def test_status_authenticated(self):
         """Test status when authenticated."""
-        with patch('miminions.cli.auth.is_authenticated') as mock_is_auth:
-            with patch('miminions.cli.auth.load_auth_data') as mock_load:
-                mock_is_auth.return_value = True
-                mock_load.return_value = {"username": "testuser"}
-                
-                result = self.runner.invoke(auth_cli, ['status'])
-                
-                assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-                assert 'Signed in as: testuser' in result.output, f"expect status command reports active signed-in username from auth data as 'Signed in as: testuser', got {result.output}"
+        with (
+            patch('miminions.cli.auth.is_authenticated') as mock_is_auth,
+            patch('miminions.cli.auth.load_auth_data') as mock_load,
+        ):
+            mock_is_auth.return_value = True
+            mock_load.return_value = {"username": "testuser"}
+
+            result = self.runner.invoke(auth_cli, ['status'])
+
+            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert 'Signed in as: testuser' in result.output, f"expect status command reports active signed-in username from auth data as 'Signed in as: testuser', got {result.output}"
 
     def test_status_not_authenticated(self):
         """Test status when not authenticated."""
