@@ -91,6 +91,8 @@ class MCPToolAdapter:
             try:
                 await task
             except asyncio.CancelledError:
+                # Expected when cancelling the background connection task during cleanup.
+                # Swallow to preserve the original connection error semantics.
                 pass
             raise
 
