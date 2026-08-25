@@ -67,7 +67,7 @@ class TestTaskPriority:
 
     def test_task_priority_comparison(self):
         """Test TaskPriority enum comparison."""
-        assert TaskPriority.LOW == TaskPriority.LOW, f"expect TaskPriority.LOW, got {TaskPriority.LOW}"
+        assert TaskPriority("low") == TaskPriority.LOW, f"expect TaskPriority('low') == TaskPriority.LOW, got {TaskPriority('low')}"
         assert TaskPriority.HIGH != TaskPriority.LOW, f"expect value != TaskPriority.LOW, got {TaskPriority.HIGH}"
         assert TaskPriority.CRITICAL != TaskPriority.MEDIUM, f"expect value != TaskPriority.MEDIUM, got {TaskPriority.CRITICAL}"
 
