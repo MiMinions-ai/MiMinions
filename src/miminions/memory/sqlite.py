@@ -1,8 +1,5 @@
 # Try to use pysqlite3 first (has extension support), fallback to sqlite3
-try:
-    import pysqlite3.dbapi2 as sqlite3
-except ImportError:
-    import sqlite3
+import pysqlite3.dbapi2 as sqlite3
 
 try:
     import sqlite_vec
@@ -20,8 +17,6 @@ try:
 except ImportError:
     TextEmbedding = None
 
-# Re-exported so callers importing it from this module keep working.
-from miminions.core.paths import get_global_memory_db_path  # noqa: F401
 
 
 _DEFAULT_DB_DIR = Path(__file__).parent / ".data"
