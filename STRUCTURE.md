@@ -70,7 +70,7 @@ MiMinions/
 |       |   |-- prompt.py
 |       |   |-- task.py
 |       |   |-- workspace.py
-|       |   |-- workflow.py    # Present but not registered
+|       |   |-- workflow.py    # Internal-only workflow helpers; not a shipped CLI command
 |       |   `-- README.md
 |       |
 |       |-- context/           # System-prompt assembly
@@ -125,8 +125,9 @@ Registered CLI command groups are:
 auth, agent, task, knowledge, workspace, execution, chat, gateway, prompt
 ```
 
-`src/miminions/cli/workflow.py` exists, but it is not registered in
-`src/miminions/cli/main.py`; `miminions workflow ...` is planned/unreachable.
+`src/miminions/cli/workflow.py` remains in the tree for internal workflow-related
+helpers, but `src/miminions/cli/main.py` does not ship a `miminions workflow`
+command group.
 
 ## Public Import Surface
 

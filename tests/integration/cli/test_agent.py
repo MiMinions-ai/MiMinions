@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import click
@@ -172,6 +173,29 @@ class TestAgentFunctions:
     ):
         with pytest.raises(click.ClickException, match=message):
             await _execute_agent_action(MagicMock(), operation, **params)
+
+    @pytest.mark.asyncio
+    async def test_runtime_action_dispatch_runs_prompts_through_runtime(self):
+        runtime = MagicMock()
+        runtime.run = AsyncMock(return_value="model response")
+        runtime.get_state.return_value = SimpleNamespace(
+            tool_count=3,
+            has_memory=False,
+            connected_servers=[],
+        )
+
+        run_result = await _execute_agent_action(
+            runtime, AgentAction.RUN, prompt="Add 10 and 5"
+        )
+        ask_result = await _execute_agent_action(
+            runtime, AgentAction.ASK, prompt="What time is it?"
+        )
+
+        assert run_result == "model response", f"expect result to be {'model response'}, got {run_result}"
+        assert ask_result == "model response", f"expect result to be {'model response'}, got {ask_result}"
+        runtime.run.assert_any_await("Add 10 and 5")
+        runtime.run.assert_any_await("What time is it?")
+        assert runtime.run.await_count == 2, f"expect result to be {2}, got {runtime.run.await_count}"
 
 
 class TestAgentCLI:
@@ -713,8 +737,8 @@ class TestAgentCLI:
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "Invalid JSON for --arguments." in result.output, f"expect tool-run invalid arguments reports 'Invalid JSON for --arguments.', got {result.output}"
 
-    def test_ask_agent_uses_tool_fallback_for_addition(self):
-        """Ask should use cli_add fallback when prompt requests arithmetic."""
+    def test_ask_agent_runs_prompt_through_runtime(self):
+        """Ask should pass the prompt through the runtime without keyword shortcuts."""
         existing_agents = {
             "test_agent": {
                 "name": "Test Agent",
@@ -724,8 +748,14 @@ class TestAgentCLI:
             }
         }
 
-        with patch('miminions.core.auth.is_authenticated', return_value=True):
-            with patch('miminions.cli.agent.load_agents') as mock_load:
+        with (
+                patch('miminions.core.auth.is_authenticated', return_value=True),
+                patch('miminions.cli.agent.load_agents') as mock_load,
+                patch(
+                    'miminions.cli.agent._run_with_agent_runtime',
+                    new=AsyncMock(return_value='model says Please add 4 and 9 for me'),
+                ),
+        ):
                 mock_load.return_value = existing_agents
 
                 result = self.runner.invoke(
@@ -733,32 +763,42 @@ class TestAgentCLI:
                     ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
                 )
 
-            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-            assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output, f"expect \"Asking agent 'test_agent': Please add 4 and 9 for me\" in result.output, got {result.output}"
-            assert "Agent response: Used tool cli_add -> 13" in result.output, f"expect ask arithmetic fallback reports cli_add result as 'Agent response: Used tool cli_add -> 13', got {result.output}"
+        assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+        assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output, f"expect \"Asking agent 'test_agent': Please add 4 and 9 for me\" in result.output, got {result.output}"
+        assert "Agent response: model says Please add 4 and 9 for me" in result.output, f"expect ask runtime result as 'Agent response: model says Please add 4 and 9 for me', got {result.output}"
 
-    def test_run_agent_uses_tool_fallback_for_addition_goal(self):
-        """Run should use cli_add fallback for arithmetic goals."""
+    def test_run_agent_runs_goal_through_runtime(self):
+        """Run should pass the stored goal through the runtime without keyword shortcuts."""
         existing_agents = {
-            "test_agent": {
-                "name": "Test Agent",
-                "description": "A test agent",
-                "type": "general",
-                "status": "inactive",
-                "goal": "Add 10 and 5",
-            }
+                "test_agent": {
+                    "name": "Test Agent",
+                    "description": "A test agent",
+                    "type": "general",
+                    "status": "inactive",
+                    "goal": "Add 10 and 5",
+                }
         }
 
         with (
-            patch('miminions.core.auth.is_authenticated', return_value=True),
-            patch('miminions.cli.agent.load_agents') as mock_load,
-            patch('miminions.cli.agent.save_agents') as mock_save,
+                patch('miminions.core.auth.is_authenticated', return_value=True),
+                patch('miminions.cli.agent.load_agents') as mock_load,
+                patch('miminions.cli.agent.save_agents') as mock_save,
+                patch(
+                    'miminions.cli.agent._run_with_agent_runtime',
+                    new=AsyncMock(return_value='model says Add 10 and 5'),
+                ),
         ):
-            mock_load.return_value = existing_agents
+                mock_load.return_value = existing_agents
+                result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
 
-            result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
+        assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+        assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {result.output}"
+        assert "Agent response: model says Add 10 and 5" in result.output, f"expect run runtime result as 'Agent response: model says Add 10 and 5', got {result.output}"
+        mock_save.assert_called_once()
 
-            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-            assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {result.output}"
-            assert "Agent response: Used tool cli_add -> 15" in result.output, f"expect run arithmetic fallback reports cli_add result as 'Agent response: Used tool cli_add -> 15', got {result.output}"
-            mock_save.assert_called_once()
+    def test_run_agent_rejects_removed_async_flag(self):
+        """Run should reject the removed async placeholder flag."""
+        result = self.runner.invoke(agent_cli, ['run', '--async'])
+
+        assert result.exit_code == 2, f"expect cli exit code 2, got {result.exit_code} with output: {result.output}"
+        assert "No such option '--async'" in result.output, f"expect \"No such option '--async'\" in result.output, got {result.output}"

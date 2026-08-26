@@ -211,15 +211,15 @@ run = controller.finish_run(output="13")   # -> WorkflowRun
 
 ## How workflows are driven today
 
-!!! warning "`miminions workflow` is planned, not enabled"
-    A `workflow` CLI command group exists in the codebase but is **not registered** with the CLI ("not yet implemented") — `miminions workflow ...` does **not** run today. Do not script against it yet.
+!!! note
+    MiMinions does not ship a `miminions workflow` command. Workflow orchestration is exposed through Python APIs and execution traces instead of a dedicated CLI group.
 
 In the current release, workflow orchestration is driven through:
 
 1. **The `TaskRuntime` API** (above) for running agent-bound work concurrently in Python.
 2. **The [`miminions execution`](cli.md#execution) commands**, which persist each tool run as a `WorkflowRun` (`AgentRunRecord` + `ToolCallRecord`) under `~/.miminions/interactions.json`. `execution interaction list` / `show` read those traces back.
 
-So the trace models on this page are real and in use — just consumed via `execution` and `TaskRuntime`, not a `workflow` command.
+So the trace models on this page are real and in use — just consumed via `execution` and `TaskRuntime`, not a shipped workflow command group.
 
 ---
 
