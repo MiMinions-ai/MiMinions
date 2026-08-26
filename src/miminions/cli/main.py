@@ -104,7 +104,7 @@ def _maybe_bootstrap(ctx: click.Context) -> None:
 @click.version_option(version=__version__, prog_name="miminions")
 @click.pass_context
 def cli(ctx: click.Context) -> None:
-    """MiMinions CLI - Manage AI agents, tasks, workflows and knowledge."""
+    """MiMinions CLI - Manage AI agents, tasks, knowledge and workspaces."""
     _maybe_bootstrap(ctx)
 
 
