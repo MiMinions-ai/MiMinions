@@ -33,7 +33,8 @@ miminions init --force
 -   :material-login: **`auth`** — local sign-in, status, and config
 -   :material-cog-outline: **`config`** — get/set top-level CLI defaults (`default_workspace`, `default_agent`)
 -   :material-database-export-outline: **`export`/`import`** — backup and restore agents/tasks/knowledge JSON data
--   :material-robot: **`agent`** — manage agent records, run them, inspect tools
+-   :material-robot: **`agent`** — manage and run agent records
+-   :material-hammer-wrench: **`tool`** — discover, inspect, search, and run agent tools
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
 -   :material-checkbox-marked-circle-outline: **`task`** — track tasks with priority and status
@@ -247,23 +248,28 @@ miminions agent remove researcher
 !!! warning "`run --async` is not functional"
     The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.
 
-### Inspecting and running tools
+## Tool
 
-These commands build the agent's runtime and operate on its registered tools.
+The top-level `tool` category builds an agent's runtime and operates on its
+registered tools. The agent id is optional and defaults to the configured
+default agent.
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `tool-list [id]` | — | List the agent's tool names and descriptions. `id` defaults to `default_agent`. |
-| `tool-info [id] <tool>` | — | Show a tool's description and JSON parameter schema. `id` defaults to `default_agent`. |
-| `tool-search [id] <query>` | — | Search tools by name/description (substring). `id` defaults to `default_agent`. |
-| `tool-run [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). `id` defaults to `default_agent`. |
+| `list [id]` | — | List the agent's tool names and descriptions. |
+| `info [id] <tool>` | — | Show a tool's description and JSON parameter schema. |
+| `search [id] <query>` | — | Search tools by name/description (substring). |
+| `run [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). |
 
 ```bash
-miminions agent tool-list researcher
-miminions agent tool-list                            # uses default_agent
-miminions agent tool-run researcher cli_add --arguments '{"a": 2, "b": 3}'
-miminions agent tool-run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
+miminions tool list researcher
+miminions tool list                            # uses default_agent
+miminions tool run researcher cli_add --arguments '{"a": 2, "b": 3}'
+miminions tool run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
+
+The former `miminions agent tool-list`, `tool-info`, `tool-search`, and
+`tool-run` spellings remain as hidden deprecated aliases for compatibility.
 
 ### MCP servers
 

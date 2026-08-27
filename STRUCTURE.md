@@ -69,6 +69,7 @@ MiMinions/
 |       |   |-- knowledge.py
 |       |   |-- prompt.py
 |       |   |-- task.py
+|       |   |-- tool.py       # Registered as `miminions tool`
 |       |   |-- workspace.py
 |       |   |-- workflow.py    # Present but not registered
 |       |   `-- README.md
@@ -122,7 +123,7 @@ MiMinions/
 Registered CLI command groups are:
 
 ```text
-auth, agent, task, knowledge, workspace, execution, chat, gateway, prompt
+auth, agent, tool, task, knowledge, workspace, execution, chat, gateway, prompt
 ```
 
 `src/miminions/cli/workflow.py` exists, but it is not registered in
