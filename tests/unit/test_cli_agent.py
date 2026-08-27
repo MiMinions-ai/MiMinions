@@ -10,7 +10,6 @@ from miminions.cli.agent import (
 )
 
 NONEXISTENT_AGENT_ID = "agent-does-not-exist"
-NONEXISTENT_TOOL_NAME = "tool-does-not-exist"
 
 
 def _assert_exit_code(result, expected: int, behavior: str) -> None:
@@ -132,6 +131,22 @@ def test_agent_tool_list_reports_nonexistent_agent(isolated_cli_runner, tmp_path
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
+def test_legacy_tool_commands_are_hidden_and_warn(isolated_cli_runner, tmp_path, monkeypatch):
+    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
+
+    help_result = isolated_cli_runner.invoke(agent_cli, ["--help"])
+    _assert_exit_code(help_result, 0, "showing agent help")
+    for command in ("tool-list", "tool-info", "tool-search", "tool-run"):
+        assert command not in help_result.output
+
+    result = isolated_cli_runner.invoke(agent_cli, ["tool-list", "agent1"])
+    _assert_exit_code(result, 0, "using the legacy tool-list alias")
+    assert "miminions agent tool-list" in result.output
+    assert "miminions tool list" in result.output
+    assert "cli_add" in result.output
+
+
 def test_agent_tool_run_rejects_invalid_json_arguments(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
@@ -158,7 +173,7 @@ def test_agent_tool_run_rejects_non_object_json_arguments(
     assert "--arguments must be a JSON object" in not_object.output, f"expect '--arguments must be a JSON object' in not_object.output, got {not_object.output}"
 
 
-def test_agent_tool_commands_and_deterministic_prompt_fallbacks(
+def test_agent_deterministic_prompt_fallbacks(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
     """Tool commands should expose runtime tools and deterministic prompt routing."""
@@ -172,39 +187,6 @@ def test_agent_tool_commands_and_deterministic_prompt_fallbacks(
             }
         }
     )
-
-    tool_list = isolated_cli_runner.invoke(agent_cli, ["tool-list", "agent1"])
-    _assert_exit_code(tool_list, 0, "listing agent tools")
-    assert "cli_echo" in tool_list.output, f"expect 'cli_echo' in tool_list.output, got {tool_list.output}"
-    assert "cli_add" in tool_list.output, f"expect 'cli_add' in tool_list.output, got {tool_list.output}"
-    assert "cli_now_utc" in tool_list.output, f"expect 'cli_now_utc' in tool_list.output, got {tool_list.output}"
-
-    tool_info = isolated_cli_runner.invoke(agent_cli, ["tool-info", "agent1", "cli_add"])
-    _assert_exit_code(tool_info, 0, "showing tool info")
-    assert "Tool: cli_add" in tool_info.output, f"expect 'Tool: cli_add' in tool_info.output, got {tool_info.output}"
-    assert "Add two integers" in tool_info.output, f"expect 'Add two integers' in tool_info.output, got {tool_info.output}"
-
-    missing_tool = isolated_cli_runner.invoke(
-        agent_cli, ["tool-info", "agent1", NONEXISTENT_TOOL_NAME]
-    )
-    assert missing_tool.exit_code == 0, f"expect cli exit code 0, got {missing_tool.exit_code} with output: {missing_tool.output}"
-    target_value = f"Tool '{NONEXISTENT_TOOL_NAME}' not found"
-    assert target_value in missing_tool.output, f"expect {target_value} in missing_tool.output, got {missing_tool.output}"
-
-    tool_search = isolated_cli_runner.invoke(agent_cli, ["tool-search", "agent1", "echo"])
-    _assert_exit_code(tool_search, 0, "searching agent tools")
-    assert "cli_echo" in tool_search.output, f"expect 'cli_echo' in tool_search.output, got {tool_search.output}"
-
-    no_match = isolated_cli_runner.invoke(agent_cli, ["tool-search", "agent1", "zzzz"])
-    _assert_exit_code(no_match, 0, "searching for unmatched agent tools")
-    assert "No tools matched" in no_match.output, f"expect 'No tools matched' in no_match.output, got {no_match.output}"
-
-    tool_run = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", '{"a": 4, "b": 6}']
-    )
-    _assert_exit_code(tool_run, 0, "running cli_add")
-    assert "Status: success" in tool_run.output, f"expect 'Status: success' in tool_run.output, got {tool_run.output}"
-    assert "Result: 10" in tool_run.output, f"expect 'Result: 10' in tool_run.output, got {tool_run.output}"
 
     asked = isolated_cli_runner.invoke(
         agent_cli, ["ask", "agent1", "--prompt", "echo hello there"]
