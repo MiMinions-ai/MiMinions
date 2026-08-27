@@ -139,9 +139,9 @@ async def _execute_agent_action(runtime_agent, operation, **params):
             f"(tools={state.tool_count}, has_memory={state.has_memory}, "
             f"servers={len(state.connected_servers)})"
         )
-        return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
+        return await runtime_agent.run(params["prompt"])
     if action is AgentAction.ASK:
-        return await _execute_prompt_with_tool_fallback(runtime_agent, params["prompt"])
+        return await runtime_agent.run(params["prompt"])
     if action is AgentAction.TOOL_LIST:
         return [
             (name, runtime_agent.get_tool_info(name))
@@ -526,9 +526,10 @@ def set_goal(agent_id, goal):
 
 @agent_cli.command("run")
 @click.argument("agent_id", required=False, default=None)
-@click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
+#@click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
 # @require_auth  # TODO(auth): placeholder; local agent runs do not require sign-in yet.
-def run_agent(agent_id, async_run):
+#def run_agent(agent_id, async_run):
+def run_agent(agent_id):
     """Run an agent (defaults to the configured default agent)."""
     agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
@@ -547,16 +548,16 @@ def run_agent(agent_id, async_run):
     agents[agent_id]["status"] = "running"
     save_agents(agents)
     
-    if async_run:
-        click.echo(f"Agent '{agent_id}' started asynchronously")
-        click.echo("TODO: Async CLI execution path should stream model output and session events.")
-    else:
-        click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
-        output = asyncio.run(
-            _run_with_agent_runtime(agent, AgentAction.RUN, prompt=agent["goal"])
-        )
-        click.echo(f"Agent response: {output}")
-        click.echo("Agent execution completed")
+    # if async_run:
+    #     click.echo(f"Agent '{agent_id}' started asynchronously")
+    #     click.echo("TODO: Async CLI execution path should stream model output and session events.")
+    # else:
+    #     click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
+    #     output = asyncio.run(
+    #         _run_with_agent_runtime(agent, AgentAction.RUN, prompt=agent["goal"])
+    #     )
+    #     click.echo(f"Agent response: {output}")
+    #     click.echo("Agent execution completed")
 
 
 @agent_cli.command("ask")
