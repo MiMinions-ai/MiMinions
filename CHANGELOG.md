@@ -16,7 +16,7 @@ Work in progress toward the next release.
 
 ### Added
 
-- TBD
+- Added a top-level `miminions tool` category for listing, inspecting, searching, and running agent tools. The former `miminions agent tool-*` commands remain available as hidden deprecated aliases.
 
 ## [0.4.0] - 2026-08-24
 
