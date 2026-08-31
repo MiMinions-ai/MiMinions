@@ -20,7 +20,7 @@ def patch_config_dir(config_dir):
         'miminions.cli.auth',
         'miminions.cli.agent',
         'miminions.cli.task',
-        'miminions.cli.workflow',
+        # 'miminions.cli.workflow', # TODO: Re-enable once workflow is implemented
         'miminions.cli.knowledge',
         'miminions.cli.workspace',
     ]

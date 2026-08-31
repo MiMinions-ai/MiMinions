@@ -266,10 +266,6 @@ miminions agent tool-list default
 miminions agent ask default --prompt "echo hello"
 ```
 
-!!! note
-    On `agent run`, the `--async` flag is **not yet functional** — it just prints a
-    placeholder. Run agents synchronously for now.
-
 ### Workspaces
 
 ```bash

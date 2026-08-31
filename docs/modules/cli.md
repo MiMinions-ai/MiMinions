@@ -44,10 +44,6 @@ miminions init --force
 
 </div>
 
-!!! warning "`workflow` is not yet enabled"
-    A `workflow` command group exists in the code but is **commented out of the CLI registration** ("not yet implemented"). `miminions workflow ...` will not run today — treat it as **planned**. The workflow tracing *models* are, however, used internally by `execution` (see below) and by the [Tasks & Workflows](tasks.md) module.
-    When enabled, workflow commands validate referenced agent ids (`--agents`) and reject unknown ids.
-
 ---
 
 ## `chat`
@@ -212,7 +208,7 @@ miminions import --input ./miminions-backup.json --mode replace
 
 ## `agent`
 
-Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, pre-loaded with a small default toolset (`cli_echo`, `cli_add`, `cli_now_utc`).
+Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, and their default CLI tools remain available through `tool-list`, `tool-info`, `tool-search`, and `tool-run`.
 
 All commands that take an agent id accept it as an optional positional argument. When omitted, the `default_agent` from `~/.miminions/config.json` is used.
 
@@ -239,13 +235,10 @@ miminions agent remove researcher
 | `update <id>` | `--name`, `--description`, `--type` | Update fields on an existing record. |
 | `remove <id>` | — | Delete a record (asks for confirmation). |
 | `set-goal [id]` | `--goal` | Store a goal used by `run`. `id` defaults to `default_agent`. |
-| `run [id]` | `--async` | Build the runtime and execute the stored goal. `id` defaults to `default_agent`. Requires a goal to be set. |
+| `run [id]` | — | Build the runtime and execute the stored goal. `id` defaults to `default_agent`. Requires a goal to be set. |
 | `ask [id]` | `--prompt` | One-off prompt to the agent without mutating its stored goal. `id` defaults to `default_agent`. |
 
 `show <ref>` accepts an exact id, an id prefix, or an exact agent name.
-
-!!! warning "`run --async` is not functional"
-    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.
 
 ### Inspecting and running tools
 

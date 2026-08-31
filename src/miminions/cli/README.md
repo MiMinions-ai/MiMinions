@@ -21,10 +21,6 @@ default workspace + agent are bootstrapped on first run.
 | `execution.py` | `miminions execution` | Execution sessions and recorded tool runs |
 | `gateway.py` | `miminions gateway` | Local gateway runtime, cron jobs, and sessions |
 
-> `workflow.py` exists but is **not registered** in `main.py`
-> (`miminions workflow` is currently unreachable). The `--async` flag on
-> `miminions agent run` is a no-op placeholder.
-
 ## Chat
 
 ```bash

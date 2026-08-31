@@ -175,9 +175,6 @@ miminions workspace add --name "Demo" --sample --init-files
 miminions workspace list
 ```
 
-> The `workflow` command group exists in the codebase but is **not yet enabled**.
-> The `--async` flag on `miminions agent run` is currently a placeholder.
-
 See the [CLI reference](https://miminions.ai/modules/cli/) for every subcommand.
 
 ## Documentation
