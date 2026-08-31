@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-The latest published release is **0.4.0** (requires Python ≥ 3.12). Install with
+The latest published release is **0.4.1** (requires Python ≥ 3.12). Install with
 `pip install miminions`, or `pip install miminions[sqlite]` for SQLite vector memory.
 
 ## [Unreleased]
@@ -17,6 +17,16 @@ Work in progress toward the next release.
 ### Added
 
 - TBD
+
+## [0.4.1] - 2026-08-26
+
+Latest published release on PyPI.
+
+### Changed
+
+- `miminions agent run` no longer accepts the non-functional `--async` flag; the CLI now fails fast instead of exposing a placeholder execution path.
+- `miminions agent run` and `miminions agent ask` now send prompts straight through the runtime model instead of applying hidden keyword-based demo tool routing.
+- Workflow-related CLI code remains internal-only; public docs no longer imply a shipped `miminions workflow` command surface.
 
 ## [0.4.0] - 2026-08-24
 
@@ -155,7 +165,8 @@ Initial release.
 | Version | Notes |
 | ------- | ----- |
 | **Unreleased** | TBD |
-| **0.4.0** | Current published release — streaming replies, retries + timeouts + hooks, history trimming, workspace schema versioning, `MIMINIONS_HOME`, atomic JSON persistence |
+| **0.4.1** | Current published release — removes the no-op `agent run --async` flag and hidden keyword-based CLI prompt bypass |
+| **0.4.0** | Previous release — streaming replies, retries + timeouts + hooks, history trimming, workspace schema versioning, `MIMINIONS_HOME`, atomic JSON persistence |
 | **0.3.0** | CLI, three-tier memory + distiller, workspaces, context builder, MCP loading, gateway building blocks; `fastembed` embeddings |
 | **0.2.2** | Agent, vector memory, tools, local data |
 | **0.1.0** | Initial release with core functionality |

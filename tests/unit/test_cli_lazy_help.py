@@ -46,6 +46,7 @@ def test_help_skips_bootstrap_and_heavy_imports():
     assert "MiMinions CLI" in result.output
     assert "auth" in result.output
     assert "agent" in result.output
+    assert "workflow" not in result.output.lower()
     # Static short helps (prove we did not import auth_cli docstring path for listing).
     assert "Create and manage agents." in result.output
 
@@ -86,3 +87,12 @@ def test_lazy_group_lists_all_commands():
     names = cli.list_commands(ctx)
     for expected in ("auth", "agent", "task", "chat", "gateway", "prompt"):
         assert expected in names
+    assert "workflow" not in names
+
+
+def test_version_reports_local_project_release():
+    cli, _ = _fresh_cli()
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--version"])
+    assert result.exit_code == 0, result.output
+    assert "0.4.1" in result.output, result.output
