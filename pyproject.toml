@@ -39,6 +39,9 @@ dev = [
     "ruff",
     "build>=1.0.0",
 ]
+docs = [
+    "mkdocs-material>=9.5.32",
+]
 cli-build = [
     "pyinstaller>=6.0.0",
 ]

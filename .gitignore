@@ -149,3 +149,5 @@ AGENTS.md
 
 # macOS system files
 .DS_Store
+
+.analysis

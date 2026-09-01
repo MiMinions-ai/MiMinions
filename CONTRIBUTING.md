@@ -48,23 +48,24 @@ We follow a structured branch naming convention:
 
 |Branch|Name|Notes|
 |---|---|---|
-|Stable|master|Accepts merges from Release and Hotfix branches only.|
-|Development|develop|Accepts merges from Feature/Bugfix, Release and Hotfix|
-|Features/Bugfix|feat-* / bug-*|Always branch off HEAD of develop|
-|Hotfix|hotfix-*|Always branch off master. Merges back into master and develop.|
-|Release|release-*|Always branches off develop. Last minute changes for release.|
+|Stable|main|Default branch. Accepts merges from Development, Release and Hotfix branches only.|
+|Development|development|Integration branch. Accepts merges from Feature/Bugfix branches.|
+|Features/Bugfix|`feature/*` or `bug/*`|Always branch off HEAD of development|
+|Hotfix|`hotfix/*`|Always branch off main. Merges back into main and development.|
+|Release|`release/*`|Always branches off development. Last minute changes for release.|
 
 #### Examples
 
 ```bash
 feature/PYM-001-stripe-payment-integration
-bugfix/PYM-015-webhook-signature-validation
+bug/PYM-015-webhook-signature-validation
 hotfix/PYM-020-payment-failure-handling
 ```
 
 ### Branch Rules
 
-1. **Always create from main/master/develop**: `git checkout main && git pull origin main`
+1. **Always create from development**: `git checkout development && git pull origin development`
+   Hotfixes are the exception and branch from `main`.
 2. **Use descriptive names**: Include ticket number and brief description
 3. **Keep branches focused**: One feature/fix per branch
 4. **Keep branches short-lived**: Merge within 1-2 weeks
@@ -75,7 +76,7 @@ hotfix/PYM-020-payment-failure-handling
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.12 or higher
 - pip (Python package installer)
 - Git
 
