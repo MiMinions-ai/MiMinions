@@ -77,27 +77,25 @@ From `pyproject.toml`:
 
 ## Code style
 
-From the project instruction set:
-
-- Simple, clear control flow only.
-- Loops must have statically provable bounds.
-- No dynamic allocation after initialization.
-- Functions under roughly 60 logical lines.
-- At least two assertions per function on average.
-- Narrowest possible variable scope.
-- Check all return values; validate all input parameters.
-- Avoid metaprogramming and macro-like constructs.
-- Combine context managers with parenthesized multi-line `with (a, b):` style.
+Governed by the project instruction set, which is the source of truth: simple
+control flow, statically bounded loops, no post-init allocation, functions under
+roughly 60 logical lines, at least two assertions per function on average,
+narrowest variable scope, all return values checked and inputs validated, no
+metaprogramming. Combine context managers as `with (a, b):`.
 
 ## Branching
 
-`main` is the stable default branch and the only CI trigger. `development` is
-the integration branch. Work branches use `<type>/<ticket>-<description>` with
-`feature/*` and `bug/*` off `development`, `hotfix/*` off `main`, and
-`release/*` off `development`.
+`main` is the stable default; `development` is the integration branch. Work
+branches use `<type>/<ticket>-<description>`: `feature/*`, `fix/*`, and
+`enhance/*` off `development`, `hotfix/*` off `main`, `release/*` optional.
 
-`CONTRIBUTING.md` was corrected to match on 2026-09-01; it previously described
-a `master`/`develop` model that never existed here.
+While the team is small, `development` merges directly into `main` to cut a
+release; a `release/*` branch is used only when a release needs stabilising
+apart from ongoing work.
+
+`CONTRIBUTING.md` was corrected on 2026-09-01 (it described a `master`/`develop`
+model that never existed) and again on 2026-09-02, replacing an unused `bug/*`
+prefix with the `fix/*` and `enhance/*` prefixes actually in use.
 
 ## Continuous integration
 

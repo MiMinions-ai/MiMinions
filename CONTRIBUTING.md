@@ -49,16 +49,19 @@ We follow a structured branch naming convention:
 |Branch|Name|Notes|
 |---|---|---|
 |Stable|main|Default branch. Accepts merges from Development, Release and Hotfix branches only.|
-|Development|development|Integration branch. Accepts merges from Feature/Bugfix branches.|
-|Features/Bugfix|`feature/*` or `bug/*`|Always branch off HEAD of development|
-|Hotfix|`hotfix/*`|Always branch off main. Merges back into main and development.|
-|Release|`release/*`|Always branches off development. Last minute changes for release.|
+|Development|development|Integration branch. Accepts merges from work branches below.|
+|Feature|`feature/*`|New capability. Branch off HEAD of development.|
+|Fix|`fix/*`|Bug fix. Branch off HEAD of development.|
+|Enhancement|`enhance/*`|Improvement to something that already works: docs, tooling, refactors. Branch off HEAD of development.|
+|Hotfix|`hotfix/*`|Urgent fix against a release. Always branch off main. Merges back into main and development.|
+|Release|`release/*`|Optional. Branch off development when a release needs stabilising before it lands on main.|
 
 #### Examples
 
 ```bash
 feature/PYM-001-stripe-payment-integration
-bug/PYM-015-webhook-signature-validation
+fix/PYM-015-webhook-signature-validation
+enhance/repo-docs-and-memory
 hotfix/PYM-020-payment-failure-handling
 ```
 
@@ -69,6 +72,15 @@ hotfix/PYM-020-payment-failure-handling
 2. **Use descriptive names**: Include ticket number and brief description
 3. **Keep branches focused**: One feature/fix per branch
 4. **Keep branches short-lived**: Merge within 1-2 weeks
+
+### Promoting to main
+
+While the team is small, `development` is merged directly into `main` to cut a
+release. A `release/*` branch is optional and worth creating only when a release
+needs stabilising separately from ongoing work on `development`.
+
+CI gates pull requests into both `main` and `development`, so the promotion PR
+is verified either way.
 
 
 
