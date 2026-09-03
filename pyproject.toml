@@ -8,12 +8,13 @@ version = "0.4.1"
 description = "An agentic framework with pydantic_ai, MCP server support and vector memory"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
     "click>=8.0.0",
     "pydantic>=2.0.0",
     "pydantic-ai>=1.0.0,<2.0.0",
     "openai>=2.14.0",
-    "mcp>=1.23.0",
+    "mcp>=1.23.0,<2.0.0",
     "numpy>=1.21.0",
     "pdfplumber>=0.9.0",
     "Faker>=40.0.0",
@@ -36,8 +37,11 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
-    "ruff",
+    "ruff>=0.16.5",
     "build>=1.0.0",
+]
+docs = [
+    "mkdocs-material>=9.5.32",
 ]
 cli-build = [
     "pyinstaller>=6.0.0",
@@ -46,3 +50,10 @@ cli-build = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 127
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]
