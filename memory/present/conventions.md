@@ -9,7 +9,7 @@ verified 2026-09-01 against version 0.4.1.
 
 | Task | Command | Observed result |
 | --- | --- | --- |
-| Sync environment | `uv sync --extra dev --extra sqlite --extra docs` | full toolchain |
+| Sync environment | `uv sync --extra dev --extra sqlite --extra docs --extra cli-build` | full toolchain |
 | Run tests | `uv run pytest -q` | 622 passed |
 | Lint | `uv run ruff check src tests` | clean, exit 0 |
 | Build package | `uv build` | builds sdist + wheel into `dist/` |
