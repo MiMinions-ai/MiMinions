@@ -1,28 +1,10 @@
-# Core dependencies
-pydantic>=2.0.0
-pydantic-ai>=1.0.0,<2.0.0
-openai>=2.14.0
-mcp>=1.0.0
-fastembed>=0.3.0
-numpy>=1.21.0
+# Development dependency entry point.
+#
+# `pyproject.toml` is the single source of truth for dependencies. This file
+# only exists so that `pip install -r requirements.txt` keeps working; it
+# installs the project in editable mode with every optional extra.
+#
+# Do not list packages here. Add them to the appropriate extra in
+# `pyproject.toml` instead, or this file will drift out of sync again.
 
-# Document processing
-pdfplumber>=0.9.0
-
-# Memory backends
-pysqlite3>=0.6.0
-sqlite-vec>=0.1.0
-
-# Development dependencies
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.0.0
-
-# User Interface
-click>=8.0.0
-
-# Utility
-Faker>=40.0.0
-
-# Documentation
-mkdocs-material>=9.5.32
+-e .[all,dev,docs,cli-build]
