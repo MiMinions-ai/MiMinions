@@ -110,10 +110,9 @@ jobs:
           binary=dist/miminions-cli
           [ "$RUNNER_OS" = "Windows" ] && binary=dist/miminions-cli.exe
           "$binary" --version
-          # Every group is lazily imported, so --help alone would not catch a
-          # missing module.
-          for group in agent workspace chat task auth knowledge execution gateway prompt; do
-            "$binary" "$group" --help > /dev/null
+          # Every lazy command must be invoked, because root --help does not import it.
+          for command in agent workspace chat task auth knowledge execution gateway prompt config export import; do
+            "$binary" "$command" --help > /dev/null
           done
       - name: Rename binary for release
         shell: bash
