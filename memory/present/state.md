@@ -31,8 +31,8 @@ All four are enforced in CI on `main`.
 
 ## Partial or not integrated
 
-- **`workflow`** — models and a controller exist, but no CLI command group is
-  shipped and no other module imports it. Internal-only.
+- **`workflow`** — trace models are consumed by the execution CLI, but its
+  controller has no caller and no workflow-specific command group is shipped.
 - **`user`** — a dataclass and a stub controller. No internal callers.
 - **`data`** — a local content-addressable manager with no internal callers;
   reached only through the CLI knowledge path.
