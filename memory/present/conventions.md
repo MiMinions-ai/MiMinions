@@ -114,9 +114,9 @@ targeting `main` or `development`, on Python 3.12, installing with
   three to the release.
 - `publish` uploads the wheel to PyPI via trusted publishing.
 
-The PyInstaller flags are load-bearing and duplicated between the workflow and
-`deploy/build_cli.sh`. See `../past/adrs/0008-cli-binary-build-flags.md` and
-`../future/open-questions.md` OQ-9.
+PyInstaller settings live in the root `miminions-cli.spec`, shared by the
+workflow and `deploy/build_cli.sh`. See
+`../past/adrs/0008-cli-binary-build-flags.md`.
 
 ## Provenance
 
