@@ -24,8 +24,8 @@ All four are enforced in CI on `main`.
 - Message-history trimming at 40 messages, cutting only on user-turn boundaries
   so tool call/return pairs stay intact. On-disk transcript stays complete.
 - Atomic JSON persistence with loud failure on corrupt files.
-- `MIMINIONS_HOME` relocation of `~/.miminions`, resolved centrally through
-  `core.paths`.
+- `MIMINIONS_HOME` relocation for integrated CLI state through `core.paths`;
+  `LocalDataManager` still hardcodes its default `~/.miminions` path.
 - Workspace schema versioning at v1 with a load-time migration hook.
 - `SQLiteMemory` as a context manager, behind the `sqlite` extra.
 
