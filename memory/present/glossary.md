@@ -40,9 +40,9 @@ configuration. The `context` subpackage.
 **Task** — a unit of asynchronous work in the `task` subpackage, executed by
 `TaskRuntime`. `AgentTask` is the agent-backed variant.
 
-**Workflow** — trace models and a controller in the `workflow` subpackage.
-Internal-only: no CLI command group ships, and nothing else imports it. Do not
-assume a user-facing workflow feature exists.
+**Workflow** — trace models and a controller in the `workflow` subpackage. The
+execution CLI consumes its trace models, but no workflow-specific command group
+ships; do not assume a complete user-facing workflow feature exists.
 
 **Gateway** — the messaging layer under `core/gateway`: message bus, channels,
 sessions, cron service, orchestrator.
