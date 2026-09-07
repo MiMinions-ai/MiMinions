@@ -50,7 +50,7 @@ only the tier you need.
 3. Link both directions: an ADR links forward to the reference record that
    implemented it, and the record links back.
 4. Graduation path: open question -> ADR -> reference record -> timeline entry.
-5. Keep this file plus `present/` under roughly 400 lines total (currently 379).
+5. Keep this file plus `present/` under roughly 400 lines total (currently 397).
    Depth lives in `past/`, read on demand. If the tier outgrows the budget,
    move detail down into `past/` rather than raising the ceiling again.
 
