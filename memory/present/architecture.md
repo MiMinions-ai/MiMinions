@@ -58,8 +58,9 @@ should move down into `core` and the CLI should import them upward.
 
 ## Persistence boundaries
 
-- All persistent paths resolve through `miminions.core.paths.get_config_dir()`,
-  honoring `MIMINIONS_HOME`. Nothing should hardcode `~/.miminions`.
+- Integrated CLI paths resolve through `miminions.core.paths.get_config_dir()`
+  and honor `MIMINIONS_HOME`; `LocalDataManager` still hardcodes its default
+  `~/.miminions` directory.
 - JSON stores go through `miminions.core.persistence` `load_json` / `save_json`,
   which write atomically and fail loudly on corrupt files.
 - Chat transcripts are JSONL under `session/`.
