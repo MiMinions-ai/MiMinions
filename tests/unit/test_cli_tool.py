@@ -1,3 +1,5 @@
+"""Tool CLI tests persist only under pytest-managed ``tmp_path`` directories."""
+
 from miminions.cli.agent import save_agents
 from miminions.cli.tool import tool_cli
 

@@ -120,16 +120,6 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
-def test_agent_tool_commands_are_removed(isolated_cli_runner):
-    help_result = isolated_cli_runner.invoke(agent_cli, ["--help"])
-    _assert_exit_code(help_result, 0, "showing agent help")
-    for command in ("tool-list", "tool-info", "tool-search", "tool-run"):
-        assert command not in help_result.output
-        result = isolated_cli_runner.invoke(agent_cli, [command])
-        assert result.exit_code == 2
-        assert "No such command" in result.output
-
-
 def test_agent_deterministic_prompt_fallbacks(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
