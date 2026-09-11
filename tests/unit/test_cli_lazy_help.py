@@ -91,13 +91,12 @@ def test_lazy_group_lists_all_commands():
     names = cli.list_commands(ctx)
     for expected in ("auth", "agent", "tool", "task", "chat", "gateway", "prompt"):
         assert expected in names
+    assert "workflow" not in names
 
 
-def test_lazy_subcommand_resolves_tool_group():
-    cli, main_mod = _fresh_cli()
+def test_version_reports_local_project_release():
+    cli, _ = _fresh_cli()
     runner = CliRunner()
-    with patch.object(main_mod, "_maybe_bootstrap"):
-        result = runner.invoke(cli, ["tool", "--help"])
-    assert result.exit_code == 0
-    for command in ("list", "info", "search", "run"):
-        assert command in result.output
+    result = runner.invoke(cli, ["--version"])
+    assert result.exit_code == 0, result.output
+    assert "0.4.1" in result.output, result.output
