@@ -45,6 +45,38 @@
   --md-code-fg-color: #e5e7eb;
 }
 
+/* Keep feature callouts and FAQ questions on the documentation palette. */
+.md-typeset .admonition.note,
+.md-typeset details.note,
+.md-typeset .admonition.question,
+.md-typeset details.question {
+  --md-admonition-fg-color: #087F86;
+  --md-admonition-bg-color: #1DCED81A;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  --md-admonition-fg-color: #218043;
+  --md-admonition-bg-color: #55E07E1A;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  --md-admonition-fg-color: #A65316;
+  --md-admonition-bg-color: #FF9D501A;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.note,
+[data-md-color-scheme="slate"] .md-typeset details.note,
+[data-md-color-scheme="slate"] .md-typeset .admonition.question,
+[data-md-color-scheme="slate"] .md-typeset details.question,
+[data-md-color-scheme="slate"] .md-typeset .admonition.tip,
+[data-md-color-scheme="slate"] .md-typeset details.tip,
+[data-md-color-scheme="slate"] .md-typeset .admonition.warning,
+[data-md-color-scheme="slate"] .md-typeset details.warning {
+  --md-admonition-fg-color: #FFF9D8;
+}
+
 /* Use the warm brand color as the visual anchor for site navigation. */
 .md-header {
   background: linear-gradient(135deg, #FF9D50 0%, #1DCED8 100%);
