@@ -268,9 +268,6 @@ miminions tool run researcher cli_add --arguments '{"a": 2, "b": 3}'
 miminions tool run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
 
-The former `miminions agent tool-list`, `tool-info`, `tool-search`, and
-`tool-run` spellings remain as hidden deprecated aliases for compatibility.
-
 ### MCP servers
 
 MCP stdio servers are configured per agent. Registration stores the executable

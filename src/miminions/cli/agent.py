@@ -575,63 +575,6 @@ def ask_agent(agent_id, prompt):
     click.echo(f"Agent response: {output}")
 
 
-def _warn_legacy_tool_command(old_name, new_name):
-    """Warn while preserving legacy agent tool command behavior."""
-    click.echo(
-        f"Warning: 'miminions agent {old_name}' is deprecated; "
-        f"use 'miminions tool {new_name}' instead.",
-        err=True,
-    )
-
-
-@agent_cli.command("tool-list", hidden=True)
-@click.argument("agent_id", required=False, default=None)
-def legacy_list_agent_tools(agent_id):
-    """Compatibility alias for ``miminions tool list``."""
-    from .tool import list_agent_tools
-
-    _warn_legacy_tool_command("tool-list", "list")
-    return list_agent_tools.callback(agent_id)
-
-
-@agent_cli.command("tool-info", hidden=True)
-@click.argument("agent_id", required=False, default=None)
-@click.argument("tool_name", required=False, default=None)
-def legacy_show_agent_tool_info(agent_id, tool_name):
-    """Compatibility alias for ``miminions tool info``."""
-    from .tool import show_agent_tool_info
-
-    _warn_legacy_tool_command("tool-info", "info")
-    return show_agent_tool_info.callback(agent_id, tool_name)
-
-
-@agent_cli.command("tool-search", hidden=True)
-@click.argument("agent_id", required=False, default=None)
-@click.argument("query", required=False, default=None)
-def legacy_search_agent_tools(agent_id, query):
-    """Compatibility alias for ``miminions tool search``."""
-    from .tool import search_agent_tools
-
-    _warn_legacy_tool_command("tool-search", "search")
-    return search_agent_tools.callback(agent_id, query)
-
-
-@agent_cli.command("tool-run", hidden=True)
-@click.argument("agent_id", required=False, default=None)
-@click.argument("tool_name", required=False, default=None)
-@click.option(
-    "--arguments",
-    default="{}",
-    help="JSON object with tool arguments, e.g. '{\"a\":2,\"b\":3}'.",
-)
-def legacy_run_agent_tool(agent_id, tool_name, arguments):
-    """Compatibility alias for ``miminions tool run``."""
-    from .tool import run_agent_tool
-
-    _warn_legacy_tool_command("tool-run", "run")
-    return run_agent_tool.callback(agent_id, tool_name, arguments)
-
-
 # TODO(cli-agent): Add commands for memory backends and memory tools:
 # - memory-attach --backend {sqlite,md}
 # - memory-store / memory-recall / memory-update / memory-delete

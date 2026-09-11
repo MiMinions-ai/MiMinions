@@ -120,57 +120,14 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
-def test_agent_tool_list_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    result = isolated_cli_runner.invoke(agent_cli, ["tool-list", NONEXISTENT_AGENT_ID])
-
-    _assert_exit_code(result, 0, "listing tools for a nonexistent agent")
-    target_value = f"Agent '{NONEXISTENT_AGENT_ID}' not found."
-    assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
-
-
-def test_legacy_tool_commands_are_hidden_and_warn(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
+def test_agent_tool_commands_are_removed(isolated_cli_runner):
     help_result = isolated_cli_runner.invoke(agent_cli, ["--help"])
     _assert_exit_code(help_result, 0, "showing agent help")
     for command in ("tool-list", "tool-info", "tool-search", "tool-run"):
         assert command not in help_result.output
-
-    result = isolated_cli_runner.invoke(agent_cli, ["tool-list", "agent1"])
-    _assert_exit_code(result, 0, "using the legacy tool-list alias")
-    assert "miminions agent tool-list" in result.output
-    assert "miminions tool list" in result.output
-    assert "cli_add" in result.output
-
-
-def test_agent_tool_run_rejects_invalid_json_arguments(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    invalid_json = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "nope"]
-    )
-    _assert_exit_code(invalid_json, 0, "running a tool with invalid JSON arguments")
-    assert "Invalid JSON" in invalid_json.output, f"expect 'Invalid JSON' in invalid_json.output, got {invalid_json.output}"
-
-
-def test_agent_tool_run_rejects_non_object_json_arguments(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    not_object = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "[1, 2]"]
-    )
-    _assert_exit_code(not_object, 0, "running a tool with non-object JSON arguments")
-    assert "--arguments must be a JSON object" in not_object.output, f"expect '--arguments must be a JSON object' in not_object.output, got {not_object.output}"
+        result = isolated_cli_runner.invoke(agent_cli, [command])
+        assert result.exit_code == 2
+        assert "No such command" in result.output
 
 
 def test_agent_deterministic_prompt_fallbacks(

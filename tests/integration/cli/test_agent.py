@@ -22,6 +22,7 @@ from miminions.cli.agent import (
     load_agents,
     save_agents,
 )
+from miminions.cli.tool import tool_cli
 
 
 class TestAgentFunctions:
@@ -578,7 +579,7 @@ class TestAgentCLI:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_load.return_value = existing_agents
 
-                result = self.runner.invoke(agent_cli, ['tool-list', 'test_agent'])
+                result = self.runner.invoke(tool_cli, ['list', 'test_agent'])
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "Tools for 'test_agent':" in result.output, f"expect \"Tools for 'test_agent':\" in result.output, got {result.output}"
@@ -601,7 +602,7 @@ class TestAgentCLI:
             with patch('miminions.cli.agent.load_agents') as mock_load:
                 mock_load.return_value = existing_agents
 
-                result = self.runner.invoke(agent_cli, ['tool-info', 'test_agent', 'cli_add'])
+                result = self.runner.invoke(tool_cli, ['info', 'test_agent', 'cli_add'])
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "Tool: cli_add" in result.output, f"expect tool-info output identifies requested tool as 'Tool: cli_add', got {result.output}"
@@ -624,8 +625,8 @@ class TestAgentCLI:
                 mock_load.return_value = existing_agents
 
                 result = self.runner.invoke(
-                    agent_cli,
-                    ['tool-run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
+                    tool_cli,
+                    ['run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
                 )
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
@@ -650,8 +651,8 @@ class TestAgentCLI:
                 mock_load.return_value = existing_agents
 
                 result = self.runner.invoke(
-                    agent_cli,
-                    ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                    tool_cli,
+                    ['run', 'test_agent', 'cli_run_command', '--arguments', arguments],
                     input='y\n',
                 )
 
@@ -680,8 +681,8 @@ class TestAgentCLI:
         ):
             mock_load.return_value = existing_agents
             result = self.runner.invoke(
-                agent_cli,
-                ['tool-run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                tool_cli,
+                ['run', 'test_agent', 'cli_run_command', '--arguments', arguments],
                 input='n\n',
             )
 
@@ -706,8 +707,8 @@ class TestAgentCLI:
                 mock_load.return_value = existing_agents
 
                 result = self.runner.invoke(
-                    agent_cli,
-                    ['tool-run', 'test_agent', 'cli_add', '--arguments', 'not-json']
+                    tool_cli,
+                    ['run', 'test_agent', 'cli_add', '--arguments', 'not-json']
                 )
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
