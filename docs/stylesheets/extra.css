@@ -1,31 +1,35 @@
-/* MiMinions brand palette — matched from miminions.ai landing.css */
+/* MiMinions documentation palette */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --md-primary-fg-color:        #2DD4BF;
-  --md-primary-fg-color--light: #5ee8d8;
-  --md-primary-fg-color--dark:  #1ba394;
-  --md-accent-fg-color:         #0EA5E9;
-  --md-accent-fg-color--transparent: #0EA5E910;
+  --md-primary-fg-color:        #FF9D50;
+  --md-primary-fg-color--light: #FFBF8A;
+  --md-primary-fg-color--dark:  #D97832;
+  --md-accent-fg-color:         #1DCED8;
+  --md-accent-fg-color--transparent: #1DCED820;
+  --md-default-bg-color:        #FFF9D8;
+  --md-typeset-mark-color:      #55E07E66;
 
   --md-text-font: "Plus Jakarta Sans", sans-serif;
   --md-code-font: "Fira Code", "Monaco", "Consolas", monospace;
 }
 
-/* Light scheme: the light brand teal is unreadable as a link color on white,
-   so links use teal-700 from the same Tailwind family (passes WCAG AA) */
+/* Darken cyan links against the cream canvas for readable body copy. */
 [data-md-color-scheme="default"] {
-  --md-typeset-a-color: #0f766e;
+  --md-typeset-a-color: #087F86;
 }
 
-/* Dark (slate) scheme — yellow accent matches the site's hover/CTA accent */
+/* Dark scheme keeps the warm primary and bright interactive accent visible. */
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color:        #2DD4BF;
-  --md-primary-fg-color--light: #5ee8d8;
-  --md-primary-fg-color--dark:  #1ba394;
-  --md-accent-fg-color:         #FDE047;
-  --md-accent-fg-color--transparent: #FDE04710;
+  --md-primary-fg-color:        #FF9D50;
+  --md-primary-fg-color--light: #FFBF8A;
+  --md-primary-fg-color--dark:  #D97832;
+  --md-accent-fg-color:         #1DCED8;
+  --md-accent-fg-color--transparent: #1DCED820;
+  --md-default-bg-color:        #182727;
+  --md-default-fg-color:        #FFF9D8;
+  --md-typeset-a-color:         #55E07E;
 }
 
 /* Code blocks — light scheme keeps Material's light code styling so the
@@ -41,17 +45,16 @@
   --md-code-fg-color: #e5e7eb;
 }
 
-/* Nav header gradient — mirrors the site's CTA gradient */
+/* Use the warm brand color as the visual anchor for site navigation. */
 .md-header {
-  background: linear-gradient(135deg, #2DD4BF 0%, #0EA5E9 100%);
+  background: linear-gradient(135deg, #FF9D50 0%, #1DCED8 100%);
 }
 
-/* Active nav tabs — yellow text on the teal tab bar is unreadable (~1.4:1),
-   so keep white text and carry the yellow accent as an underline instead */
+/* Keep tab labels readable and use green for the active state. */
 .md-tabs__link--active,
 .md-tabs__link:hover {
   color: #ffffff;
-  box-shadow: inset 0 -2px 0 #FDE047;
+  box-shadow: inset 0 -2px 0 #55E07E;
 }
 
 /* ── Homepage hero ───────────────────────────────────────────── */
@@ -60,8 +63,8 @@
   padding: 3rem 1rem 2.5rem;
   margin: 0 0 1rem;
   background: linear-gradient(135deg,
-    var(--md-primary-fg-color--transparent, #2DD4BF14) 0%,
-    var(--md-accent-fg-color--transparent, #0EA5E914) 100%);
+    var(--md-primary-fg-color--transparent, #FF9D5020) 0%,
+    var(--md-accent-fg-color--transparent, #1DCED820) 100%);
   border-radius: 1rem;
 }
 
@@ -107,7 +110,7 @@
 /* ── Feature/use-case category badge ─────────────────────────── */
 .feature-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #2DD4BF 0%, #0EA5E9 100%);
+  background: linear-gradient(135deg, #55E07E 0%, #1DCED8 100%);
   color: #ffffff !important;
   font-size: 0.7rem;
   font-weight: 600;
