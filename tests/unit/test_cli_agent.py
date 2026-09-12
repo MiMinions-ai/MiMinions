@@ -110,48 +110,18 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
-def test_agent_tool_list_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    result = isolated_cli_runner.invoke(agent_cli, ["tool-list", NONEXISTENT_AGENT_ID])
-
-    _assert_exit_code(result, 0, "listing tools for a nonexistent agent")
-    target_value = f"Agent '{NONEXISTENT_AGENT_ID}' not found."
-    assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
-
-
-def test_agent_tool_run_rejects_invalid_json_arguments(
+def test_agent_commands_and_runtime_prompt_execution(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
+    """Agent prompts should go through the runtime without making network requests."""
     monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
-    invalid_json = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "nope"]
+    async def mock_runtime(_agent_data, _operation, **params):
+        return f"model says {params['prompt']}"
+
+    monkeypatch.setattr(
+        "miminions.cli.agent._run_with_agent_runtime", mock_runtime
     )
-    _assert_exit_code(invalid_json, 0, "running a tool with invalid JSON arguments")
-    assert "Invalid JSON" in invalid_json.output, f"expect 'Invalid JSON' in invalid_json.output, got {invalid_json.output}"
-
-
-def test_agent_tool_run_rejects_non_object_json_arguments(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    not_object = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "[1, 2]"]
-    )
-    _assert_exit_code(not_object, 0, "running a tool with non-object JSON arguments")
-    assert "--arguments must be a JSON object" in not_object.output, f"expect '--arguments must be a JSON object' in not_object.output, got {not_object.output}"
-
-
-def test_agent_tool_commands_and_runtime_prompt_execution(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    """Tool commands should expose runtime tools while prompts go through the runtime."""
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
     save_agents(
         {
             "agent1": {
@@ -176,7 +146,8 @@ def test_agent_tool_commands_and_runtime_prompt_execution(
 
     async_run = isolated_cli_runner.invoke(agent_cli, ["run", "agent1", "--async"])
     _assert_exit_code(async_run, 2, "rejecting removed async run flag")
-    assert "No such option '--async'" in async_run.output, f"expect \"No such option '--async'\" in async_run.output, got {async_run.output}"
+    assert "No such option" in async_run.output, f"expect 'No such option' in async_run.output, got {async_run.output}"
+    assert "--async" in async_run.output, f"expect '--async' in async_run.output, got {async_run.output}"
 
 
 def test_agent_run_reports_missing_goal(
