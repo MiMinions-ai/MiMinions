@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import time
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -30,11 +31,13 @@ def test_help_skips_bootstrap_and_heavy_imports():
             "miminions.cli.gateway",
             "miminions.cli.execution",
             "miminions.cli.prompt",
+            "miminions.cli.tool",
             "miminions.core.bootstrap",
         }
         or name.startswith("miminions.cli.agent.")
         or name.startswith("miminions.cli.chat.")
         or name.startswith("miminions.cli.gateway.")
+        or name.startswith("miminions.cli.tool.")
     ]
     for name in doomed:
         sys.modules.pop(name, None)
@@ -46,13 +49,14 @@ def test_help_skips_bootstrap_and_heavy_imports():
     assert "MiMinions CLI" in result.output
     assert "auth" in result.output
     assert "agent" in result.output
-    assert "workflow" not in result.output.lower()
+    assert "tool" in result.output
     # Static short helps (prove we did not import auth_cli docstring path for listing).
     assert "Create and manage agents." in result.output
 
     assert "miminions.cli.agent" not in sys.modules
     assert "miminions.cli.chat" not in sys.modules
     assert "miminions.cli.gateway" not in sys.modules
+    assert "miminions.cli.tool" not in sys.modules
     assert "miminions.core.bootstrap" not in sys.modules
 
 
@@ -85,7 +89,7 @@ def test_lazy_group_lists_all_commands():
     # Avoid no_args_is_help SystemExit by building a context that is not parsed.
     ctx = cli.make_context("miminions", ["--help"], resilient_parsing=True)
     names = cli.list_commands(ctx)
-    for expected in ("auth", "agent", "task", "chat", "gateway", "prompt"):
+    for expected in ("auth", "agent", "tool", "task", "chat", "gateway", "prompt"):
         assert expected in names
     assert "workflow" not in names
 

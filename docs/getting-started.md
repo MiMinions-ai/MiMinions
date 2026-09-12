@@ -135,7 +135,7 @@ default agent under `~/.miminions/`, where all CLI state persists (set
 miminions --help
 ```
 
-Registered command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`,
+Registered command groups: `auth`, `agent`, `tool`, `task`, `knowledge`, `workspace`,
 `execution`, `chat`, `gateway`, `prompt`.
 
 ### Chat
@@ -262,7 +262,7 @@ miminions agent set-goal default --goal "Add 2 and 3"
 miminions agent run default
 
 # Inspect an agent's tools
-miminions agent tool-list default
+miminions tool list default
 miminions agent ask default --prompt "echo hello"
 ```
 
