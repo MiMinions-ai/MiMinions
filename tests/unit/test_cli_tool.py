@@ -14,6 +14,10 @@ def _assert_exit_code(result, expected: int, behavior: str) -> None:
     )
 
 
+def _tear_down_saved_agents() -> None:
+    save_agents({})
+
+
 def test_tool_group_help_and_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
     monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
@@ -26,6 +30,7 @@ def test_tool_group_help_and_nonexistent_agent(isolated_cli_runner, tmp_path, mo
     result = isolated_cli_runner.invoke(tool_cli, ["list", NONEXISTENT_AGENT_ID])
     _assert_exit_code(result, 0, "listing tools for a nonexistent agent")
     assert f"Agent '{NONEXISTENT_AGENT_ID}' not found." in result.output
+    _tear_down_saved_agents()
 
 
 def test_tool_commands_use_configured_default_agent(isolated_cli_runner, tmp_path, monkeypatch):
@@ -48,6 +53,7 @@ def test_tool_commands_use_configured_default_agent(isolated_cli_runner, tmp_pat
             result, 0, f"running tool command {arguments[0]} with the default agent"
         )
         assert expected in result.output
+    _tear_down_saved_agents()
 
 
 def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkeypatch):
@@ -84,6 +90,7 @@ def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkey
     _assert_exit_code(tool_run, 0, "running cli_add")
     assert "Status: success" in tool_run.output
     assert "Result: 10" in tool_run.output
+    _tear_down_saved_agents()
 
 
 def test_tool_run_rejects_invalid_arguments(isolated_cli_runner, tmp_path, monkeypatch):
@@ -101,3 +108,4 @@ def test_tool_run_rejects_invalid_arguments(isolated_cli_runner, tmp_path, monke
     )
     _assert_exit_code(not_object, 0, "running a tool with non-object arguments")
     assert "--arguments must be a JSON object" in not_object.output
+    _tear_down_saved_agents()
