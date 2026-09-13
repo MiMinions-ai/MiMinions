@@ -43,6 +43,12 @@ def _is_retryable_error(exc: BaseException) -> bool:
     return isinstance(exc, ModelAPIError)  # connection errors / timeouts
 
 
+def _result_usage(result: Any) -> RunUsage:
+    """Return run usage across pydantic-ai's method-to-property transition."""
+    usage = result.usage
+    return usage if isinstance(usage, RunUsage) else usage()
+
+
 def _python_type_to_param_type(py_type: type) -> ParameterType:
     """Map Python type to ParameterType."""
     mapping = {
@@ -623,7 +629,7 @@ class Minion:
         self._last_messages = result.all_messages()
         if self._on_turn_end is not None:
             try:
-                self._on_turn_end(result.usage, time.monotonic() - start)
+                self._on_turn_end(_result_usage(result), time.monotonic() - start)
             except Exception:
                 logger.exception("on_turn_end callback failed")
         return result.output if hasattr(result, "output") else str(result.response)
@@ -661,7 +667,7 @@ class Minion:
             self._last_messages = result.all_messages()
             if self._on_turn_end is not None:
                 try:
-                    self._on_turn_end(result.usage, time.monotonic() - start)
+                    self._on_turn_end(_result_usage(result), time.monotonic() - start)
                 except Exception:
                     logger.exception("on_turn_end callback failed")
 

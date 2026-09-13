@@ -16,7 +16,7 @@ Work in progress toward the next release.
 
 ### Added
 
-- TBD
+- Added a top-level `miminions tool` category for listing, inspecting, searching, and running agent tools.
 
 ## [0.4.1] - 2026-08-26
 

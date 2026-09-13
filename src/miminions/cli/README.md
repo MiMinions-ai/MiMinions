@@ -12,7 +12,8 @@ default workspace + agent are bootstrapped on first run.
 | Module | Command | Purpose |
 |--------|---------|---------|
 | `auth.py` | `miminions auth` | Local sign-in, public-access mode, config |
-| `agent.py` | `miminions agent` | Manage agents; run and inspect their tools |
+| `agent.py` | `miminions agent` | Manage and run agents |
+| `tool.py` | `miminions tool` | Discover, inspect, and run agent tools |
 | `chat.py` | `miminions chat` | Interactive async chat loop |
 | `prompt.py` | `miminions prompt` | One-shot prompt to a workspace agent |
 | `task.py` | `miminions task` | Task CRUD |
