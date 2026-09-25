@@ -59,7 +59,7 @@ custom tools and execution workflows.
 miminions prompt ask "Draft a friendly reply for a delayed order complaint."
 
 # Add workflow/tool integration for deeper automation
-miminions execution --help
+miminions tool --help
 ```
 
 ## 5. Personal Productivity
@@ -91,7 +91,7 @@ execution workflows.
 miminions prompt ask "Draft SQL to compare weekly active users month over month."
 
 # Extend with custom tooling/data integration
-miminions execution --help
+miminions tool --help
 ```
 
 ## Practical Pattern
