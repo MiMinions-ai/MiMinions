@@ -24,7 +24,7 @@ miminions init --force
 `init` is an explicit, user-facing bootstrap/repair command over the same default setup logic used on first command run. The `--force` option re-runs bootstrap repair so missing default workspace template files are recreated without overwriting existing customized files.
 
 !!! warning "Authentication gating is uneven"
-    A `require_auth` decorator gates the commands in `task`, `knowledge`, `workspace`, and `execution`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat` and `prompt` commands are not wrapped at all — don't rely on those being blocked when signed out.
+    A `require_auth` decorator gates the commands in `task`, `knowledge`, and `workspace`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat`, `prompt`, and `tool` commands are not wrapped at all — don't rely on those being blocked when signed out.
 
 ## Command groups at a glance
 
@@ -34,13 +34,12 @@ miminions init --force
 -   :material-cog-outline: **`config`** — get/set top-level CLI defaults (`default_workspace`, `default_agent`)
 -   :material-database-export-outline: **`export`/`import`** — backup and restore agents/tasks/knowledge JSON data
 -   :material-robot: **`agent`** — manage and run agent records
--   :material-hammer-wrench: **`tool`** — discover, inspect, search, and run agent tools
+-   :material-hammer-wrench: **`tool`** — discover, execute, and trace tools and tool sessions
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
 -   :material-checkbox-marked-circle-outline: **`task`** — track tasks with priority and status
 -   :material-book-open-variant: **`knowledge`** — versioned knowledge entries
 -   :material-graph-outline: **`workspace`** — workspaces, rules, and on-disk scaffolding
--   :material-play-circle: **`execution`** — live tool-execution sessions and interaction traces
 -   :material-lan: **`gateway`** — local gateway runtime, cron jobs, and gateway sessions
 
 </div>
@@ -255,13 +254,13 @@ default agent.
 | `list [id]` | — | List the agent's tool names and descriptions. |
 | `info [id] <tool>` | — | Show a tool's description and JSON parameter schema. |
 | `search [id] <query>` | — | Search tools by name/description (substring). |
-| `run [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). |
+| `execute [id] <tool>` | `--arguments '<json>'` | Execute one tool with a JSON-object argument map and print the structured result (status, result/error, timing). |
 
 ```bash
 miminions tool list researcher
 miminions tool list                            # uses default_agent
-miminions tool run researcher cli_add --arguments '{"a": 2, "b": 3}'
-miminions tool run cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
+miminions tool execute researcher cli_add --arguments '{"a": 2, "b": 3}'
+miminions tool execute cli_add --arguments '{"a": 2, "b": 3}'  # uses default_agent
 ```
 
 ### MCP servers
@@ -389,26 +388,26 @@ miminions workspace add-rule my-project \
 
 ---
 
-## `execution`
+## Tool sessions and history
 
 A live tool-execution runtime: start a session, register tool modules, run individual tools, and review the recorded interactions. Each tool run is captured as a `WorkflowRun` trace and persisted to `interactions.json` (the same schema used by the [workflow tracing layer](tasks.md)).
 
 ```bash
 # 1. Start a session
-miminions execution session start --name demo
+miminions tool session start --name demo
 
 # 2. Register a Python module that defines GenericTool instances
-miminions execution add-tool ./my_tools.py
+miminions tool add ./my_tools.py
 
 # 3. Run a tool with KEY=VALUE inputs
-miminions execution run my_tool --input city=Tokyo --input units=metric
+miminions tool session execute my_tool --input city=Tokyo --input units=metric
 
 # 4. Review what happened
-miminions execution interaction list
-miminions execution interaction show 0
+miminions tool history list
+miminions tool history show 0
 
 # 5. Stop the session
-miminions execution session stop
+miminions tool session stop
 ```
 
 ### Sessions
@@ -423,19 +422,19 @@ miminions execution session stop
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `add-tool <path.py>` | — | Load `GenericTool` instances from a `.py` file into the active session. |
-| `run <tool>` | `--input KEY=VALUE` (repeatable) | Execute a registered tool with string inputs; prints result/error and records a `WorkflowRun`. |
+| `add <path.py>` | — | Load `GenericTool` instances from a `.py` file into the active session. |
+| `session execute <tool>` | `--input KEY=VALUE` (repeatable) | Execute a registered tool with string inputs; prints result/error and records a `WorkflowRun`. |
 | `test` | `--prompt` | Run every registered tool with its default parameters and record the batch as one `WorkflowRun`. |
 
-### Interactions
+### History
 
 | Command | Arguments / Options | Description |
 | --- | --- | --- |
-| `interaction list` | `--session-id`, `--json` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
-| `interaction show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
+| `history list` | `--session-id`, `--json` | List recorded `WorkflowRun`s for a session (defaults to the active one). |
+| `history show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
 
 !!! note "Tool modules"
-    `add-tool` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `add-tool` at the file.
+    `tool add` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `tool add` at the file.
 
 ---
 
@@ -445,20 +444,21 @@ Manage the local gateway runtime for a workspace, plus gateway cron jobs and gat
 
 ```bash
 miminions gateway status --workspace Demo
-miminions gateway run --workspace Demo
+miminions gateway start --workspace Demo
 miminions gateway cron list --workspace Demo
+miminions gateway cron exec --workspace Demo <job-id>
 miminions gateway sessions list --workspace Demo
 ```
 
 | Command | Options | Description |
 | --- | --- | --- |
 | `status` | `--workspace` | Show workspace gateway paths, session count, and cron job count. |
-| `run` | `--workspace`, `--no-cron`, `--log-level` | Start the local gateway runtime until interrupted. |
+| `start` | `--workspace`, `--no-cron`, `--log-level` | Start the local gateway runtime until interrupted. |
 | `cron list` | `--workspace`, `--all` | List gateway cron jobs. |
 | `cron add-every` | `--workspace`, `--name`, interval option, `--message` | Add a recurring interval job. |
 | `cron add-at` | `--workspace`, `--name`, `--at`, `--message` | Add a one-shot ISO-datetime job. |
 | `cron add-cron` | `--workspace`, `--name`, `--expr`, `--tz`, `--message` | Add a cron-expression job; requires `croniter`. |
-| `cron remove` / `enable` / `disable` / `run` | `--workspace` plus job id | Manage or trigger an existing cron job. |
+| `cron remove` / `enable` / `disable` / `exec` | `--workspace` plus job id | Manage or trigger an existing cron job. |
 | `sessions list` / `show` / `delete` | `--workspace` plus session options | Inspect or delete gateway sessions. |
 
 !!! note "Workspace root required"
@@ -473,7 +473,7 @@ miminions gateway sessions list --workspace Demo
 | `~/.miminions/config.json` | CLI config + default workspace/agent ids |
 | `~/.miminions/auth.json` | Local sign-in marker |
 | `~/.miminions/agents.json` · `tasks.json` · `knowledge.json` | Record stores for the respective groups |
-| `~/.miminions/sessions.json` · `interactions.json` | `execution` sessions and recorded traces |
+| `~/.miminions/sessions.json` · `interactions.json` | Tool sessions and recorded traces |
 | `~/.miminions/workspaces/` | Per-workspace on-disk folders (`prompt/ memory/ skills/ sessions/ data/`) |
 | `~/.miminions/global_memory.db` | Tier-3 global SQLite insight store (written by chat distillation) |
 

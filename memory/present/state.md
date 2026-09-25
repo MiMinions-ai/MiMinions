@@ -16,8 +16,8 @@ All four are enforced in CI on `main`.
 
 ## Working
 
-- Click CLI with nine shipped command groups: `auth`, `agent`, `task`,
-  `knowledge`, `workspace`, `execution`, `chat`, `gateway`, `prompt`.
+- Click CLI with nine shipped command groups: `auth`, `agent`, `tool`, `task`,
+  `knowledge`, `workspace`, `chat`, `gateway`, `prompt`.
 - Streaming replies via `Minion.run_stream()`, used by the CLI chat loop.
 - Retries with exponential backoff, per-request timeouts, and `on_tool_call` /
   `on_turn_end` observability hooks surfaced by `chat start --verbose`.
@@ -31,7 +31,7 @@ All four are enforced in CI on `main`.
 
 ## Partial or not integrated
 
-- **`workflow`** — trace models are consumed by the execution CLI, but its
+- **`workflow`** — trace models are consumed by the tool-session CLI, but its
   controller has no caller and no workflow-specific command group is shipped.
 - **`user`** — a dataclass and a stub controller. No internal callers.
 - **`data`** — a local content-addressable manager with no internal callers;
