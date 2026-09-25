@@ -18,11 +18,10 @@ from miminions import __version__
 _LAZY_COMMANDS: tuple[tuple[str, str, str, str], ...] = (
     ("auth", "miminions.cli.auth", "auth_cli", "Authentication and configuration."),
     ("agent", "miminions.cli.agent", "agent_cli", "Create and manage agents."),
-    ("tool", "miminions.cli.tool", "tool_cli", "Discover and run agent tools."),
+    ("tool", "miminions.cli.tool", "tool_cli", "Discover and execute agent tools."),
     ("task", "miminions.cli.task", "task_cli", "Manage tasks."),
     ("knowledge", "miminions.cli.knowledge", "knowledge_cli", "Manage knowledge entries."),
     ("workspace", "miminions.cli.workspace", "workspace_cli", "Manage workspaces."),
-    ("execution", "miminions.cli.execution", "execution_cli", "Live execution sessions."),
     ("chat", "miminions.cli.chat", "chat_cli", "Interactive chat sessions."),
     ("gateway", "miminions.cli.gateway", "gateway_cli", "Gateway runtime and channels."),
     ("prompt", "miminions.cli.prompt", "prompt_cli", "One-shot prompts."),

@@ -21,7 +21,7 @@ def _split_optional_agent_operand(agent_id, operand, operand_name):
 
 @click.group("tool")
 def tool_cli():
-    """Discover, inspect, and run tools for an agent."""
+    """Discover, inspect, and execute tools and tool sessions."""
 
 
 @tool_cli.command("list")
@@ -99,7 +99,7 @@ def search_agent_tools(agent_id, query):
         click.echo(f"  {name}")
 
 
-@tool_cli.command("run")
+@tool_cli.command("execute")
 @click.argument("agent_id", required=False, default=None)
 @click.argument("tool_name", required=False, default=None)
 @click.option(
@@ -107,8 +107,8 @@ def search_agent_tools(agent_id, query):
     default="{}",
     help="JSON object with tool arguments, e.g. '{\"a\":2,\"b\":3}'.",
 )
-def run_agent_tool(agent_id, tool_name, arguments):
-    """Run one tool and print structured execution output."""
+def execute_agent_tool(agent_id, tool_name, arguments):
+    """Execute one saved-agent tool and print structured output."""
     agent_id, tool_name = _split_optional_agent_operand(
         agent_id, tool_name, "tool_name"
     )
@@ -150,3 +150,13 @@ def run_agent_tool(agent_id, tool_name, arguments):
     else:
         click.echo(f"Result: {result.result}")
     click.echo(f"Execution time (ms): {result.execution_time_ms:.2f}")
+
+
+# Execution sessions share the public ``tool`` namespace while retaining their
+# independent persistence and tracing implementation.
+from .execution import add_tool, history, run_test, session
+
+tool_cli.add_command(session)
+tool_cli.add_command(add_tool)
+tool_cli.add_command(history)
+tool_cli.add_command(run_test)

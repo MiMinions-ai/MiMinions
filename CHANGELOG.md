@@ -16,7 +16,11 @@ Work in progress toward the next release.
 
 ### Added
 
-- Added a top-level `miminions tool` category for listing, inspecting, searching, and running agent tools.
+- Added a top-level `miminions tool` category for listing, inspecting, searching, and executing agent tools.
+
+### Changed
+
+- **Breaking:** consolidated execution sessions under `miminions tool`, renamed direct tool invocation to `tool execute`, renamed the gateway runtime command to `gateway start`, and renamed immediate cron invocation to `gateway cron exec`. The former `execution`, `tool run`, `gateway run`, and `gateway cron run` paths have been removed.
 
 ## [0.4.1] - 2026-08-26
 
