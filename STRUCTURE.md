@@ -123,7 +123,7 @@ MiMinions/
 Registered CLI command groups are:
 
 ```text
-auth, agent, tool, task, knowledge, workspace, execution, chat, gateway, prompt
+auth, agent, tool, task, knowledge, workspace, chat, gateway, prompt
 ```
 
 `src/miminions/cli/workflow.py` remains in the tree for internal workflow-related

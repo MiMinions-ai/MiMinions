@@ -54,11 +54,11 @@ Everything you need to know about MiMinions.
 
     MiMinions takes a pragmatic, local-first approach to safety:
 
-    - **Sign-in gating on the CLI.** The `task`, `knowledge`, `workspace`, and
-      `execution` command groups are wrapped with `require_auth` and refuse to run
+    - **Sign-in gating on the CLI.** The `task`, `knowledge`, and `workspace`
+      command groups are wrapped with `require_auth` and refuse to run
       until you sign in with `miminions auth signin`. An opt-in public-access mode
-      can relax this for trusted, local-only use. (Gating for the `agent`, `chat`,
-      and `prompt` commands is still being stabilized — see the
+      can relax this for trusted, local-only use. (Gating for the `agent`,
+      `tool`, `chat`, and `prompt` commands is still being stabilized — see the
       [CLI reference](modules/cli.md).)
     - **Local-first data.** Agents, workspaces, and memory persist under
       `~/.miminions/` on your own machine — nothing is sent to a third party

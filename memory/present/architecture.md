@@ -73,5 +73,5 @@ should move down into `core` and the CLI should import them upward.
 
 - Console script `miminions` -> `miminions.cli.main:main`.
 - Module form `python -m miminions` -> `src/miminions/__main__.py`.
-- Nine shipped command groups: `auth`, `agent`, `task`, `knowledge`,
-  `workspace`, `execution`, `chat`, `gateway`, `prompt`.
+- Nine shipped command groups: `auth`, `agent`, `tool`, `task`, `knowledge`,
+  `workspace`, `chat`, `gateway`, `prompt`.

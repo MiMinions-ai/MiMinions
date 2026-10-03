@@ -24,7 +24,7 @@ def test_tool_group_help_and_nonexistent_agent(isolated_cli_runner, tmp_path, mo
 
     help_result = isolated_cli_runner.invoke(tool_cli, ["--help"])
     _assert_exit_code(help_result, 0, "showing tool group help")
-    for command in ("list", "info", "search", "run"):
+    for command in ("list", "info", "search", "execute", "session", "history", "add", "test"):
         assert command in help_result.output
 
     result = isolated_cli_runner.invoke(tool_cli, ["list", NONEXISTENT_AGENT_ID])
@@ -45,7 +45,7 @@ def test_tool_commands_use_configured_default_agent(isolated_cli_runner, tmp_pat
         (["list"], "cli_add"),
         (["info", "cli_add"], "Tool: cli_add"),
         (["search", "echo"], "cli_echo"),
-        (["run", "cli_add", "--arguments", '{"a": 3, "b": 4}'], "Result: 7"),
+        (["execute", "cli_add", "--arguments", '{"a": 3, "b": 4}'], "Result: 7"),
     )
     for arguments, expected in invocations:
         result = isolated_cli_runner.invoke(tool_cli, arguments)
@@ -85,7 +85,7 @@ def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkey
     assert "No tools matched" in no_match.output
 
     tool_run = isolated_cli_runner.invoke(
-        tool_cli, ["run", "agent1", "cli_add", "--arguments", '{"a": 4, "b": 6}']
+        tool_cli, ["execute", "agent1", "cli_add", "--arguments", '{"a": 4, "b": 6}']
     )
     _assert_exit_code(tool_run, 0, "running cli_add")
     assert "Status: success" in tool_run.output
@@ -93,18 +93,18 @@ def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkey
     _tear_down_saved_agents()
 
 
-def test_tool_run_rejects_invalid_arguments(isolated_cli_runner, tmp_path, monkeypatch):
+def test_tool_execute_rejects_invalid_arguments(isolated_cli_runner, tmp_path, monkeypatch):
     monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     invalid_json = isolated_cli_runner.invoke(
-        tool_cli, ["run", "agent1", "cli_add", "--arguments", "nope"]
+        tool_cli, ["execute", "agent1", "cli_add", "--arguments", "nope"]
     )
     _assert_exit_code(invalid_json, 0, "running a tool with invalid JSON")
     assert "Invalid JSON" in invalid_json.output
 
     not_object = isolated_cli_runner.invoke(
-        tool_cli, ["run", "agent1", "cli_add", "--arguments", "[1, 2]"]
+        tool_cli, ["execute", "agent1", "cli_add", "--arguments", "[1, 2]"]
     )
     _assert_exit_code(not_object, 0, "running a tool with non-object arguments")
     assert "--arguments must be a JSON object" in not_object.output

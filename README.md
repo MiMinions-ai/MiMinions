@@ -148,11 +148,11 @@ Command groups:
 | ----- | ------------ |
 | `chat` | Interactive chat with a workspace agent; distills memory on exit |
 | `prompt` | One-shot prompt to a workspace agent |
-| `agent` | Create/manage agents and run/inspect their tools |
+| `agent` | Create and run agents |
+| `tool` | Discover, execute, and trace tools and tool sessions |
 | `task` | Create and track tasks |
 | `knowledge` | A versioned knowledge base |
 | `workspace` | Manage workspaces, their nodes, rules, and on-disk files |
-| `execution` | Register tools and record tool runs in execution sessions |
 | `gateway` | Manage local gateway runtime, cron jobs, and gateway sessions |
 | `auth` | Local sign-in, public-access mode, and config |
 

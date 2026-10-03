@@ -41,7 +41,7 @@ configuration. The `context` subpackage.
 `TaskRuntime`. `AgentTask` is the agent-backed variant.
 
 **Workflow** — trace models and a controller in the `workflow` subpackage. The
-execution CLI consumes its trace models, but no workflow-specific command group
+tool-session CLI consumes its trace models, but no workflow-specific command group
 ships; do not assume a complete user-facing workflow feature exists.
 
 **Gateway** — the messaging layer under `core/gateway`: message bus, channels,

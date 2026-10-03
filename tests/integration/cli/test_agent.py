@@ -650,7 +650,7 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(
                     tool_cli,
-                    ['run', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
+                    ['execute', 'test_agent', 'cli_add', '--arguments', '{"a": 2, "b": 3}']
                 )
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
@@ -676,7 +676,7 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(
                     tool_cli,
-                    ['run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                    ['execute', 'test_agent', 'cli_run_command', '--arguments', arguments],
                     input='y\n',
                 )
 
@@ -706,7 +706,7 @@ class TestAgentCLI:
             mock_load.return_value = existing_agents
             result = self.runner.invoke(
                 tool_cli,
-                ['run', 'test_agent', 'cli_run_command', '--arguments', arguments],
+                ['execute', 'test_agent', 'cli_run_command', '--arguments', arguments],
                 input='n\n',
             )
 
@@ -732,7 +732,7 @@ class TestAgentCLI:
 
                 result = self.runner.invoke(
                     tool_cli,
-                    ['run', 'test_agent', 'cli_add', '--arguments', 'not-json']
+                    ['execute', 'test_agent', 'cli_add', '--arguments', 'not-json']
                 )
 
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"

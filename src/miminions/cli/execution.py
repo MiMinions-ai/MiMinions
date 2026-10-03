@@ -166,15 +166,9 @@ def _run_tool(session_id: str, session: dict, tool_name: str, inputs: dict):
 
 # ── CLI command group ─────────────────────────────────────────────────────────
 
-@click.group()
-def execution():
-    """Manage live execution sessions and tool runs."""
-    pass
-
-
 # ── Session commands ──────────────────────────────────────────────────────────
 
-@execution.group()
+@click.group("session")
 def session():
     """Manage execution sessions."""
     pass
@@ -237,14 +231,14 @@ def session_list(as_json):
 
 # ── Add-tool command ──────────────────────────────────────────────────────────
 
-@execution.command("add-tool")
+@click.command("add")
 @click.argument("path")
 # @require_auth  # TODO(auth): placeholder; local tool registration does not require sign-in yet.
 def add_tool(path):
     """Register a tool module (.py) with the active session."""
     sid, s = _active_session()
     if not sid:
-        click.echo("No active session. Run 'execution session start' first.")
+        click.echo("No active session. Run 'tool session start' first.")
         return
 
     resolved = str(Path(path).resolve())
@@ -264,7 +258,7 @@ def add_tool(path):
 
 # ── Run command ───────────────────────────────────────────────────────────────
 
-@execution.command("run")
+@session.command("execute")
 @click.argument("tool_name")
 @click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
               help="Tool input as KEY=VALUE pairs.")
@@ -306,17 +300,17 @@ def run_tool(tool_name, inputs):
 
 # ── Interaction commands ──────────────────────────────────────────────────────
 
-@execution.group()
-def interaction():
+@click.group("history")
+def history():
     """View recorded interactions (stored as WorkflowRun objects)."""
     pass
 
 
-@interaction.command("list")
+@history.command("list")
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 # @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
-def interaction_list(session_id, as_json):
+def history_list(session_id, as_json):
     """List all recorded WorkflowRuns for a session."""
     if not session_id:
         session_id, _ = _active_session()
@@ -351,12 +345,12 @@ def interaction_list(session_id, as_json):
         click.echo(f"[{i}] {wf.id}  tool={tool_name}  status={status}  created={wf.created_at}")
 
 
-@interaction.command("show")
+@history.command("show")
 @click.argument("index", type=int)
 @click.option("--session-id", default=None, help="Session ID (defaults to active session).")
 @click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
 # @require_auth  # TODO(auth): placeholder; local interaction logs do not require sign-in yet.
-def interaction_show(index, session_id, as_json):
+def history_show(index, session_id, as_json):
     """Show full details of a recorded WorkflowRun by index."""
     if not session_id:
         session_id, _ = _active_session()
@@ -381,7 +375,7 @@ def interaction_show(index, session_id, as_json):
 
 # ── Test command ──────────────────────────────────────────────────────────────
 
-@execution.command("test")
+@click.command("test")
 @click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
 # @require_auth  # TODO(auth): placeholder; local execution tests do not require sign-in yet.
 def run_test(prompt):
@@ -458,6 +452,4 @@ def run_test(prompt):
     click.echo(f"\nRecorded as WorkflowRun {wf.id} ({len(tool_names)} tool(s) tested)")
 
 
-# ── Alias for main.py import ──────────────────────────────────────────────────
-
-execution_cli = execution
+__all__ = ["add_tool", "history", "run_test", "session"]

@@ -50,6 +50,7 @@ def test_help_skips_bootstrap_and_heavy_imports():
     assert "auth" in result.output
     assert "agent" in result.output
     assert "tool" in result.output
+    assert "execution" not in result.output
     # Static short helps (prove we did not import auth_cli docstring path for listing).
     assert "Create and manage agents." in result.output
 
@@ -91,6 +92,7 @@ def test_lazy_group_lists_all_commands():
     names = cli.list_commands(ctx)
     for expected in ("auth", "agent", "tool", "task", "chat", "gateway", "prompt"):
         assert expected in names
+    assert "execution" not in names
     assert "workflow" not in names
 
 

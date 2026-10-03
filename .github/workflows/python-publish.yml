@@ -111,7 +111,7 @@ jobs:
           [ "$RUNNER_OS" = "Windows" ] && binary=dist/miminions-cli.exe
           "$binary" --version
           # Every lazy command must be invoked, because root --help does not import it.
-          for command in agent workspace chat task auth knowledge execution gateway prompt config export import; do
+          for command in agent tool workspace chat task auth knowledge gateway prompt config export import; do
             "$binary" "$command" --help > /dev/null
           done
       - name: Rename binary for release
