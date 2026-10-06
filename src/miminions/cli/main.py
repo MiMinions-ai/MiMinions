@@ -20,6 +20,7 @@ _LAZY_COMMANDS: tuple[tuple[str, str, str, str], ...] = (
     ("agent", "miminions.cli.agent", "agent_cli", "Create and manage agents."),
     ("tool", "miminions.cli.tool", "tool_cli", "Discover and execute agent tools."),
     ("task", "miminions.cli.task", "task_cli", "Manage tasks."),
+    ("instance", "miminions.cli.instance", "instance_cli", "Manage the local execution instance."),
     ("knowledge", "miminions.cli.knowledge", "knowledge_cli", "Manage knowledge entries."),
     ("workspace", "miminions.cli.workspace", "workspace_cli", "Manage workspaces."),
     ("chat", "miminions.cli.chat", "chat_cli", "Interactive chat sessions."),
@@ -89,9 +90,12 @@ def _maybe_bootstrap(ctx: click.Context) -> None:
     # Import bootstrap + config path only when needed so `--help` stays light.
     from miminions.core.bootstrap import ensure_default_setup
     from miminions.core.paths import get_config_dir
+    from miminions.execution.processes import InstanceLock
 
     try:
-        ensure_default_setup(get_config_dir())
+        config_dir = get_config_dir()
+        with InstanceLock(config_dir / "execution-workspace.lock"):
+            ensure_default_setup(config_dir)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -137,6 +141,11 @@ cli.add_command(init_cli, name="init")
 
 def main() -> None:
     """Entry point for the CLI."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "_execution-worker":
+        from miminions.execution.worker import main as worker_main
+        worker_main(sys.argv[2:])
+        return
     cli()
 
 
