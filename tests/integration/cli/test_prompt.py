@@ -1,4 +1,7 @@
 import json
+import pytest
+
+pytestmark = pytest.mark.usefixtures("inline_execution")
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -28,11 +31,16 @@ def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | 
         tmp_path / "workspaces",
     )
     monkeypatch.setattr(
-        "miminions.cli.prompt.create_minion",
+        "miminions.agent.create_minion",
         lambda name, description: fake,
     )
-    monkeypatch.setattr("miminions.cli.prompt.ContextBuilder", FakeContextBuilder)
 
+    async def stream(prompt, message_history=None):
+        yield await fake.run(prompt)
+    fake.run_stream = stream
+    fake.cleanup = AsyncMock()
+    fake._max_retries = 0
+    fake._last_messages = []
     return fake
 
 
@@ -65,7 +73,7 @@ def test_prompt_ask_creates_default_workspace_files_logs_and_prints(tmp_path, mo
     )
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert result.output == "assistant reply\n", f"expect prompt ask prints assistant runtime response followed by newline as 'assistant reply\n', got {result.output}"
+    assert result.stdout == "assistant reply\n", f"expect prompt ask prints assistant runtime response followed by newline as 'assistant reply\n', got {result.output}"
     fake.run.assert_awaited_once_with("book a chinese food restaurant at 6 pm today")
 
     config_dir = tmp_path / "config"
