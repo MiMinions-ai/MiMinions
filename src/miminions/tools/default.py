@@ -6,7 +6,9 @@ import shlex
 import subprocess
 import sys
 import time
-from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Callable, Dict, Iterable, Optional, Sequence, Tuple
 
 import click
 
@@ -16,6 +18,18 @@ CLI_RUN_COMMAND_DESCRIPTION = (
     "Execute an approved CLI command without a shell and return stdout, stderr, "
     "and return code"
 )
+
+_command_callbacks = ContextVar("miminions_command_callbacks", default=(None, None))
+
+
+@contextmanager
+def command_callbacks(approval_callback=None, output_callback=None):
+    """Bind callbacks to one execution context, including its async tool threads."""
+    token = _command_callbacks.set((approval_callback, output_callback))
+    try:
+        yield
+    finally:
+        _command_callbacks.reset(token)
 
 
 class PermissionDecision(str, Enum):
@@ -125,15 +139,23 @@ def cli_run_command(
     command: str,
     timeout: int = 30,
     policy: Optional[CommandPermissionPolicy] = None,
+    *,
+    approval_callback: Optional[Callable[[str], bool]] = None,
+    output_callback: Optional[Callable[[str, str], None]] = None,
 ) -> Dict[str, Any]:
     """Run a command without a shell after applying a permission policy."""
+    context_approval, context_output = _command_callbacks.get()
+    if approval_callback is None:
+        approval_callback = context_approval
+    if output_callback is None:
+        output_callback = context_output
     if not command or not command.strip():
         raise ValueError("Command must not be empty")
     if timeout <= 0:
         raise ValueError("Timeout must be greater than zero")
 
     try:
-        args = shlex.split(command, posix=(sys.platform != "win32"))
+        args = _split_command(command)
     except ValueError as exc:
         raise ValueError(f"Could not parse command: {exc}") from exc
 
@@ -149,9 +171,8 @@ def cli_run_command(
         raise _CommandPermissionError("Command execution was not approved")
     if decision is PermissionDecision.ASK:
         try:
-            approved = click.confirm(
-                f"Execute command: {command}",
-                default=False,
+            approved = approval_callback(f"Execute command: {command}") if approval_callback else click.confirm(
+                f"Execute command: {command}", default=False,
             )
         except (click.Abort, EOFError) as exc:
             raise _CommandPermissionError(
@@ -163,13 +184,10 @@ def cli_run_command(
 
     execution_started = time.perf_counter()
     try:
-        completed = subprocess.run(
-            args,
-            shell=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+        if output_callback is None:
+            completed = subprocess.run(args, shell=False, capture_output=True, text=True, timeout=timeout)
+        else:
+            completed = _stream_command(args, timeout, output_callback)
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError(f"Command timed out after {timeout} seconds") from exc
     execution_time_ms = (time.perf_counter() - execution_started) * 1000
@@ -183,6 +201,69 @@ def cli_run_command(
         },
         execution_time_ms=execution_time_ms,
     )
+
+
+def _split_command(command):
+    if sys.platform != "win32":
+        return shlex.split(command)
+    import ctypes
+    from ctypes import wintypes
+    shell = ctypes.WinDLL("shell32", use_last_error=True)
+    shell.CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_int)]
+    shell.CommandLineToArgvW.restype = ctypes.POINTER(wintypes.LPWSTR)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.LocalFree.argtypes = [ctypes.c_void_p]
+    count = ctypes.c_int()
+    argv = shell.CommandLineToArgvW(command.strip(), ctypes.byref(count))
+    if not argv:
+        raise ValueError("Could not parse Windows command line")
+    try:
+        return [argv[i] for i in range(count.value)]
+    finally:
+        kernel.LocalFree(argv)
+
+
+def _stream_command(args, timeout, callback):
+    """Drain both pipes concurrently while retaining the normal tool result."""
+    import codecs
+    import os
+    import threading
+    process = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    outputs = {"stdout": [], "stderr": []}
+    failures = []
+
+    def read(pipe, stream):
+        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        try:
+            while True:
+                chunk = os.read(pipe.fileno(), 4096)
+                text = decoder.decode(chunk, final=not chunk)
+                if text:
+                    outputs[stream].append(text)
+                    callback(stream, text)
+                if not chunk:
+                    break
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            pipe.close()
+
+    readers = [threading.Thread(target=read, args=(pipe, stream), daemon=True)
+               for pipe, stream in ((process.stdout, "stdout"), (process.stderr, "stderr"))]
+    for reader in readers:
+        reader.start()
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        raise
+    finally:
+        for reader in readers:
+            reader.join(timeout=timeout)
+    if failures:
+        raise failures[0]
+    return subprocess.CompletedProcess(args, process.returncode, "".join(outputs["stdout"]), "".join(outputs["stderr"]))
 
 
 def cli_run_command_tool(command: str, timeout: int = 30) -> Dict[str, Any]:
