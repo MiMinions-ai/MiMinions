@@ -36,6 +36,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# Curated, not generated: the single source of truth for the CLI binary build.
+!miminions-cli.spec
 
 # Installer logs
 pip-log.txt
@@ -149,3 +151,5 @@ AGENTS.md
 
 # macOS system files
 .DS_Store
+
+.analysis

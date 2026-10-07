@@ -1,5 +1,8 @@
 # Try to use pysqlite3 first (has extension support), fallback to sqlite3
-import pysqlite3.dbapi2 as sqlite3
+try:
+    import pysqlite3.dbapi2 as sqlite3
+except ImportError:
+    import sqlite3
 
 from typing import Optional
 try:

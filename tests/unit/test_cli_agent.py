@@ -5,7 +5,6 @@ from miminions.cli.agent import (
 )
 
 NONEXISTENT_AGENT_ID = "agent-does-not-exist"
-NONEXISTENT_TOOL_NAME = "tool-does-not-exist"
 
 
 def _assert_exit_code(result, expected: int, behavior: str) -> None:
@@ -111,48 +110,18 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
-def test_agent_tool_list_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    result = isolated_cli_runner.invoke(agent_cli, ["tool-list", NONEXISTENT_AGENT_ID])
-
-    _assert_exit_code(result, 0, "listing tools for a nonexistent agent")
-    target_value = f"Agent '{NONEXISTENT_AGENT_ID}' not found."
-    assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
-
-
-def test_agent_tool_run_rejects_invalid_json_arguments(
+def test_agent_commands_and_runtime_prompt_execution(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
+    """Agent prompts should go through the runtime without making network requests."""
     monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
-    invalid_json = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "nope"]
+    async def mock_runtime(_agent_data, _operation, **params):
+        return f"model says {params['prompt']}"
+
+    monkeypatch.setattr(
+        "miminions.cli.agent._run_with_agent_runtime", mock_runtime
     )
-    _assert_exit_code(invalid_json, 0, "running a tool with invalid JSON arguments")
-    assert "Invalid JSON" in invalid_json.output, f"expect 'Invalid JSON' in invalid_json.output, got {invalid_json.output}"
-
-
-def test_agent_tool_run_rejects_non_object_json_arguments(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    save_agents({"agent1": {"name": "Agent", "description": "desc"}})
-
-    not_object = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", "[1, 2]"]
-    )
-    _assert_exit_code(not_object, 0, "running a tool with non-object JSON arguments")
-    assert "--arguments must be a JSON object" in not_object.output, f"expect '--arguments must be a JSON object' in not_object.output, got {not_object.output}"
-
-
-def test_agent_tool_commands_and_runtime_prompt_execution(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    """Tool commands should expose runtime tools while prompts go through the runtime."""
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
     save_agents(
         {
             "agent1": {
@@ -162,46 +131,6 @@ def test_agent_tool_commands_and_runtime_prompt_execution(
             }
         }
     )
-
-    tool_list = isolated_cli_runner.invoke(agent_cli, ["tool-list", "agent1"])
-    _assert_exit_code(tool_list, 0, "listing agent tools")
-    assert "cli_echo" in tool_list.output, f"expect 'cli_echo' in tool_list.output, got {tool_list.output}"
-    assert "cli_add" in tool_list.output, f"expect 'cli_add' in tool_list.output, got {tool_list.output}"
-    assert "cli_now_utc" in tool_list.output, f"expect 'cli_now_utc' in tool_list.output, got {tool_list.output}"
-
-    tool_info = isolated_cli_runner.invoke(agent_cli, ["tool-info", "agent1", "cli_add"])
-    _assert_exit_code(tool_info, 0, "showing tool info")
-    assert "Tool: cli_add" in tool_info.output, f"expect 'Tool: cli_add' in tool_info.output, got {tool_info.output}"
-    assert "Add two integers" in tool_info.output, f"expect 'Add two integers' in tool_info.output, got {tool_info.output}"
-
-    missing_tool = isolated_cli_runner.invoke(
-        agent_cli, ["tool-info", "agent1", NONEXISTENT_TOOL_NAME]
-    )
-    assert missing_tool.exit_code == 0, f"expect cli exit code 0, got {missing_tool.exit_code} with output: {missing_tool.output}"
-    target_value = f"Tool '{NONEXISTENT_TOOL_NAME}' not found"
-    assert target_value in missing_tool.output, f"expect {target_value} in missing_tool.output, got {missing_tool.output}"
-
-    tool_search = isolated_cli_runner.invoke(agent_cli, ["tool-search", "agent1", "echo"])
-    _assert_exit_code(tool_search, 0, "searching agent tools")
-    assert "cli_echo" in tool_search.output, f"expect 'cli_echo' in tool_search.output, got {tool_search.output}"
-
-    no_match = isolated_cli_runner.invoke(agent_cli, ["tool-search", "agent1", "zzzz"])
-    _assert_exit_code(no_match, 0, "searching for unmatched agent tools")
-    assert "No tools matched" in no_match.output, f"expect 'No tools matched' in no_match.output, got {no_match.output}"
-
-    tool_run = isolated_cli_runner.invoke(
-        agent_cli, ["tool-run", "agent1", "cli_add", "--arguments", '{"a": 4, "b": 6}']
-    )
-    _assert_exit_code(tool_run, 0, "running cli_add")
-    assert "Status: success" in tool_run.output, f"expect 'Status: success' in tool_run.output, got {tool_run.output}"
-    assert "Result: 10" in tool_run.output, f"expect 'Result: 10' in tool_run.output, got {tool_run.output}"
-
-    async def _mock_runtime(agent_data, operation, **params):
-        assert agent_data["name"] == "Agent", f"expect result to be {'Agent'}, got {agent_data['name']}"
-        assert operation in {"ask", "run"}, f"expect operation to be ask or run, got {operation}"
-        return f"model says {params['prompt']}"
-
-    monkeypatch.setattr("miminions.cli.agent._run_with_agent_runtime", _mock_runtime)
 
     asked = isolated_cli_runner.invoke(
         agent_cli, ["ask", "agent1", "--prompt", "echo hello there"]
@@ -217,7 +146,8 @@ def test_agent_tool_commands_and_runtime_prompt_execution(
 
     async_run = isolated_cli_runner.invoke(agent_cli, ["run", "agent1", "--async"])
     _assert_exit_code(async_run, 2, "rejecting removed async run flag")
-    assert "No such option '--async'" in async_run.output, f"expect \"No such option '--async'\" in async_run.output, got {async_run.output}"
+    assert "No such option" in async_run.output, f"expect 'No such option' in async_run.output, got {async_run.output}"
+    assert "--async" in async_run.output, f"expect '--async' in async_run.output, got {async_run.output}"
 
 
 def test_agent_run_reports_missing_goal(

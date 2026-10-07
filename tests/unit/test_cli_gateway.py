@@ -377,14 +377,14 @@ def test_gateway_cron_missing_job_paths(tmp_path, monkeypatch, isolated_cli_runn
         (["cron", "remove", "--workspace", workspace.id, "missing", "--force"], "Cron job not found"),
         (["cron", "enable", "--workspace", workspace.id, "missing"], "Cron job not found"),
         (["cron", "disable", "--workspace", workspace.id, "missing"], "Cron job not found"),
-        (["cron", "run", "--workspace", workspace.id, "missing"], "Cron job not found or disabled"),
+        (["cron", "exec", "--workspace", workspace.id, "missing"], "Cron job not found or disabled"),
     ):
         result = isolated_cli_runner.invoke(gateway_cli, command)
         assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
         assert expected in result.output, f"expect {expected} in result.output, got {result.output}"
 
 
-def test_gateway_cron_run_disabled_requires_force(tmp_path, monkeypatch, isolated_cli_runner):
+def test_gateway_cron_exec_disabled_requires_force(tmp_path, monkeypatch, isolated_cli_runner):
     workspace = _workspace(tmp_path)
     _patch_workspace_manager(monkeypatch, {workspace.id: workspace})
     service = _build_cron_service(workspace)
@@ -392,10 +392,10 @@ def test_gateway_cron_run_disabled_requires_force(tmp_path, monkeypatch, isolate
     service.enable_job(job.id, enabled=False)
 
     blocked = isolated_cli_runner.invoke(
-        gateway_cli, ["cron", "run", "--workspace", workspace.id, job.id]
+        gateway_cli, ["cron", "exec", "--workspace", workspace.id, job.id]
     )
     forced = isolated_cli_runner.invoke(
-        gateway_cli, ["cron", "run", "--workspace", workspace.id, job.id, "--force"]
+        gateway_cli, ["cron", "exec", "--workspace", workspace.id, job.id, "--force"]
     )
 
     assert blocked.exit_code != 0, f"expect cli exit code != 0, got {blocked.exit_code} with output: {blocked.output}"
@@ -482,7 +482,7 @@ def test_gateway_sessions_show_empty_and_missing_delete(
     assert "Session not found: missing" in missing_delete.output, f"expect 'Session not found: missing' in missing_delete.output, got {missing_delete.output}"
 
 
-def test_gateway_run_starts_and_stops_runtime(tmp_path, monkeypatch, isolated_cli_runner):
+def test_gateway_start_starts_and_stops_runtime(tmp_path, monkeypatch, isolated_cli_runner):
     workspace = _workspace(tmp_path)
     _patch_workspace_manager(monkeypatch, {workspace.id: workspace})
     calls = []
@@ -505,10 +505,20 @@ def test_gateway_run_starts_and_stops_runtime(tmp_path, monkeypatch, isolated_cl
 
     result = isolated_cli_runner.invoke(
         gateway_cli,
-        ["run", "--workspace", workspace.id, "--no-cron", "--log-level", "bogus"],
+        ["start", "--workspace", workspace.id, "--no-cron", "--log-level", "bogus"],
     )
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     assert "Gateway running." in result.output, f"expect 'Gateway running.' in result.output, got {result.output}"
     assert "Gateway stopped." in result.output, f"expect 'Gateway stopped.' in result.output, got {result.output}"
     assert calls == [("init", True), ("start", None), ("shutdown", None)], f"expect result to be {[('init', True), ('start', None), ('shutdown', None)]}, got {calls}"
+
+
+def test_removed_gateway_run_commands_are_unknown(isolated_cli_runner):
+    runtime = isolated_cli_runner.invoke(gateway_cli, ["run"])
+    cron = isolated_cli_runner.invoke(gateway_cli, ["cron", "run"])
+
+    assert runtime.exit_code != 0
+    assert "No such command 'run'" in runtime.output
+    assert cron.exit_code != 0
+    assert "No such command 'run'" in cron.output

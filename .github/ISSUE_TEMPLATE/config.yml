@@ -1,4 +1,4 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: 🗨️ Discussions
     url: https://github.com/MiMinions-ai/MiMinions/discussions
@@ -6,6 +6,3 @@ contact_links:
   - name: 📚 Documentation
     url: https://github.com/MiMinions-ai/MiMinions#readme
     about: Check the README and documentation first
-  - name: 💬 Community Chat
-    url: https://github.com/MiMinions-ai/MiMinions/discussions
-    about: Join the community discussion

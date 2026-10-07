@@ -208,11 +208,11 @@ def gateway_status(workspace_ref: str) -> None:
     click.echo(f"Number of cron jobs: {cron_count}")
 
 
-@gateway_cli.command("run")
+@gateway_cli.command("start")
 @click.option("--workspace", "workspace_ref", required=True, help="Workspace id or name.")
 @click.option("--no-cron", is_flag=True, help="Start without the cron service.")
 @click.option("--log-level", default="INFO", show_default=True, help="Python logging level.")
-def gateway_run(workspace_ref: str, no_cron: bool, log_level: str) -> None:
+def gateway_start(workspace_ref: str, no_cron: bool, log_level: str) -> None:
     """Start the local gateway runtime for a workspace."""
     workspace = _get_workspace_or_raise(workspace_ref)
     paths = _get_gateway_paths(workspace)
@@ -403,11 +403,11 @@ def cron_disable(workspace_ref: str, job_id: str) -> None:
     click.echo(f"Disabled cron job: {job_id}")
 
 
-@gateway_cron_cli.command("run")
+@gateway_cron_cli.command("exec")
 @click.option("--workspace", "workspace_ref", required=True, help="Workspace id or name.")
 @click.argument("job_id")
 @click.option("--force", is_flag=True, help="Run even if the job is disabled.")
-def cron_run(workspace_ref: str, job_id: str, force: bool) -> None:
+def cron_exec(workspace_ref: str, job_id: str, force: bool) -> None:
     """Run a gateway cron job now."""
     workspace = _get_workspace_or_raise(workspace_ref)
     ran = asyncio.run(_build_cron_service(workspace).run_job(job_id, force=force))

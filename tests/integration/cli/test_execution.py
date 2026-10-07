@@ -1,11 +1,12 @@
-"""Integration tests for execution CLI behavior."""
+"""Integration tests for tool history CLI behavior."""
 
 import json
 from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.execution import execution
+from miminions.cli.execution import history_list
+from miminions.cli.tool import tool_cli
 from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace
 
 
@@ -25,8 +26,8 @@ def test_execution_interaction_list_json_output():
             return {"s1": [run.to_dict()]}
         return {}
 
-    with _auth_enabled(), patch("miminions.cli.execution._load", side_effect=_fake_load):
-        result = runner.invoke(execution, ["interaction", "list", "--session-id", "s1", "--json"])
+    with _auth_enabled(), patch.dict(history_list.callback.__globals__, {"_load": _fake_load}):
+        result = runner.invoke(tool_cli, ["history", "list", "--session-id", "s1", "--json"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     payload = json.loads(result.output)

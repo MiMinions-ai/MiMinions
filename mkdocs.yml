@@ -6,6 +6,9 @@ repo_name: MiMinions-ai/MiMinions
 
 theme:
   name: material
+  custom_dir: docs/overrides
+  icon:
+    logo: material/robot
   palette:
     - scheme: default
       primary: custom

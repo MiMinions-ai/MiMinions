@@ -102,25 +102,32 @@ def _patched_config_dir(config_dir):
 
 # ── Help / smoke ──────────────────────────────────────────────────────────────
 
-class TestExecutionHelp:
+class TestToolSessionHelp:
 
-    def test_execution_help(self, runner):
+    def test_removed_execution_group_is_unknown(self, runner):
         result = runner.invoke(cli, ["execution", "--help"])
-        assert result.exit_code == 0, f"expect cli execution --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        assert result.exit_code != 0
+        assert "No such command 'execution'" in result.output
+
+    def test_tool_help(self, runner):
+        result = runner.invoke(cli, ["tool", "--help"])
+        assert result.exit_code == 0, f"expect cli tool --help to exit with 0, got {result.exit_code} with output: {result.output}"
         assert "session" in result.output, f"expect the result to contain 'session', got {result.output}"
-        assert "interaction" in result.output, f"expect the result to contain 'interaction', got {result.output}"
+        assert "history" in result.output, f"expect the result to contain 'history', got {result.output}"
         assert "test" in result.output, f"expect the result to contain 'test', got {result.output}"
 
     def test_session_help(self, runner):
-        result = runner.invoke(cli, ["execution", "session", "--help"])
-        assert result.exit_code == 0, f"expect cli execution session --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        result = runner.invoke(cli, ["tool", "session", "--help"])
+        assert result.exit_code == 0, f"expect cli tool session --help to exit with 0, got {result.exit_code} with output: {result.output}"
         assert "start" in result.output, f"expect the result to contain 'start', got {result.output}"
         assert "stop" in result.output, f"expect the result to contain 'stop', got {result.output}"
         assert "list" in result.output, f"expect the result to contain 'list', got {result.output}"
 
-    def test_interactions_help(self, runner):
-        result = runner.invoke(cli, ["execution", "interaction", "--help"])
-        assert result.exit_code == 0, f"expect cli execution interaction --help to exit with 0, got {result.exit_code} with output: {result.output}"
+        assert "execute" in result.output, f"expect the result to contain 'execute', got {result.output}"
+
+    def test_history_help(self, runner):
+        result = runner.invoke(cli, ["tool", "history", "--help"])
+        assert result.exit_code == 0, f"expect cli tool history --help to exit with 0, got {result.exit_code} with output: {result.output}"
         assert "list" in result.output, f"expect the result to contain 'list', got {result.output}"
         assert "show" in result.output, f"expect the result to contain 'show', got {result.output}"
 
@@ -131,27 +138,27 @@ class TestSessionManagement:
 
     def test_start_session(self, runner, authenticated):
         with _patched_config_dir(authenticated):
-            result = runner.invoke(cli, ["execution", "session", "start", "--name", "my-session"])
+            result = runner.invoke(cli, ["tool", "session", "start", "--name", "my-session"])
             assert result.exit_code == 0, f"expect cli execution session start --name my-session to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "Session started" in result.output, f"expect the result to contain 'Session started', got {result.output}"
 
     def test_start_session_blocks_duplicate(self, runner, authenticated, active_session):
         config_dir, _ = active_session
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "session", "start", "--name", "new-session"])
+            result = runner.invoke(cli, ["tool", "session", "start", "--name", "new-session"])
             assert result.exit_code == 0, f"expect cli execution session start --name new-session to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "already active" in result.output, f"expect the result to contain 'already active', got {result.output}"
 
     def test_list_sessions_empty(self, runner, authenticated):
         with _patched_config_dir(authenticated):
-            result = runner.invoke(cli, ["execution", "session", "list"])
+            result = runner.invoke(cli, ["tool", "session", "list"])
             assert result.exit_code == 0, f"expect cli execution session list to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "No sessions found" in result.output, f"expect the result to contain 'No sessions found', got {result.output}"
 
     def test_list_sessions_shows_active(self, runner, authenticated, active_session):
         config_dir, _session_id = active_session
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "session", "list"])
+            result = runner.invoke(cli, ["tool", "session", "list"])
             assert result.exit_code == 0, f"expect cli execution session list to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "test-session" in result.output, f"expect the result to contain 'test-session', got {result.output}"
             assert "active" in result.output, f"expect the result to contain 'active', got {result.output}"
@@ -159,13 +166,13 @@ class TestSessionManagement:
     def test_stop_active_session(self, runner, authenticated, active_session):
         config_dir, _ = active_session
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "session", "stop"])
+            result = runner.invoke(cli, ["tool", "session", "stop"])
             assert result.exit_code == 0, f"expect cli execution session stop to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "stopped" in result.output, f"expect the result to contain 'stopped', got {result.output}"
 
     def test_stop_no_active_session(self, runner, authenticated):
         with _patched_config_dir(authenticated):
-            result = runner.invoke(cli, ["execution", "session", "stop"])
+            result = runner.invoke(cli, ["tool", "session", "stop"])
             assert result.exit_code == 0, f"expect cli execution session stop to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "No active session" in result.output, f"expect the result to contain 'No active session', got {result.output}"
 
@@ -174,9 +181,43 @@ class TestSessionManagement:
 
 class TestToolExecution:
 
+    def test_add_tool_registers_module_with_active_session(
+        self, runner, authenticated, active_session, tmp_path
+    ):
+        config_dir, _ = active_session
+        module_path = tmp_path / "custom_tools.py"
+        module_path.write_text("# loaded through mocked module discovery\n")
+
+        with (
+            _patched_config_dir(config_dir),
+            patch("miminions.cli.execution._load_module", return_value=1),
+        ):
+            result = runner.invoke(cli, ["tool", "add", str(module_path)])
+
+        assert result.exit_code == 0, result.output
+        assert "Registered 1 tool(s)" in result.output
+        sessions = json.loads((config_dir / "sessions.json").read_text())
+        assert sessions["abc12345"]["tool_sources"] == [
+            {"type": "module", "path": str(module_path.resolve())}
+        ]
+
+    def test_add_tool_without_session_shows_new_start_command(self, runner, authenticated):
+        with _patched_config_dir(authenticated):
+            result = runner.invoke(cli, ["tool", "add", "custom_tools.py"])
+
+        assert result.exit_code == 0, result.output
+        assert "tool session start" in result.output
+
+    def test_tool_test_requires_active_session(self, runner, authenticated):
+        with _patched_config_dir(authenticated):
+            result = runner.invoke(cli, ["tool", "test"])
+
+        assert result.exit_code == 0, result.output
+        assert "No active session" in result.output
+
     def test_run_no_active_session(self, runner, authenticated):
         with _patched_config_dir(authenticated):
-            result = runner.invoke(cli, ["execution", "run", "calculator"])
+            result = runner.invoke(cli, ["tool", "session", "execute", "calculator"])
             assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "No active session" in result.output, f"expect the result to contain 'No active session', got {result.output}"
 
@@ -188,7 +229,7 @@ class TestToolExecution:
             _patched_config_dir(config_dir),
             patch("miminions.cli.execution._build_agent", return_value=mock_agent),
         ):
-            result = runner.invoke(cli, ["execution", "run", "nonexistent_tool"])
+            result = runner.invoke(cli, ["tool", "session", "execute", "nonexistent_tool"])
             assert result.exit_code == 0, f"expect cli execution run nonexistent_tool to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "not found" in result.output, f"expect the result to contain 'not found', got {result.output}"
 
@@ -198,7 +239,7 @@ class TestToolExecution:
             _patched_config_dir(config_dir),
             patch("miminions.cli.execution._build_agent", return_value=mock_agent),
         ):
-            result = runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
+            result = runner.invoke(cli, ["tool", "session", "execute", "calculator", "--input", "a=1"])
             assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "42" in result.output, f"expect contains '42', got {result.output}"
 
@@ -209,7 +250,7 @@ class TestToolExecution:
             _patched_config_dir(config_dir),
             patch("miminions.cli.execution._build_agent", return_value=mock_agent),
         ):
-            runner.invoke(cli, ["execution", "run", "calculator", "--input", "a=1"])
+            runner.invoke(cli, ["tool", "session", "execute", "calculator", "--input", "a=1"])
             interactions_file = config_dir / "interactions.json"
             file_exists = interactions_file.exists()
             assert file_exists, f"expect interactions.json should be created after a run, got {file_exists}"
@@ -233,14 +274,14 @@ class TestInteractions:
     def test_list_interactions_empty(self, runner, authenticated, active_session):
         config_dir, _ = active_session
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "interaction", "list"])
+            result = runner.invoke(cli, ["tool", "history", "list"])
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
 
     def test_show_interaction_index_out_of_range(self, runner, authenticated, active_session):
         """show takes an integer index — passing 99 on an empty log returns not found."""
         config_dir, _ = active_session
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "interaction", "show", "99"])
+            result = runner.invoke(cli, ["tool", "history", "show", "99"])
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "No interaction at index" in result.output, f"expect contains 'No interaction at index', got {result.output}"
 
@@ -251,9 +292,15 @@ class TestInteractions:
         interactions_file = config_dir / "interactions.json"
         interactions_file.write_text(json.dumps({session_id: [wf_dict]}))
         with _patched_config_dir(config_dir):
-            result = runner.invoke(cli, ["execution", "interaction", "show", "0",
+            result = runner.invoke(cli, ["tool", "history", "show", "0",
                                          "--session-id", session_id])
             assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "calculator" in result.output, f"expect contains 'calculator', got {result.output}"
             assert "success" in result.output, f"expect contains 'success', got {result.output}"
+
+
+def test_removed_tool_run_is_unknown(runner):
+    result = runner.invoke(cli, ["tool", "run", "calculator"])
+    assert result.exit_code != 0
+    assert "No such command 'run'" in result.output
 

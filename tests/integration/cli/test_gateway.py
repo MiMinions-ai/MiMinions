@@ -62,8 +62,14 @@ def test_gateway_cli_registration():
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
     assert "status" in result.output, f"expect contains 'status', got {result.output}"
+    assert "start" in result.output, f"expect contains 'start', got {result.output}"
     assert "cron" in result.output, f"expect contains 'cron', got {result.output}"
     assert "sessions" in result.output, f"expect contains 'sessions', got {result.output}"
+
+    cron_result = CliRunner().invoke(cli, ["gateway", "cron", "--help"])
+    assert cron_result.exit_code == 0, cron_result.output
+    assert "exec" in cron_result.output
+    assert "run" not in cron_result.output
 
 
 def test_gateway_status_requires_root_path(monkeypatch):

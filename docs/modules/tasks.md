@@ -3,7 +3,7 @@
 This page covers two related runtime layers:
 
 - **Tasks** (`miminions.task`) — bind a [Minion](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
-- **Workflow tracing** (`miminions.workflow`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions execution`](cli.md#execution) CLI.
+- **Workflow tracing** (`miminions.workflow`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
 
 !!! note "Import from the subpackages"
     The top-level `import miminions` re-exports nothing. Import tasks from `miminions.task`, and workflow trace models from their submodules (`miminions.workflow` has **no** package-level exports).
@@ -135,7 +135,7 @@ runtime.clear_tasks()
 
 ## Part 2 — Workflow tracing
 
-The `miminions.workflow` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions execution`](cli.md#execution) interaction log.
+The `miminions.workflow` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions tool`](cli.md#tool-sessions-and-history) history log.
 
 !!! note "No package-level exports"
     `import miminions.workflow` exposes nothing. Import the concrete symbols from the submodules:
@@ -217,9 +217,9 @@ run = controller.finish_run(output="13")   # -> WorkflowRun
 In the current release, workflow orchestration is driven through:
 
 1. **The `TaskRuntime` API** (above) for running agent-bound work concurrently in Python.
-2. **The [`miminions execution`](cli.md#execution) commands**, which persist each tool run as a `WorkflowRun` (`AgentRunRecord` + `ToolCallRecord`) under `~/.miminions/interactions.json`. `execution interaction list` / `show` read those traces back.
+2. **The [`miminions tool`](cli.md#tool-sessions-and-history) session commands**, which persist each tool run as a `WorkflowRun` (`AgentRunRecord` + `ToolCallRecord`) under `~/.miminions/interactions.json`. `tool history list` / `show` read those traces back.
 
-So the trace models on this page are real and in use — just consumed via `execution` and `TaskRuntime`, not a shipped workflow command group.
+So the trace models on this page are real and in use — just consumed via `tool` sessions and `TaskRuntime`, not a shipped workflow command group.
 
 ---
 
@@ -262,7 +262,7 @@ So the trace models on this page are real and in use — just consumed via `exec
 <div class="grid cards" markdown>
 
 - :material-robot: **[Agent](agent.md)** — the `Minion` each `AgentTask` binds to
-- :material-console: **[CLI & Chat](cli.md)** — the `execution` commands that persist `WorkflowRun`s
+- :material-console: **[CLI & Chat](cli.md)** — the `tool` session commands that persist `WorkflowRun`s
 - :material-graph: **[Workspaces](workspaces.md)** — nodes, rules, and on-disk layout
 
 </div>

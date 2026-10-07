@@ -135,8 +135,8 @@ default agent under `~/.miminions/`, where all CLI state persists (set
 miminions --help
 ```
 
-Registered command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`,
-`execution`, `chat`, `gateway`, `prompt`.
+Registered command groups: `auth`, `agent`, `tool`, `task`, `knowledge`, `workspace`,
+`chat`, `gateway`, `prompt`.
 
 ### Chat
 
@@ -222,7 +222,7 @@ and automation typically needs extra workflow/tool integration.
     miminions prompt ask "Draft a friendly reply for a delayed order complaint."
 
     # Add workflow/tool integration for deeper automation
-    miminions execution --help
+    miminions tool --help
 
 #### 5. Personal productivity
 
@@ -246,7 +246,7 @@ Deeper automated analysis depends on connecting data/tools through execution.
     miminions prompt ask "Draft SQL to compare weekly active users month over month."
 
     # Extend with custom tooling/data integration
-    miminions execution --help
+    miminions tool --help
 
 ### Agents
 
@@ -262,7 +262,7 @@ miminions agent set-goal default --goal "Add 2 and 3"
 miminions agent run default
 
 # Inspect an agent's tools
-miminions agent tool-list default
+miminions tool list default
 miminions agent ask default --prompt "echo hello"
 ```
 

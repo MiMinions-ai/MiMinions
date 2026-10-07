@@ -1,7 +1,10 @@
 """SQLite Memory Test Suite."""
 
 from pathlib import Path
-from pysqlite3 import ProgrammingError
+try:
+    from pysqlite3 import ProgrammingError
+except ImportError:
+    from sqlite3 import ProgrammingError
 import pytest
 
 pytest.importorskip("sqlite_vec")

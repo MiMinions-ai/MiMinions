@@ -39,10 +39,9 @@ Natural language processing enables computers to understand human language.""")
 
 async def test_ingest_pdf():
     print("test_ingest_pdf")
-    pdf_path = Path(__file__).parent.parent.parent / "examples" / "example_files" / "resume.pdf"
-    
-    if not pdf_path.exists():
-        pytest.skip("no PDF fixture")
+    pdf_path = Path(__file__).parents[3] / "examples" / "example_files" / "resume.pdf"
+
+    assert pdf_path.exists(), f"expect PDF fixture at {pdf_path}, got missing"
     
     agent = create_minion("PDFAgent", memory=SQLiteMemory(db_path=":memory:"))
     
