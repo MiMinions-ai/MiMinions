@@ -13,8 +13,13 @@ from .persistence import load_json, save_json
 from .config import load_config
 # TODO(auth): Re-enable require_auth for account-backed advanced features.
 from miminions.core.paths import get_config_dir
-from miminions.agent import create_minion
-from mcp import StdioServerParameters
+from .dispatch import attachment_options, submit_task, validate_attachment
+
+
+def create_minion(*args, **kwargs):
+    """Load the model runtime only for operations that use it."""
+    from miminions.agent import create_minion as factory
+    return factory(*args, **kwargs)
 
 
 class AgentAction(str, Enum):
@@ -159,6 +164,7 @@ async def _execute_agent_action(runtime_agent, operation, **params):
 
 async def _run_with_agent_runtime(agent_data, operation, **params):
     """Build an agent, attach its configured MCP servers, and always clean up."""
+    from mcp import StdioServerParameters
     runtime_agent = _build_cli_extension_agent(agent_data)
     try:
         for server_name, config in agent_data.get("mcp_servers", {}).items():
@@ -525,55 +531,45 @@ def set_goal(agent_id, goal):
 
 @agent_cli.command("run")
 @click.argument("agent_id", required=False, default=None)
+@attachment_options
 #@click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
 # @require_auth  # TODO(auth): placeholder; local agent runs do not require sign-in yet.
 #def run_agent(agent_id, async_run):
-def run_agent(agent_id):
+def run_agent(agent_id, attach=False, detach=False):
     """Run an agent (defaults to the configured default agent)."""
+    validate_attachment(attach, detach)
     agent_id = _resolve_agent_id(agent_id)
     agents = load_agents()
 
     if agent_id not in agents:
-        click.echo(f"Agent '{agent_id}' not found.", err=True)
-        return
+        raise click.ClickException(f"Agent '{agent_id}' not found.")
 
     agent = agents[agent_id]
     
     if not agent.get("goal"):
-        click.echo(f"Agent '{agent_id}' has no goal set. Use 'set-goal' command first.", err=True)
-        return
+        raise click.ClickException(f"Agent '{agent_id}' has no goal set. Use 'set-goal' command first.")
 
-    # Update status
-    agents[agent_id]["status"] = "running"
-    save_agents(agents)
-    
-    # if async_run:
-    #     click.echo(f"Agent '{agent_id}' started asynchronously")
-    #     click.echo("TODO: Async CLI execution path should stream model output and session events.")
-    # else:
-    click.echo(f"Running agent '{agent_id}' with goal: {agent['goal']}")
-    output = asyncio.run(
-        _run_with_agent_runtime(agent, AgentAction.RUN, prompt=agent["goal"])
-    )
-    click.echo(f"Agent response: {output}")
-    click.echo("Agent execution completed")
+    submit_task("agent_run", {"agent_id": agent_id, "agent": agent, "prompt": agent["goal"]},
+                attach=attach, detach=detach, home=get_config_dir())
 
 
 @agent_cli.command("ask")
 @click.argument("agent_id", required=False, default=None)
 @click.option("--prompt", required=True, help="Prompt to send to the agent.")
+@attachment_options
 # @require_auth  # TODO(auth): placeholder; local agent prompts do not require sign-in yet.
-def ask_agent(agent_id, prompt):
+def ask_agent(agent_id, prompt, attach=False, detach=False):
     """Ask an agent for a one-off response (defaults to the configured default agent)."""
+    validate_attachment(attach, detach)
+    if not prompt.strip():
+        raise click.UsageError("Prompt cannot be empty.")
+    agent_id = _resolve_agent_id(agent_id)
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
-        return
+        raise click.exceptions.Exit(1)
 
-    click.echo(f"Asking agent '{agent_id}': {prompt}")
-    output = asyncio.run(
-        _run_with_agent_runtime(agent_data, AgentAction.ASK, prompt=prompt)
-    )
-    click.echo(f"Agent response: {output}")
+    submit_task("agent_ask", {"agent_id": agent_id, "agent": agent_data, "prompt": prompt},
+                attach=attach, detach=detach, home=get_config_dir())
 
 
 # TODO(cli-agent): Add commands for memory backends and memory tools:
