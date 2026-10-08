@@ -45,12 +45,13 @@ extra:
 nav:
   - Home: index.md
   - For CLI Users:
+      - Getting Started: for-use/getting-started.md
       - CLI & Chat: for-use/cli.md
-      - Features: for-use/single-agent-use-case.md
+      - Use Cases: use-cases.md
   - For Developers:
       - Getting Started: for-dev/getting-started.md
       - Use Cases:
-          - Single Agent Use Case: for-dev/use-cases/single-agent-use-case.md
+          - Single Agent Use Case: for-dev/use-cases/single-agent-use-cases.md
           - Real-estate deal desk: for-dev/use-cases/real-estate-deal-desk.md
       - Modules:
           - Agent: for-dev/modules/agent.md
