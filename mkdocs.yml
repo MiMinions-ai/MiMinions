@@ -47,7 +47,7 @@ nav:
   - For CLI Users:
       - Getting Started: for-use/getting-started.md
       - CLI & Chat: for-use/cli.md
-      - Use Cases: use-cases.md
+      - Use Cases: for-use/use-cases.md
   - For Developers:
       - Getting Started: for-dev/getting-started.md
       - Use Cases:
