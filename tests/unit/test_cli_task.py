@@ -41,7 +41,7 @@ def test_task_crud_commands_persist_json(isolated_cli_runner, tmp_path, monkeypa
     assert "Task 'Write tests' added successfully with ID: 12345678" in added.output, f"expect task add command reports created task id for the new task as {"Task 'Write tests' added successfully with ID: 12345678"}, got {added.output}"
 
     listed = isolated_cli_runner.invoke(task_cli, ["list"])
-    assert "12345678: Write tests (pending, high) - Cover CLI" in listed.output, f"expect task list includes the created task with id, status, priority, and description as '12345678: Write tests (pending, high) - Cover CLI', got {listed.output}"
+    assert "12345678: Write tests (work_item, pending, high) - Cover CLI" in listed.output, f"expect task list includes the created task with id, status, priority, and description as '12345678: Write tests (work_item, pending, high) - Cover CLI', got {listed.output}"
 
     shown = isolated_cli_runner.invoke(task_cli, ["show", "12345678"])
     assert "Agent: agent1" in shown.output, f"expect task show displays linked agent field for the selected task as 'Agent: agent1', got {shown.output}"
