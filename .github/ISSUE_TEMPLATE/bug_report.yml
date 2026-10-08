@@ -32,7 +32,7 @@ body:
     attributes:
       label: Environment
       description: MiMinions version, OS, and Python version.
-      placeholder: "0.4.1, macOS 15, Python 3.12"
+      placeholder: "0.4.2, macOS 15, Python 3.12"
     validations:
       required: true
   - type: checkboxes

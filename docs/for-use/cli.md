@@ -283,37 +283,6 @@ miminions agent mcp-remove researcher files --yes
 
 ---
 
-## `task`
-
-Track tasks with priority, status, and an optional assigned agent. Records persist to `tasks.json`.
-
-```bash
-miminions task list
-miminions task add --title "Write docs" --description "CLI page" --priority high
-miminions task update <id> --status in_progress --agent researcher
-miminions task duplicate <id> --title "Write docs (v2)"
-miminions task show <id>
-miminions task remove <id>
-```
-
-| Command | Options | Description |
-| --- | --- | --- |
-| `list` | `--json` | List all tasks with status and priority. |
-| `add` | `--title`, `--description`, `--priority`, `--agent` | Create a task. |
-| `update <id>` | `--title`, `--description`, `--priority`, `--status`, `--agent` | Update one or more fields. |
-| `duplicate <id>` | `--title` | Copy a task (reset to `pending`). |
-| `show <id>` | `--json` | Print full task detail. |
-| `remove <id>` | — | Delete a task (asks for confirmation). |
-
-- `--priority` is one of `low`, `medium` (default), `high`.
-- `--status` is one of `pending`, `in_progress`, `completed`, `cancelled`.
-- `--agent` must reference an existing agent id; unknown ids are rejected.
-
-!!! note "CLI tasks vs. the task runtime"
-    These commands manage lightweight *task records* in JSON. They are distinct from the programmatic concurrent [`TaskRuntime`](tasks.md) (which runs agent-bound tasks via `asyncio.TaskGroup`).
-
----
-
 ## `knowledge`
 
 Versioned knowledge entries persisted to `knowledge.json`. Each content change records a new version.
