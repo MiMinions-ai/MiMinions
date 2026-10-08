@@ -108,7 +108,7 @@ When adapting this to a real desk:
 - [Memory](../modules/memory.md) — tiers + distiller
 - [Agent](../modules/agent.md) — `create_minion` + tools
 - [Workspaces](../modules/workspaces.md) — on-disk layout
-- [CLI & Chat](../modules/cli.md) — `miminions chat start`
+- [CLI & Chat](../../for-use/cli.md) — `miminions chat start`
 
 ## Feedback
 

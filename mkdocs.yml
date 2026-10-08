@@ -44,23 +44,23 @@ extra:
 
 nav:
   - Home: index.md
-  - Features: features.md
-  - Documentation:
-      - Getting Started: getting-started.md
+  - For CLI Users:
+      - Getting Started: for-use/getting-started.md
+      - CLI & Chat: for-use/cli.md
+      - Use Cases: for-use/use-cases.md
+  - For Developers:
+      - Getting Started: for-dev/getting-started.md
       - Use Cases:
-          - Real-estate deal desk: use-cases/real-estate-deal-desk.md
+          - Single Agent Use Case: for-dev/use-cases/single-agent-use-cases.md
+          - Real-estate deal desk: for-dev/use-cases/real-estate-deal-desk.md
       - Modules:
-          - Agent: modules/agent.md
-          - Memory: modules/memory.md
-          - Context Builder: modules/context.md
-          - Tools: modules/tools.md
-          - Workspaces: modules/workspaces.md
-          - Tasks & Workflows: modules/tasks.md
-          - Data Management: modules/data.md
-          - Gateway Runtime: modules/gateway.md
-          - CLI & Chat: modules/cli.md
-      - Contributing: contributing.md
-      - Changelog: changelog.md
+          - Agent: for-dev/modules/agent.md
+          - Memory: for-dev/modules/memory.md
+          - Context Builder: for-dev/modules/context.md
+          - Tools: for-dev/modules/tools.md
+          - Workspaces: for-dev/modules/workspaces.md
+      - Contributing: for-dev/contributing.md
+      - Changelog: for-dev/changelog.md
   - About: about.md
   - FAQ: faq.md
   - Contact: contact.md

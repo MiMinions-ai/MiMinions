@@ -57,7 +57,7 @@ Previous published release on PyPI.
 
 ### Added
 
-- **Click-based CLI** (`miminions` / `python -m miminions`) with nine command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`, `execution`, `chat`, `gateway`, and `prompt`. State persists locally under `~/.miminions/`. See [CLI](modules/cli.md).
+- **Click-based CLI** (`miminions` / `python -m miminions`) with nine command groups: `auth`, `agent`, `task`, `knowledge`, `workspace`, `execution`, `chat`, `gateway`, and `prompt`. State persists locally under `~/.miminions/`. See [CLI](../for-use/cli.md).
 - **First-run bootstrap.** `miminions.core.bootstrap.ensure_default_setup` idempotently creates a `default` workspace and a default agent record under `~/.miminions/` on first use, so the CLI works out of the box.
 - **Three-tier memory with an LLM distiller.** A chronological session log (`HISTORY.md`), stable workspace facts (`MEMORY.md` &rarr; "Project Facts"), and a cross-workspace SQLite vector store (`~/.miminions/global_memory.db`). `MemoryDistiller` extracts and promotes insights across tiers using an `create_llm_filter`-built extractor. See [Memory](modules/memory.md).
 - **Workspace system.** A node/rule graph model (`Workspace`, `Node`, `Rule`, `NodeType`, `RulePriority`) with rule inheritance and priority-sorted evaluation, a JSON-backed `WorkspaceManager`, and an on-disk layout (`prompt/`, `memory/`, `skills/`, `sessions/`, `data/`) scaffolded by `init_workspace`. See [Workspaces](modules/workspaces.md).

@@ -330,7 +330,7 @@ miminions workspace remove-rule research "Has agent"
 miminions workspace init-files research
 ```
 
-See the [CLI reference](cli.md) for the full command set.
+See the [CLI reference](../../for-use/cli.md) for the full command set.
 
 ## API Reference
 
@@ -382,4 +382,4 @@ See the [CLI reference](cli.md) for the full command set.
 - [Agent](agent.md) — attach a workspace with `set_context()`
 - [Context Builder](context.md) — how the folder becomes a system prompt
 - [Memory](memory.md) — the three-tier memory backed by `memory/`
-- [CLI](cli.md) — the `miminions workspace` command group
+- [CLI](../../for-use/cli.md) — the `miminions workspace` command group
