@@ -46,6 +46,72 @@ miminions init --force
 
 ---
 
+## Dispatch, attachment, and the execution instance
+
+`prompt ask`, `agent ask`, `agent run`, `tool execute`, `tool session execute`, and
+`tool test` submit durable execution tasks. They acknowledge acceptance on stderr
+before building context, connecting MCP servers, or executing work, then stream
+output until completion. Add `--detach` to return immediately after acceptance;
+`--attach` explicitly selects the default streaming behavior. The flags cannot be
+combined. Attachment remains the default when output is piped.
+
+```bash
+miminions prompt ask "Draft release notes" --detach
+# Task exec_... accepted; follow with miminions task tail exec_...
+miminions task tail exec_...
+miminions task tail exec_... --after 12 --json
+miminions task list --kind execution
+miminions task show exec_... --json
+miminions task cancel exec_...
+```
+
+Response text and tool stdout go to stdout. Lifecycle updates, tool activity,
+approval guidance, errors, and completion go to stderr. During quiet execution,
+heartbeat events report process responsiveness every five seconds; they do not
+establish provider or tool progress. `task tail --json` emits one event per line
+with `task_id`, `sequence`, `timestamp`, `type`, and `data`.
+
+Ctrl+C or a broken pipe detaches the terminal and leaves the task running. Use
+`task cancel` to stop it. Attached commands and tail exit with 0 on success, 1 on
+failure, and 130 on cancellation/interruption. Successful detached submission
+returns 0. Events, partial output, results, and failures remain available until
+the completed task is removed with `task remove`.
+
+Tasks requiring command approval wait in `waiting_for_input`. Attached human
+terminals can answer the prompt. Noninteractive and JSON followers never approve
+automatically; inspect `task show` and answer a specific request:
+
+```bash
+miminions task approve exec_... REQUEST_ID --allow
+miminions task approve exec_... REQUEST_ID --deny
+```
+
+One local instance starts automatically per resolved `MIMINIONS_HOME`. It runs
+up to four isolated task processes and serializes work within each session.
+SQLite stores the queue, ordered events, approval responses, and model-history
+checkpoints in `execution.sqlite3`. Startup diagnostics go to
+`execution-instance.log`. Inspect output before resubmitting work interrupted by
+an instance crash: started tasks become failed and are never replayed
+automatically; queued tasks survive restart.
+
+```bash
+miminions instance start
+miminions instance status --json
+miminions instance stop           # drain accepted work
+miminions instance stop --cancel  # cancel queued and active work
+miminions config set execution.max_concurrency 2
+```
+
+Restart the instance after upgrading the application or changing concurrency or environment credentials.
+Default stop may wait for pending approvals. Explicit cancellation attempts
+cleanup for five seconds before terminating the task and its descendants.
+
+Saved work items remain in `tasks.json`. `task list` and `task show` distinguish
+`work_item` from `execution`; `--kind work_item` selects saved items. Execution
+status is runtime-owned, execution records cannot be duplicated, and active
+execution records cannot be removed. Existing import/export covers saved work
+items and excludes execution history.
+
 ## `chat`
 
 An interactive, async conversation with a live Minion bound to a workspace.
@@ -75,7 +141,6 @@ Inside the loop, type a message and press Enter — the reply **streams** to the
 ```text
 Workspace : my-project
 Session   : 20260621T101500000000Z_a1b2c3d4
-Model     : openai/gpt-oss-20b:free via OpenRouter
 Type '/exit' or '/quit' to end the session.
 
 > summarize the project goals
@@ -91,10 +156,10 @@ Session ended.
     Before each turn the in-memory history passed to the LLM is capped at the most recent **40 messages** via `trim_message_history`, cutting only at a user-prompt turn boundary so tool call/return pairs are never split. The JSONL transcript on disk always stays complete — only the model's context window is bounded.
 
 ??? note "Session resumption (how it works)"
-    Passing `--session <id>` loads the append-only `.jsonl` transcript from `JsonlSessionStore` and converts it back into native pydantic-ai messages via `load_as_pydantic_messages()`, giving the LLM full conversational context from prior runs. New sessions get an id of the form `YYYYMMDDTHHMMSSffffffZ_<8-char-uuid>`. Transcripts live under `<workspace_root>/sessions/`.
+    Passing `--session <id>` restores the native model-message checkpoint, including tool exchanges. Older sessions without a checkpoint fall back to the append-only `.jsonl` transcript. New sessions get an id of the form `YYYYMMDDTHHMMSSffffffZ_<8-char-uuid>`. Transcripts live under `<workspace_root>/sessions/`.
 
 ??? note "Background distillation (how it works)"
-    When the chat loop ends, a `MemoryDistiller` runs in the `finally` block over the session transcript. It promotes extracted memory across three tiers — Tier 1 → `HISTORY.md`, Tier 2 → `MEMORY.md` "Project Facts", Tier 3 → the global SQLite insight DB at `~/.miminions/global_memory.db`. If a real model is available it uses `create_llm_filter(model)` to extract facts; otherwise it runs the pipeline with an empty placeholder filter. Distillation failures are caught and reported as a warning rather than crashing your terminal. See [Memory](memory.md) for the full pipeline.
+    After chat exits, a separate `session_distill` task runs after outstanding session turns finish. Follow its acknowledged task ID to see progress or errors. `MemoryDistiller` promotes extracted memory across three tiers: Tier 1 → `HISTORY.md`, Tier 2 → `MEMORY.md` "Project Facts", Tier 3 → the global SQLite insight DB. Distillation failures are recorded on that task and do not fail the chat terminal. See [Memory](memory.md) for the full pipeline.
 
 ---
 
@@ -117,6 +182,9 @@ miminions prompt ask "Draft a release note" --workspace my-project --session my-
 | `--session <id>` | Optional existing session id; a new one is created if omitted. |
 
 The command builds a workspace context string via [`ContextBuilder`](context.md), records both the user prompt and assistant reply to the session transcript, and prints the reply. If the workspace does not exist it is created and its files are initialized.
+
+Supplying `--session` continues the saved model history and orders the prompt
+with chat turns in the same workspace session.
 
 ---
 
@@ -240,8 +308,8 @@ miminions agent remove researcher
 
 `show <ref>` accepts an exact id, an id prefix, or an exact agent name.
 
-!!! warning "`run --async` is not functional"
-    The `--async` flag on `agent run` currently prints a `TODO` placeholder and does **not** execute anything asynchronously. Use plain `miminions agent run [id]` for real execution.
+`agent run --detach` submits the stored goal and returns after acknowledgement.
+The old `--async` placeholder flag is no longer accepted.
 
 ## Tool
 

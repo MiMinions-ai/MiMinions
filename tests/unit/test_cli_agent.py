@@ -105,49 +105,29 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
         agent_cli, ["ask", NONEXISTENT_AGENT_ID, "--prompt", "hello"]
     )
 
-    _assert_exit_code(result, 0, "asking a nonexistent agent")
+    _assert_exit_code(result, 1, "asking a nonexistent agent")
     target_value = f"Agent '{NONEXISTENT_AGENT_ID}' not found."
     assert target_value in result.output, f"expect {target_value} in result.output, got {result.output}"
 
 
-def test_agent_commands_and_runtime_prompt_execution(
-    isolated_cli_runner, tmp_path, monkeypatch
-):
-    """Agent prompts should go through the runtime without making network requests."""
+def test_agent_commands_and_runtime_prompt_execution(isolated_cli_runner, tmp_path, monkeypatch):
+    """Ask and run dispatch the original prompt/goal without invoking a model locally."""
+    from unittest.mock import Mock
     monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-
-    async def mock_runtime(_agent_data, _operation, **params):
-        return f"model says {params['prompt']}"
-
-    monkeypatch.setattr(
-        "miminions.cli.agent._run_with_agent_runtime", mock_runtime
-    )
-    save_agents(
-        {
-            "agent1": {
-                "name": "Agent",
-                "description": "desc",
-                "goal": "Please add 10 and 5",
-            }
-        }
-    )
-
-    asked = isolated_cli_runner.invoke(
-        agent_cli, ["ask", "agent1", "--prompt", "echo hello there"]
-    )
-    _assert_exit_code(asked, 0, "asking agent with echo prompt")
-    assert "Agent response: model says echo hello there" in asked.output, f"expect 'Agent response: model says echo hello there' in asked.output, got {asked.output}"
-
+    dispatch = Mock()
+    monkeypatch.setattr("miminions.cli.agent.submit_task", dispatch)
+    agent = {"name": "Agent", "description": "desc", "goal": "Please add 10 and 5"}
+    save_agents({"agent1": agent})
+    asked = isolated_cli_runner.invoke(agent_cli, ["ask", "agent1", "--prompt", "echo hello there", "--detach"])
+    _assert_exit_code(asked, 0, "dispatching a prompt")
+    assert dispatch.call_args.args == ("agent_ask", {"agent_id": "agent1", "agent": agent, "prompt": "echo hello there"})
+    assert dispatch.call_args.kwargs["detach"] is True
     run = isolated_cli_runner.invoke(agent_cli, ["run", "agent1"])
-    _assert_exit_code(run, 0, "running agent through runtime")
-    assert "Agent response: model says Please add 10 and 5" in run.output, f"expect 'Agent response: model says Please add 10 and 5' in run.output, got {run.output}"
-    stored_status = load_agents()["agent1"]["status"]
-    assert stored_status == "running", f"expect result to be {'running'}, got {stored_status}"
-
+    _assert_exit_code(run, 0, "dispatching an agent goal")
+    assert dispatch.call_args.args == ("agent_run", {"agent_id": "agent1", "agent": agent, "prompt": agent["goal"]})
+    assert load_agents()["agent1"] == agent
     async_run = isolated_cli_runner.invoke(agent_cli, ["run", "agent1", "--async"])
-    _assert_exit_code(async_run, 2, "rejecting removed async run flag")
-    assert "No such option" in async_run.output, f"expect 'No such option' in async_run.output, got {async_run.output}"
-    assert "--async" in async_run.output, f"expect '--async' in async_run.output, got {async_run.output}"
+    _assert_exit_code(async_run, 2, "rejecting removed async flag")
 
 
 def test_agent_run_reports_missing_goal(
@@ -157,5 +137,5 @@ def test_agent_run_reports_missing_goal(
     save_agents({"agent1": {"name": "Agent", "description": "desc", "goal": None}})
 
     no_goal = isolated_cli_runner.invoke(agent_cli, ["run", "agent1"])
-    _assert_exit_code(no_goal, 0, "running an agent without a goal")
+    _assert_exit_code(no_goal, 1, "running an agent without a goal")
     assert "has no goal set" in no_goal.output, f"expect 'has no goal set' in no_goal.output, got {no_goal.output}"

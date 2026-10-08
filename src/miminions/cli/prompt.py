@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any
 
 import click
+from .dispatch import attachment_options, submit_task, validate_attachment
 
-from miminions.agent import create_minion
-from miminions.context import ContextBuilder
-from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.core.paths import get_config_dir
-from miminions.session.store import JsonlSessionStore
 
 
 @click.group()
@@ -24,40 +19,33 @@ def prompt_cli() -> None:
 @click.option("--workspace", "workspace_ref", default="default", show_default=True, help="Workspace id or name.")
 @click.option("--session", "session_id", default=None, help="Optional existing session id.")
 @click.argument("prompt_parts", nargs=-1, required=True)
-def ask_prompt(workspace_ref: str, session_id: str | None, prompt_parts: tuple[str, ...]) -> None:
+@attachment_options
+def ask_prompt(workspace_ref: str, session_id: str | None, prompt_parts: tuple[str, ...], attach=False, detach=False) -> None:
     """Send a single prompt to the Minion runtime."""
     user_prompt = " ".join(prompt_parts).strip()
     if not user_prompt:
         raise click.ClickException("Prompt cannot be empty.")
 
-    asyncio.run(_ask_prompt(workspace_ref, session_id, user_prompt))
-
-
-async def _ask_prompt(workspace_ref: str, session_id: str | None, user_prompt: str) -> None:
-    """Run the one-shot prompt flow and print the assistant response."""
-    manager = WorkspaceManager(get_config_dir())
-    workspace, root = ensure_workspace(manager, workspace_ref, create_missing=True, init_files=True)
-
-    store = JsonlSessionStore(root)
-    if not session_id:
-        session_id = store.create_session_id()
-
-    meta: dict[str, Any] = {
-        "source": "cli-prompt",
-        "workspace_id": workspace.id,
-    }
-
-    store.append(session_id, "user", user_prompt, meta=meta)
-
-    context = ContextBuilder().build(workspace, root)
-    minion = create_minion(name="MiMinions", description=context)
-
+    validate_attachment(attach, detach)
+    from miminions.session.store import create_session_id
+    from miminions.core.workspace import WorkspaceManager, resolve_workspace
+    from miminions.execution.processes import InstanceLock
+    from miminions.execution.models import conversation_key
+    session_id = (session_id or create_session_id()).strip()
+    if not session_id.strip() or "/" in session_id or "\\" in session_id:
+        raise click.UsageError("Session ID must be nonempty and contain no path separators.")
     try:
-        reply = await minion.run(user_prompt)
-    except Exception as exc:
-        error_text = f"[error] {type(exc).__name__}: {exc}"
-        store.append(session_id, "assistant", error_text, meta={**meta, "error": True})
-        raise click.ClickException(error_text) from exc
-
-    store.append(session_id, "assistant", reply, meta=meta)
-    click.echo(reply)
+        # Reserve only the workspace identity here; files and model context are built after acknowledgement.
+        with InstanceLock(get_config_dir() / "execution-workspace.lock"):
+            manager = WorkspaceManager(get_config_dir())
+            workspaces = manager.load_workspaces()
+            workspace = resolve_workspace(workspaces, workspace_ref)
+            if workspace is None:
+                workspace = manager.create_workspace(workspace_ref)
+                workspaces[workspace.id] = workspace
+                manager.save_workspaces(workspaces)
+            workspace_ref = workspace.id
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    submit_task("prompt", {"workspace": workspace_ref, "session_id": session_id, "prompt": user_prompt},
+                attach=attach, detach=detach, session_key=conversation_key(workspace_ref, session_id), home=get_config_dir())

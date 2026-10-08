@@ -5,9 +5,9 @@ import json
 
 import click
 
-from miminions.tools.schemas import ToolExecutionResult
 
 from .agent import AgentAction, _get_agent_record_or_error, _run_with_agent_runtime
+from .dispatch import attachment_options, submit_task, validate_attachment
 
 
 def _split_optional_agent_operand(agent_id, operand, operand_name):
@@ -107,49 +107,28 @@ def search_agent_tools(agent_id, query):
     default="{}",
     help="JSON object with tool arguments, e.g. '{\"a\":2,\"b\":3}'.",
 )
-def execute_agent_tool(agent_id, tool_name, arguments):
+@attachment_options
+def execute_agent_tool(agent_id, tool_name, arguments, attach=False, detach=False):
     """Execute one saved-agent tool and print structured output."""
+    validate_attachment(attach, detach)
     agent_id, tool_name = _split_optional_agent_operand(
         agent_id, tool_name, "tool_name"
     )
     agent_data = _get_agent_record_or_error(agent_id)
     if not agent_data:
-        return
+        raise click.exceptions.Exit(1)
 
     try:
         parsed_arguments = json.loads(arguments)
-    except json.JSONDecodeError:
-        click.echo("Invalid JSON for --arguments.", err=True)
-        return
+    except json.JSONDecodeError as exc:
+        raise click.ClickException("Invalid JSON for --arguments.") from exc
 
     if not isinstance(parsed_arguments, dict):
-        click.echo("--arguments must be a JSON object.", err=True)
-        return
+        raise click.ClickException("--arguments must be a JSON object.")
 
-    result = asyncio.run(
-        _run_with_agent_runtime(
-            agent_data,
-            AgentAction.TOOL_RUN,
-            tool_name=tool_name,
-            arguments=parsed_arguments,
-        )
-    )
-
-    if isinstance(result, str):
-        click.echo(f"Tool execution returned: {result}", err=False)
-        return
-
-    if not isinstance(result, ToolExecutionResult):
-        click.echo(f"Unexpected tool execution result format: {type(result)}", err=True)
-        return
-
-    click.echo(f"Tool: {result.tool_name}")
-    click.echo(f"Status: {result.status.value}")
-    if result.error:
-        click.echo(f"Error: {result.error}")
-    else:
-        click.echo(f"Result: {result.result}")
-    click.echo(f"Execution time (ms): {result.execution_time_ms:.2f}")
+    from miminions.core.paths import get_config_dir
+    submit_task("agent_tool", {"agent": agent_data, "tool_name": tool_name, "arguments": parsed_arguments},
+                attach=attach, detach=detach, home=get_config_dir())
 
 
 # Execution sessions share the public ``tool`` namespace while retaining their

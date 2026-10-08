@@ -28,14 +28,16 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0"  # fallback for uninstalled/editable without metadata
 
-try:
-    from .tools import GenericTool, tool, create_tool
-    from .agent import Agent
-    from .data import LocalDataManager
-    from .user import User, UserController
+# The former eager import attempted a removed ``agent.Agent`` export and loaded
+# the model stack before every CLI acknowledgement. Preserve the available tool
+# shortcuts lazily, and the existing empty wildcard-export contract.
+__all__ = []
 
-    __all__ = ["__version__", "GenericTool", "tool", "create_tool", "Agent", "LocalDataManager", "User", "UserController"]
 
-except ImportError:
-    # In case optional dependencies are not installed
-    __all__ = []
+def __getattr__(name: str):
+    if name in {"GenericTool", "tool", "create_tool"}:
+        from importlib import import_module
+        value = getattr(import_module("miminions.tools"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -4,8 +4,24 @@ from __future__ import annotations
 
 import sys
 import time
+import pytest
 
 from click.testing import CliRunner
+
+
+@pytest.fixture(autouse=True)
+def restore_imported_modules():
+    """Fresh-import assertions must not invalidate modules collected by later tests."""
+    previous = {name: module for name, module in sys.modules.items() if name == "miminions" or name.startswith("miminions.")}
+    yield
+    for name in list(sys.modules):
+        if (name == "miminions" or name.startswith("miminions.")) and name not in previous:
+            sys.modules.pop(name, None)
+    sys.modules.update(previous)
+    for name, module in previous.items():
+        parent_name, _, child = name.rpartition(".")
+        if parent_name in previous:
+            setattr(previous[parent_name], child, module)
 
 
 def _fresh_cli():
@@ -49,7 +65,7 @@ def test_help_skips_bootstrap_and_heavy_imports():
     assert "auth" in result.output
     assert "agent" in result.output
     assert "tool" in result.output
-    assert "execution" not in result.output
+    assert "\n  execution " not in result.output
     # Static short helps (prove we did not import auth_cli docstring path for listing).
     assert "Create and manage agents." in result.output
 

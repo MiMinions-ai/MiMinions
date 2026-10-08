@@ -5,6 +5,7 @@ Unit tests for the MiMinions CLI agent module.
 import json
 import os
 import sys
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -668,7 +669,7 @@ class TestAgentCLI:
                 "status": "inactive",
             }
         }
-        arguments = json.dumps({"command": f"{sys.executable} --version"})
+        arguments = json.dumps({"command": subprocess.list2cmdline([sys.executable, "--version"])})
 
         with patch('miminions.core.auth.is_authenticated', return_value=True):
             with patch('miminions.cli.agent.load_agents') as mock_load:
@@ -696,7 +697,7 @@ class TestAgentCLI:
                 "status": "inactive",
             }
         }
-        arguments = json.dumps({"command": f"{sys.executable} --version"})
+        arguments = json.dumps({"command": subprocess.list2cmdline([sys.executable, "--version"])})
 
         with (
             patch('miminions.core.auth.is_authenticated', return_value=True),
@@ -710,8 +711,8 @@ class TestAgentCLI:
                 input='n\n',
             )
 
-        assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-        assert "Status: error" in result.output, f"expect denied command execution reports 'Status: error', got {result.output}"
+        assert result.exit_code == 1, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+        assert "failed" in result.output, f"expect denied command execution reports 'Status: error', got {result.output}"
         assert "Command execution was not approved" in result.output, f"expect denied command execution explains failure as 'Command execution was not approved', got {result.output}"
         mock_run.assert_not_called()
 
@@ -735,71 +736,36 @@ class TestAgentCLI:
                     ['execute', 'test_agent', 'cli_add', '--arguments', 'not-json']
                 )
 
-            assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
+            assert result.exit_code == 1, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
             assert "Invalid JSON for --arguments." in result.output, f"expect tool-run invalid arguments reports 'Invalid JSON for --arguments.', got {result.output}"
 
     def test_ask_agent_runs_prompt_through_runtime(self):
-        """Ask should pass the prompt through the runtime without keyword shortcuts."""
-        existing_agents = {
-            "test_agent": {
-                "name": "Test Agent",
-                "description": "A test agent",
-                "type": "general",
-                "status": "inactive",
-            }
-        }
-
-        with (
-                patch('miminions.core.auth.is_authenticated', return_value=True),
-                patch('miminions.cli.agent.load_agents') as mock_load,
-                patch(
-                    'miminions.cli.agent._run_with_agent_runtime',
-                    new=AsyncMock(return_value='model says Please add 4 and 9 for me'),
-                ),
-        ):
-                mock_load.return_value = existing_agents
-
-                result = self.runner.invoke(
-                    agent_cli,
-                    ['ask', 'test_agent', '--prompt', 'Please add 4 and 9 for me']
-                )
-
-        assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-        assert "Asking agent 'test_agent': Please add 4 and 9 for me" in result.output, f"expect \"Asking agent 'test_agent': Please add 4 and 9 for me\" in result.output, got {result.output}"
-        assert "Agent response: model says Please add 4 and 9 for me" in result.output, f"expect ask runtime result as 'Agent response: model says Please add 4 and 9 for me', got {result.output}"
+        agents = {"test_agent": {"name": "Test Agent"}}
+        with patch("miminions.cli.agent.load_agents", return_value=agents), patch("miminions.cli.agent.submit_task") as dispatch:
+            result = self.runner.invoke(agent_cli, ["ask", "test_agent", "--prompt", "Please add 4 and 9 for me"])
+        assert result.exit_code == 0, result.output
+        assert dispatch.call_args.args == ("agent_ask", {"agent_id": "test_agent", "agent": agents["test_agent"], "prompt": "Please add 4 and 9 for me"})
 
     def test_run_agent_runs_goal_through_runtime(self):
-        """Run should pass the stored goal through the runtime without keyword shortcuts."""
-        existing_agents = {
-                "test_agent": {
-                    "name": "Test Agent",
-                    "description": "A test agent",
-                    "type": "general",
-                    "status": "inactive",
-                    "goal": "Add 10 and 5",
-                }
-        }
-
-        with (
-                patch('miminions.core.auth.is_authenticated', return_value=True),
-                patch('miminions.cli.agent.load_agents') as mock_load,
-                patch('miminions.cli.agent.save_agents') as mock_save,
-                patch(
-                    'miminions.cli.agent._run_with_agent_runtime',
-                    new=AsyncMock(return_value='model says Add 10 and 5'),
-                ),
-        ):
-                mock_load.return_value = existing_agents
-                result = self.runner.invoke(agent_cli, ['run', 'test_agent'])
-
-        assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-        assert "Running agent 'test_agent' with goal: Add 10 and 5" in result.output, f"expect \"Running agent 'test_agent' with goal: Add 10 and 5\" in result.output, got {result.output}"
-        assert "Agent response: model says Add 10 and 5" in result.output, f"expect run runtime result as 'Agent response: model says Add 10 and 5', got {result.output}"
-        mock_save.assert_called_once()
+        agents = {"test_agent": {"name": "Test Agent", "goal": "Add 10 and 5"}}
+        with patch("miminions.cli.agent.load_agents", return_value=agents), patch("miminions.cli.agent.submit_task") as dispatch, patch("miminions.cli.agent.save_agents") as save:
+            result = self.runner.invoke(agent_cli, ["run", "test_agent"])
+        assert result.exit_code == 0, result.output
+        assert dispatch.call_args.args == ("agent_run", {"agent_id": "test_agent", "agent": agents["test_agent"], "prompt": "Add 10 and 5"})
+        save.assert_not_called()
 
     def test_run_agent_rejects_removed_async_flag(self):
         """Run should reject the removed async placeholder flag."""
         result = self.runner.invoke(agent_cli, ['run', '--async'])
 
         assert result.exit_code == 2, f"expect cli exit code 2, got {result.exit_code} with output: {result.output}"
-        assert "No such option '--async'" in result.output, f"expect \"No such option '--async'\" in result.output, got {result.output}"
+        assert "No such option" in result.output and "--async" in result.output
+
+
+pytestmark = pytest.mark.usefixtures("inline_execution")
+
+
+@pytest.fixture(autouse=True)
+def _interactive_command_tests(request, monkeypatch):
+    if request.node.name in {"test_tool_run_cli_command_success", "test_tool_run_cli_command_denied"}:
+        monkeypatch.setattr("miminions.cli.dispatch.is_interactive", lambda: True)

@@ -1,5 +1,5 @@
-from miminions.cli import cli
+from miminions.cli.main import main
 
 
 if __name__ == "__main__":
-    cli()
+    main()
