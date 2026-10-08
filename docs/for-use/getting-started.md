@@ -31,7 +31,7 @@ Every snippet runs against the real API.
     the tools system, workspaces, the markdown memory store, the data store, and
     the full CLI. It does **not** bundle `fastembed` or `sqlite-vec`.
 
-    The **`[sqlite]`** extra adds [`SQLiteMemory`](for-dev/modules/memory.md) — a local
+    The **`[sqlite]`** extra adds [`SQLiteMemory`](../for-dev/modules/memory.md) — a local
     vector store that embeds text with `fastembed` and runs KNN search through
     `sqlite-vec`. Install it if you want semantic recall or the three-tier global
     memory. The first time you construct `SQLiteMemory`, the embedding model is
@@ -48,8 +48,7 @@ Every snippet runs against the real API.
   ```
 
   The default model is the free `openai/gpt-oss-20b:free`. You can pick a
-  different provider or model instead — see
-  [Choosing a model / provider](#choosing-a-model-provider) below. For offline
+  different provider or model instead. For offline
   experiments, `provider="test"` needs no key at all.
 
 ## Using the CLI
@@ -91,7 +90,7 @@ Type `/exit` or `/quit` to end the session.
 ### One-shot prompt
 
 Send a single prompt and print the reply (no interactive loop). Workspace
-context is injected automatically via [`ContextBuilder`](for-dev/modules/context.md).
+context is injected automatically via [`ContextBuilder`](../for-dev/modules/context.md).
 
 ```bash
 miminions prompt ask "Summarize the project facts in this workspace"
@@ -102,5 +101,5 @@ miminions prompt ask --workspace "Demo" "What rules are active here?"
 
 ---
 
-See [CLI reference](for-use/cli.md) for every command group.
-See [Use Cases](for-use/use-cases.md) for common cli use cases.
+See [CLI reference](cli.md) for every command group.
+See [Use Cases](use-cases.md) for common cli use cases.

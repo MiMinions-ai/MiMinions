@@ -144,4 +144,4 @@ When adding changelog entries:
 3. Reference issue numbers where applicable.
 4. Keep the **Unreleased** section current as development proceeds.
 
-See [Contributing](contributing.md) for the full workflow.
+See [Contributing](for-dev/contributing.md) for the full workflow.

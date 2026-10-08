@@ -72,16 +72,16 @@ a development setup. Every snippet runs against the real API.
  └───────────┘ └────────────┘ └─────────────┘ └────────────┘
 ```
 
-A [Minion](for-dev/modules/agent.md) ties it all together: it talks to an LLM 
-(OpenRouter by default), calls [tools](for-dev/modules/tools.md) you define
-or load from [MCP](for-dev/modules/agent.md) servers, reads and writes
-[memory](for-dev/modules/memory.md), and injects [workspace](for-dev/modules/workspaces.md)
-[context](for-dev/modules/context.md) into every prompt.
+A [Minion](modules/agent.md) ties it all together: it talks to an LLM 
+(OpenRouter by default), calls [tools](modules/tools.md) you define
+or load from [MCP](modules/agent.md) servers, reads and writes
+[memory](modules/memory.md), and injects [workspace](modules/workspaces.md)
+[context](modules/context.md) into every prompt.
 
 
 ## Your First Agent
 
-Create a [`Minion`](for-dev/modules/agent.md), register a plain Python function as a tool,
+Create a [`Minion`](modules/agent.md), register a plain Python function as a tool,
 and `await run(...)`. Tool schemas are inferred from the function signature.
 
 ```python
@@ -146,10 +146,10 @@ agent = create_minion("MyAgent", model=OpenAIModel("gpt-4o"))
     error at `await agent.run(...)` time. Use `provider="test"` to exercise your
     tools and wiring without any credentials.
 
-Next steps from here: attach [Memory](for-dev/modules/memory.md), wire in
-[Workspaces](for-dev/modules/workspaces.md) and [Context](for-dev/modules/context.md), or expose
-external tools over [MCP](for-dev/modules/agent.md). See the
-[Tools](for-dev/modules/tools.md) and [Tasks](for-dev/modules/tasks.md) pages for more.
+Next steps from here: attach [Memory](modules/memory.md), wire in
+[Workspaces](modules/workspaces.md) and [Context](modules/context.md), or expose
+external tools over [MCP](modules/agent.md). See the
+[Tools](modules/tools.md) and [Tasks](modules/tasks.md) pages for more.
 
 
 ## Development Setup
@@ -176,12 +176,12 @@ All three layers run under `pytest`; there is no separate runner script.
 ---
 
 Ready to go deeper? Explore the module guides:
-[Agent](for-dev/modules/agent.md) ·
-[Memory](for-dev/modules/memory.md) ·
-[Context](for-dev/modules/context.md) ·
-[Tools](for-dev/modules/tools.md) ·
-[Workspaces](for-dev/modules/workspaces.md)
+[Agent](modules/agent.md) ·
+[Memory](modules/memory.md) ·
+[Context](modules/context.md) ·
+[Tools](modules/tools.md) ·
+[Workspaces](modules/workspaces.md)
 
 ## Practice use cases
-
-- [Real-estate deal desk](for-dev/use-cases/real-estate-deal-desk.md) — underwrite tool + three-tier memory starter
+- [Single Agent Use Cases](use-cases/single-agent-use-cases.md) - Multiple agents each setup for different use cases.
+- [Real-estate deal desk](use-cases/real-estate-deal-desk.md) — underwrite tool + three-tier memory starter

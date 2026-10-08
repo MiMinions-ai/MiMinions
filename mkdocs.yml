@@ -50,6 +50,7 @@ nav:
   - For Developers:
       - Getting Started: for-dev/getting-started.md
       - Use Cases:
+          - Single Agent Use Case: for-dev/use-cases/single-agent-use-case.md
           - Real-estate deal desk: for-dev/use-cases/real-estate-deal-desk.md
       - Modules:
           - Agent: for-dev/modules/agent.md

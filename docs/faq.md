@@ -7,15 +7,15 @@ Everything you need to know about MiMinions.
     **MiMinions is an open-source Python framework for building autonomous AI agents.**
     It enables developers to create, deploy, and manage agentic AI systems that
     can think, plan, and execute tasks. Built on top of the python open source eco-system, it provides
-    the building blocks for agentic systems: an LLM-powered [Agent](modules/agent.md),
-    a [Tools](modules/tools.md) registry, a [Memory](modules/memory.md),
-    [Workspaces](modules/workspaces.md), and MCP server integration.
+    the building blocks for agentic systems: an LLM-powered [Agent](for-dev/modules/agent.md),
+    a [Tools](for-dev/modules/tools.md) registry, a [Memory](for-dev/modules/memory.md),
+    [Workspaces](for-dev/modules/workspaces.md), and MCP server integration.
 
 ??? question "How do I get started?"
 
     **Getting started is easy.** Install the framework with
     `pip install miminions`, then create your first agent in just a few lines of
-    code. See the [Getting Started](getting-started.md) guide for step-by-step
+    code. See the [Getting Started](for-dev/getting-started.md) guide for step-by-step
     instructions on building your first autonomous AI agent.
 
 ??? question "Is MiMinions free to use?"
@@ -49,16 +49,13 @@ Everything you need to know about MiMinions.
 
 ??? question "Where can I find the documentation?"
 
-    Full guides and API references live in the [Documentation](getting-started.md)
+    Full guides and API references live in the [Documentation](for-dev/getting-started.md)
     section, covering the following modules:
-    - [Agent](modules/agent.md)
-    - [Memory](modules/memory.md)
-    - [Context Builder](modules/context.md)
-    - [Tools](modules/tools.md)
-    - [Workspaces](modules/workspaces.md)
-    - [Data Management](modules/data.md)
-    - [Gateway Runtime](modules/gateway.md)
-    - [CLI & Chat](modules/cli.md)
+    - [Agent](for-dev/modules/agent.md)
+    - [Memory](for-dev/modules/memory.md)
+    - [Context Builder](for-dev/modules/context.md)
+    - [Tools](for-dev/modules/tools.md)
+    - [Workspaces](for-dev/modules/workspaces.md)
 
 !!! tip "Working offline?"
     Pass `provider="test"` to `create_minion` to use `TestModel`

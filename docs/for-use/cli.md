@@ -1,6 +1,6 @@
 # CLI & Chat
 
-The `miminions` console command is the primary surface for the framework: it manages agents, tasks, knowledge, workspaces, and execution sessions, and it hosts the interactive **chat** and one-shot **prompt** runtimes that drive a live [Minion](agent.md).
+The `miminions` console command is the primary surface for the framework: it manages agents, knowledge, workspaces, and execution sessions, and it hosts the interactive **chat** and one-shot **prompt** runtimes that drive a live [Minion](../for-dev/modules/agent.md).
 
 ```bash
 # Installed as a console script…
@@ -11,7 +11,7 @@ python -m miminions --help
 ```
 
 !!! info "State lives under `~/.miminions/`"
-    All persistent CLI state is stored as JSON under your home directory: `config.json`, `auth.json`, `agents.json`, `tasks.json`, `knowledge.json`, `sessions.json`, `interactions.json`, plus a `workspaces/` tree. Set the **`MIMINIONS_HOME`** environment variable to relocate the whole directory (handy for tests and alternate deployments). JSON stores are written **atomically**, so an interrupted save can't leave a corrupt file behind. On the **first** invocation of any command, MiMinions bootstraps a **`default` workspace** and a **`default` agent** so the chat/prompt commands work out of the box.
+    All persistent CLI state is stored as JSON under your home directory: `config.json`, `auth.json`, `agents.json`, `knowledge.json`, `sessions.json`, `interactions.json`, plus a `workspaces/` tree. Set the **`MIMINIONS_HOME`** environment variable to relocate the whole directory (handy for tests and alternate deployments). JSON stores are written **atomically**, so an interrupted save can't leave a corrupt file behind. On the **first** invocation of any command, MiMinions bootstraps a **`default` workspace** and a **`default` agent** so the chat/prompt commands work out of the box.
 
 ```bash
 # Explicitly initialize (or verify) default bootstrap state
@@ -22,9 +22,6 @@ miminions init --force
 ```
 
 `init` is an explicit, user-facing bootstrap/repair command over the same default setup logic used on first command run. The `--force` option re-runs bootstrap repair so missing default workspace template files are recreated without overwriting existing customized files.
-
-!!! warning "Authentication gating is uneven"
-    A `require_auth` decorator gates the commands in `task`, `knowledge`, and `workspace`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat`, `prompt`, and `tool` commands are not wrapped at all — don't rely on those being blocked when signed out.
 
 ## Command groups at a glance
 
@@ -37,7 +34,6 @@ miminions init --force
 -   :material-hammer-wrench: **`tool`** — discover, execute, and trace tools and tool sessions
 -   :material-message-text: **`chat`** — interactive conversation with memory distillation
 -   :material-flash: **`prompt`** — one-shot prompt to the runtime
--   :material-checkbox-marked-circle-outline: **`task`** — track tasks with priority and status
 -   :material-book-open-variant: **`knowledge`** — versioned knowledge entries
 -   :material-graph-outline: **`workspace`** — workspaces, rules, and on-disk scaffolding
 -   :material-lan: **`gateway`** — local gateway runtime, cron jobs, and gateway sessions
@@ -85,7 +81,7 @@ Session ended.
 ```
 
 !!! tip "Needs an LLM backend"
-    Chat (and `prompt`) call the live model. With the default OpenRouter provider you must export `OPENROUTER_API_KEY` — without it, agent construction fails with a clear `ValueError`. Errors during a turn are shown as an `[error] ...` line; if a reply was partially streamed before the error, the partial text is kept in the transcript alongside the error marker. See [Agent](agent.md#model-provider-selection) for switching providers.
+    Chat (and `prompt`) call the live model. With the default OpenRouter provider you must export `OPENROUTER_API_KEY` — without it, agent construction fails with a clear `ValueError`. Errors during a turn are shown as an `[error] ...` line; if a reply was partially streamed before the error, the partial text is kept in the transcript alongside the error marker. See [Agent](../for-dev/modules/agent.md#model-provider-selection) for switching providers.
 
 ??? note "Bounded LLM context (how it works)"
     Before each turn the in-memory history passed to the LLM is capped at the most recent **40 messages** via `trim_message_history`, cutting only at a user-prompt turn boundary so tool call/return pairs are never split. The JSONL transcript on disk always stays complete — only the model's context window is bounded.
@@ -94,7 +90,7 @@ Session ended.
     Passing `--session <id>` loads the append-only `.jsonl` transcript from `JsonlSessionStore` and converts it back into native pydantic-ai messages via `load_as_pydantic_messages()`, giving the LLM full conversational context from prior runs. New sessions get an id of the form `YYYYMMDDTHHMMSSffffffZ_<8-char-uuid>`. Transcripts live under `<workspace_root>/sessions/`.
 
 ??? note "Background distillation (how it works)"
-    When the chat loop ends, a `MemoryDistiller` runs in the `finally` block over the session transcript. It promotes extracted memory across three tiers — Tier 1 → `HISTORY.md`, Tier 2 → `MEMORY.md` "Project Facts", Tier 3 → the global SQLite insight DB at `~/.miminions/global_memory.db`. If a real model is available it uses `create_llm_filter(model)` to extract facts; otherwise it runs the pipeline with an empty placeholder filter. Distillation failures are caught and reported as a warning rather than crashing your terminal. See [Memory](memory.md) for the full pipeline.
+    When the chat loop ends, a `MemoryDistiller` runs in the `finally` block over the session transcript. It promotes extracted memory across three tiers — Tier 1 → `HISTORY.md`, Tier 2 → `MEMORY.md` "Project Facts", Tier 3 → the global SQLite insight DB at `~/.miminions/global_memory.db`. If a real model is available it uses `create_llm_filter(model)` to extract facts; otherwise it runs the pipeline with an empty placeholder filter. Distillation failures are caught and reported as a warning rather than crashing your terminal. See [Memory](../for-dev/modules/memory.md) for the full pipeline.
 
 ---
 
@@ -116,7 +112,7 @@ miminions prompt ask "Draft a release note" --workspace my-project --session my-
 | `--workspace <id\|name>` | Workspace id or name. Default: `default`. |
 | `--session <id>` | Optional existing session id; a new one is created if omitted. |
 
-The command builds a workspace context string via [`ContextBuilder`](context.md), records both the user prompt and assistant reply to the session transcript, and prints the reply. If the workspace does not exist it is created and its files are initialized.
+The command builds a workspace context string via [`ContextBuilder`](../for-dev/modules/context.md), records both the user prompt and assistant reply to the session transcript, and prints the reply. If the workspace does not exist it is created and its files are initialized.
 
 ---
 
@@ -198,8 +194,8 @@ miminions import --input ./miminions-backup.json --mode replace
 
 | Command | Options | Description |
 | --- | --- | --- |
-| `export` | `--output <path>` | Export `agents.json`, `tasks.json`, and `knowledge.json` into one backup JSON file. |
-| `import` | `--input <path>`, `--mode merge\|replace` | Restore backup data into `agents.json`, `tasks.json`, and `knowledge.json`. |
+| `export` | `--output <path>` | Export `agents.json`, and `knowledge.json` into one backup JSON file. |
+| `import` | `--input <path>`, `--mode merge\|replace` | Restore backup data into `agents.json`, and `knowledge.json`. |
 
 `--mode merge` keeps existing records and overlays imported ids.
 `--mode replace` replaces each target store with imported data.
@@ -208,7 +204,7 @@ miminions import --input ./miminions-backup.json --mode replace
 
 ## `agent`
 
-Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, and their default CLI tools remain available through `tool-list`, `tool-info`, `tool-search`, and `tool-run`.
+Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](../for-dev/modules/agent.md) runtime, and their default CLI tools remain available through `tool-list`, `tool-info`, `tool-search`, and `tool-run`.
 
 All commands that take an agent id accept it as an optional positional argument. When omitted, the `default_agent` from `~/.miminions/config.json` is used.
 
@@ -315,7 +311,7 @@ miminions knowledge remove <id>
 
 ## `workspace`
 
-Manage workspaces — the in-memory/on-disk model of [nodes and rules](workspaces.md) plus the on-disk `prompt/ memory/ skills/ sessions/ data/` scaffolding.
+Manage workspaces — the in-memory/on-disk model of [nodes and rules](../for-dev/modules/workspaces.md) plus the on-disk `prompt/ memory/ skills/ sessions/ data/` scaffolding.
 
 ```bash
 miminions workspace list
@@ -359,7 +355,7 @@ miminions workspace add-rule my-project \
 
 ## Tool sessions and history
 
-A live tool-execution runtime: start a session, register tool modules, run individual tools, and review the recorded interactions. Each tool run is captured as a `WorkflowRun` trace and persisted to `interactions.json` (the same schema used by the [workflow tracing layer](tasks.md)).
+A live tool-execution runtime: start a session, register tool modules, run individual tools, and review the recorded interactions. Each tool run is captured as a `WorkflowRun` trace and persisted to `interactions.json`.
 
 ```bash
 # 1. Start a session
@@ -403,7 +399,7 @@ miminions tool session stop
 | `history show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
 
 !!! note "Tool modules"
-    `tool add` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `tool add` at the file.
+    `tool add` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](../for-dev/modules/tools.md)) and point `tool add` at the file.
 
 ---
 
@@ -441,14 +437,13 @@ miminions gateway sessions list --workspace Demo
 | --- | --- |
 | `~/.miminions/config.json` | CLI config + default workspace/agent ids |
 | `~/.miminions/auth.json` | Local sign-in marker |
-| `~/.miminions/agents.json` · `tasks.json` · `knowledge.json` | Record stores for the respective groups |
+| `~/.miminions/agents.json` · `knowledge.json` | Record stores for the respective groups |
 | `~/.miminions/sessions.json` · `interactions.json` | Tool sessions and recorded traces |
 | `~/.miminions/workspaces/` | Per-workspace on-disk folders (`prompt/ memory/ skills/ sessions/ data/`) |
 | `~/.miminions/global_memory.db` | Tier-3 global SQLite insight store (written by chat distillation) |
 
 ## Related
 
-- [Agent](agent.md) — the `Minion` runtime the CLI drives
-- [Workspaces](workspaces.md) — nodes, rules, and on-disk layout
-- [Memory](memory.md) — the three-tier memory and distillation pipeline
-- [Tasks & Workflows](tasks.md) — the programmatic task runtime and workflow traces
+- [Agent](../for-dev/modules/agent.md) — the `Minion` runtime the CLI drives
+- [Workspaces](../for-dev/modules/workspaces.md) — nodes, rules, and on-disk layout
+- [Memory](../for-dev/modules/memory.md) — the three-tier memory and distillation pipeline

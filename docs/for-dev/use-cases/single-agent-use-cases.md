@@ -1,14 +1,4 @@
-# Features & Use Cases
-
-<!-- markdownlint-disable MD046 -->
-
-Discover how autonomous AI agents are transforming industries and workflows.
-
-MiMinions empowers developers to create intelligent, autonomous agents that
-handle complex tasks, maintain context, and integrate seamlessly with external
-tools. Explore real-world applications below.
-
----
+# Single Agent Use Cases
 
 ## Knowledge-Aware AI Agents
 
@@ -52,7 +42,7 @@ with SQLiteMemory("agent.db") as memory:
 
     `store_knowledge()` and `recall_knowledge()` raise `ValueError` if no memory
     is attached. The `[sqlite]` extra (`pip install miminions[sqlite]`) installs
-    the vector backend. See [Memory](modules/memory.md) for the full CRUD and
+    the vector backend. See [Memory](../modules/memory.md) for the full CRUD and
     search API.
 
 ---
@@ -99,7 +89,7 @@ async for delta in agent.run_stream("Draft a release summary"):
     `run()` retries transient provider errors such as rate limits, 5xx responses,
     connection failures, and timeouts. `run_stream()` does not retry after output
     has begun, because already-yielded text cannot be withdrawn. See
-    [Agent](modules/agent.md#timeouts-retries-hooks) for details.
+    [Agent](../modules/agent.md#timeouts-retries-hooks) for details.
 
 ---
 
@@ -192,7 +182,7 @@ await agent.cleanup()
 !!! note "MCP package"
 
     MCP support requires the optional `mcp` package. See
-    [Agent](modules/agent.md) for the full connect/load lifecycle.
+    [Agent](../modules/agent.md) for the full connect/load lifecycle.
 
 ---
 
@@ -236,7 +226,7 @@ with SQLiteMemory("agent_memory.db") as memory:
 
     `SQLiteMemory` search results are dicts with the keys `id`, `text`, `meta`,
     and (for vector reads) `distance`. The metadata key is `meta`, not
-    `metadata`. Full API in [Memory](modules/memory.md).
+    `metadata`. Full API in [Memory](../modules/memory.md).
 
 ---
 
@@ -245,6 +235,6 @@ with SQLiteMemory("agent_memory.db") as memory:
 Start creating autonomous AI agents with memory, tool integration, and document
 processing capabilities.
 
-[Get Started](getting-started.md){ .md-button .md-button--primary }
-[Full Documentation](modules/agent.md){ .md-button }
+[Get Started](../getting-started.md){ .md-button .md-button--primary }
+[Full Documentation](../modules/agent.md){ .md-button }
 [:fontawesome-brands-github: View on GitHub](https://github.com/MiMinions-ai/MiMinions){ .md-button }
