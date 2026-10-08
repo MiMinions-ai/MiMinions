@@ -40,7 +40,7 @@ Everything you need to know about MiMinions.
     ```
 
     Each real provider needs its API key in the environment
-    (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, etc.).  See [Agent](modules/agent.md) for the full provider matrix.
+    (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, etc.).  See [Agent](for-dev/modules/agent.md) for the full provider matrix.
 
 ??? question "Do I need a GPU?"
 
