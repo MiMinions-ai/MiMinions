@@ -6,6 +6,8 @@ from .md_store import (
 )
 from .distiller import DistillationResult, MemoryDistiller
 from .llm_filter import create_llm_filter
+from .budget import CompactionOutcome, MemoryBudgets, TierStatus, check_pressure
+from .compaction import compact_memory
 
 __all__ = [
     "append_history",
@@ -15,4 +17,9 @@ __all__ = [
     "DistillationResult",
     "MemoryDistiller",
     "create_llm_filter",
+    "CompactionOutcome",
+    "MemoryBudgets",
+    "TierStatus",
+    "check_pressure",
+    "compact_memory",
 ]
