@@ -99,7 +99,7 @@ def test_compact_memory_preserves_non_bullet_content(tmp_path, monkeypatch):
         "Additional context must remain intact.\n"
     )
     write_memory(tmp_path, original_content)
-    budgets = MemoryBudgets(memory_tokens=45)
+    budgets = MemoryBudgets(memory_tokens=20)
 
     outcome = compact_memory(tmp_path, budgets=budgets)
 
