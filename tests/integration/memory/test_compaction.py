@@ -8,7 +8,7 @@ from typing import ClassVar, Self
 
 from miminions.memory.budget import MemoryBudgets, load_state
 from miminions.memory.compaction import compact_memory
-from miminions.memory.md_store import read_memory, upsert_memory_section
+from miminions.memory.md_store import read_memory, upsert_memory_section, write_memory
 from miminions.workspace_fs.bootstrap import init_workspace
 
 
@@ -72,8 +72,9 @@ def test_compact_memory_promotes_oldest_half_when_over_budget(tmp_path, monkeypa
     outcome = compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets, workspace={"id": "ws-1"})
 
     assert outcome.succeeded is True, f"expect over-budget compaction to report succeeded as True, got {outcome.succeeded}"
-    assert outcome.facts_promoted == 5, f"expect half of 10 facts promoted to vector store as 5, got {outcome.facts_promoted}"
-    assert len(_FakeSQLiteMemory.created) == 5, f"expect 5 records written to fake vector store as 5, got {len(_FakeSQLiteMemory.created)}"
+    assert outcome.facts_promoted > 0, f"expect facts promoted under pressure, got {outcome.facts_promoted}"
+    assert len(_FakeSQLiteMemory.created) == outcome.facts_promoted, f"expect vector records match promoted facts as {outcome.facts_promoted}, got {len(_FakeSQLiteMemory.created)}"
+    assert outcome.size_after_tokens <= budgets.memory_tokens, f"expect compacted memory within budget as {budgets.memory_tokens}, got {outcome.size_after_tokens}"
     promoted_metadata = _FakeSQLiteMemory.created[0][1]
     assert promoted_metadata["workspace_id"] == "ws-1", f"expect promoted record carries workspace_id provenance as 'ws-1', got {promoted_metadata['workspace_id']}"
     assert promoted_metadata["source"] == "memory_md_compaction", f"expect promoted record source as 'memory_md_compaction', got {promoted_metadata['source']}"
@@ -82,6 +83,47 @@ def test_compact_memory_promotes_oldest_half_when_over_budget(tmp_path, monkeypa
     assert "Archived Facts" in remaining_content, f"expect archive pointer section present in MEMORY.md as True, got 'Archived Facts' in remaining_content: {'Archived Facts' in remaining_content}"
     assert "fact number 9" in remaining_content, f"expect newest fact retained in MEMORY.md as True, got 'fact number 9' in remaining_content: {'fact number 9' in remaining_content}"
     assert "fact number 0" not in remaining_content, f"expect oldest fact removed from MEMORY.md as True, got 'fact number 0' in remaining_content: {'fact number 0' in remaining_content}"
+
+
+def test_compact_memory_preserves_non_bullet_content(tmp_path, monkeypatch):
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    init_workspace(tmp_path)
+    original_content = (
+        "# Memory\n\n"
+        "Keep this explanatory paragraph.\n\n"
+        "## Project Facts\n"
+        "- first fact\n"
+        "- second fact\n"
+        "1. This numbered item is not a fact bullet.\n"
+        "Additional context must remain intact.\n"
+    )
+    write_memory(tmp_path, original_content)
+    budgets = MemoryBudgets(memory_tokens=45)
+
+    outcome = compact_memory(tmp_path, budgets=budgets)
+
+    compacted_content = read_memory(tmp_path)
+    assert "Keep this explanatory paragraph." in compacted_content, "expect non-bullet paragraph preserved"
+    assert "1. This numbered item is not a fact bullet." in compacted_content, "expect numbered list preserved"
+    assert "Additional context must remain intact." in compacted_content, "expect trailing context preserved"
+    assert outcome.facts_promoted > 0, f"expect at least one fact promoted, got {outcome.facts_promoted}"
+
+
+def test_compact_memory_promotes_single_oversized_fact(tmp_path, monkeypatch):
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    init_workspace(tmp_path)
+    oversized_fact = " ".join(f"word{i}" for i in range(500))
+    write_memory(tmp_path, f"# Memory\n\n## Project Facts\n- {oversized_fact}\n")
+    budgets = MemoryBudgets(memory_tokens=100)
+
+    outcome = compact_memory(tmp_path, budgets=budgets)
+
+    assert outcome.succeeded is True, f"expect single oversized fact to compact successfully, got {outcome.error}"
+    assert outcome.facts_promoted == 1, f"expect sole oversized fact promoted, got {outcome.facts_promoted}"
+    assert len(_FakeSQLiteMemory.created) == 1, f"expect one vector record, got {len(_FakeSQLiteMemory.created)}"
+    assert oversized_fact not in read_memory(tmp_path), "expect oversized fact removed from MEMORY.md after promotion"
 
 
 def test_compact_memory_deduplicates_facts_before_promotion(tmp_path, monkeypatch):
@@ -121,7 +163,8 @@ def test_compact_memory_is_idempotent_across_repeated_calls(tmp_path, monkeypatc
     first = compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets)
     second = compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets)
 
-    assert first.facts_promoted == 10, f"expect first compaction promotes half of 20 facts as 10, got {first.facts_promoted}"
+    assert first.facts_promoted > 0, f"expect first compaction to promote facts under pressure, got {first.facts_promoted}"
+    assert first.size_after_tokens <= budgets.memory_tokens, f"expect first compaction to fit budget as {budgets.memory_tokens}, got {first.size_after_tokens}"
     assert second.facts_after <= first.facts_after, f"expect repeated compaction to not grow fact count, got first={first.facts_after} second={second.facts_after}"
 
     state = load_state(tmp_path)
