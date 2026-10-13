@@ -9,7 +9,8 @@ from typing import ClassVar, Self
 import pytest
 
 from miminions.memory.budget import MemoryBudgets
-from miminions.memory.compaction import _dedupe_facts, compact_memory
+from miminions.memory.compaction import compact_memory
+from miminions.memory.dedupe import dedupe_facts as _dedupe_facts
 from miminions.memory.md_store import read_memory, upsert_memory_section
 from miminions.workspace_fs.bootstrap import init_workspace
 

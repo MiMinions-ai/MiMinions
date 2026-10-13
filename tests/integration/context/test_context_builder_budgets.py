@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
+import sys
 
 import pytest
 
@@ -10,6 +12,17 @@ from miminions.context import ContextBuilder
 from miminions.context.strategies import TruncateLines
 from miminions.memory.md_store import write_memory
 from miminions.workspace_fs.bootstrap import init_workspace
+
+
+@pytest.fixture(autouse=True)
+def _no_real_embedding_model(monkeypatch):
+    """Keep tests offline; the synthetic 'memory fact N' lines must not be semantically merged."""
+
+    class _Unavailable:
+        def __init__(self, model_name: str):
+            raise RuntimeError("model unavailable")
+
+    monkeypatch.setitem(sys.modules, "fastembed", SimpleNamespace(TextEmbedding=_Unavailable))
 
 
 class _Workspace:

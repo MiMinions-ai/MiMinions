@@ -67,16 +67,13 @@ def _run_agent_sync(model: Any, instructions: str, prompt: str) -> str:
         return result.output if hasattr(result, "output") else str(result.response)
 
     try:
-        loop = asyncio.get_event_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        return asyncio.run(_run())
 
-    if loop.is_running():
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, _run()).result()
-    return loop.run_until_complete(_run())
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, _run()).result()
 
 
 def create_llm_compactor(

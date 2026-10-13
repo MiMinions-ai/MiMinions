@@ -6,6 +6,8 @@ import sys
 from types import SimpleNamespace
 from typing import ClassVar, Self
 
+import pytest
+
 from miminions.memory.budget import MemoryBudgets, load_state
 from miminions.memory.compaction import compact_memory
 from miminions.memory.md_store import read_memory, upsert_memory_section
@@ -43,6 +45,17 @@ def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
         "miminions.memory.sqlite",
         SimpleNamespace(SQLiteMemory=sqlite_memory_cls),
     )
+
+
+@pytest.fixture(autouse=True)
+def _no_real_embedding_model(monkeypatch):
+    """Keep tests offline and deterministic: semantic dedupe falls back to exact match."""
+
+    class _Unavailable:
+        def __init__(self, model_name: str):
+            raise RuntimeError("model unavailable")
+
+    monkeypatch.setitem(sys.modules, "fastembed", SimpleNamespace(TextEmbedding=_Unavailable))
 
 
 def _seed_facts(root_path, count: int) -> None:
@@ -84,7 +97,7 @@ def test_compact_memory_promotes_oldest_half_when_over_budget(tmp_path, monkeypa
     assert "fact number 0" not in remaining_content, f"expect oldest fact removed from MEMORY.md as True, got 'fact number 0' in remaining_content: {'fact number 0' in remaining_content}"
 
 
-def test_compact_memory_deduplicates_facts_before_promotion(tmp_path, monkeypatch):
+def test_compact_memory_keeps_duplicate_facts_in_persistent_tiers(tmp_path, monkeypatch):
     _FakeSQLiteMemory.created = []
     _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
     init_workspace(tmp_path)
@@ -93,7 +106,10 @@ def test_compact_memory_deduplicates_facts_before_promotion(tmp_path, monkeypatc
 
     outcome = compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets)
 
-    assert outcome.facts_dropped_duplicate == 1, f"expect one duplicate fact dropped as 1, got {outcome.facts_dropped_duplicate}"
+    assert outcome.facts_before == 3, f"expect all 3 facts counted including duplicate as 3, got {outcome.facts_before}"
+    stored = [text for text, _ in _FakeSQLiteMemory.created]
+    kept = read_memory(tmp_path)
+    assert stored.count("duplicate fact") + kept.count("- duplicate fact") == 2, f"expect both duplicates retained across MEMORY.md and vector store as 2, got stored={stored}, kept={kept}"
 
 
 def test_compact_memory_preserves_facts_when_promotion_fails(tmp_path, monkeypatch):
@@ -126,3 +142,73 @@ def test_compact_memory_is_idempotent_across_repeated_calls(tmp_path, monkeypatc
 
     state = load_state(tmp_path)
     assert len(state["compaction_history"]) == 2, f"expect two recorded compaction outcomes as 2, got {len(state['compaction_history'])}"
+
+
+def test_archive_pointer_is_not_repromoted(tmp_path, monkeypatch):
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    init_workspace(tmp_path)
+    _seed_facts(tmp_path, 10)
+    budgets = MemoryBudgets(memory_tokens=50)
+
+    compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets)
+    promoted_texts = [text for text, _ in _FakeSQLiteMemory.created]
+    compact_memory(tmp_path, global_db_path=":memory:", budgets=budgets)
+
+    later = [text for text, _ in _FakeSQLiteMemory.created[len(promoted_texts):]]
+    assert not any("archived to the global vector" in text for text in later), f"expect archive pointer never promoted as True, got {later}"
+
+
+def test_compaction_preserves_prose_and_indented_bullets(tmp_path, monkeypatch):
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    init_workspace(tmp_path)
+    _seed_facts(tmp_path, 10)
+    path = tmp_path / ".miminions" / "memory" / "MEMORY.md"
+    if not path.exists():
+        path = next(tmp_path.rglob("MEMORY.md"))
+    path.write_text(path.read_text(encoding="utf-8") + "Free-form prose note.\n  - nested detail\n", encoding="utf-8")
+
+    compact_memory(tmp_path, global_db_path=":memory:", budgets=MemoryBudgets(memory_tokens=50))
+
+    content = read_memory(tmp_path)
+    assert "Free-form prose note." in content, f"expect prose preserved as True, got {content}"
+    assert "  - nested detail" in content, f"expect indented bullet preserved as True, got {content}"
+
+
+def test_single_fact_is_still_promoted(tmp_path, monkeypatch):
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    init_workspace(tmp_path)
+    _seed_facts(tmp_path, 1)
+
+    outcome = compact_memory(tmp_path, global_db_path=":memory:", budgets=MemoryBudgets(memory_tokens=1))
+
+    assert outcome.facts_promoted == 1, f"expect lone oversized fact promoted as 1, got {outcome.facts_promoted}"
+
+
+def test_partial_promotion_failure_rolls_back_created_records(tmp_path, monkeypatch):
+    class _FlakyMemory(_FakeSQLiteMemory):
+        deleted: ClassVar[list[str]] = []
+
+        def create(self, text: str, metadata: dict | None = None) -> str:
+            if len(self.__class__.created) >= 2:
+                raise RuntimeError("disk full")
+            return super().create(text, metadata)
+
+        def delete(self, id: str) -> bool:
+            self.__class__.deleted.append(id)
+            return True
+
+    _FlakyMemory.created = []
+    _FlakyMemory.deleted = []
+    _patch_sqlite_memory(monkeypatch, _FlakyMemory)
+    init_workspace(tmp_path)
+    _seed_facts(tmp_path, 10)
+    before = read_memory(tmp_path)
+
+    outcome = compact_memory(tmp_path, global_db_path=":memory:", budgets=MemoryBudgets(memory_tokens=50))
+
+    assert outcome.succeeded is False, f"expect failed outcome as False, got {outcome.succeeded}"
+    assert len(_FlakyMemory.deleted) == 2, f"expect 2 created records rolled back as 2, got {len(_FlakyMemory.deleted)}"
+    assert read_memory(tmp_path) == before, "expect MEMORY.md unchanged after failed promotion as True"

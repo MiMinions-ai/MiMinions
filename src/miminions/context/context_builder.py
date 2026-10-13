@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from miminions.core.paths import get_global_memory_db_path
+from miminions.memory.dedupe import dedupe_memory_text
 from miminions.memory.md_store import read_memory
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
 
@@ -206,7 +207,7 @@ class ContextBuilder:
     ) -> str:
         root = Path(root_path)
         prompt_files = read_prompt_files(root)
-        memory_text = read_memory(root)
+        memory_text = dedupe_memory_text(read_memory(root))
         skills = list_skills(root)
 
         workspace_id = _safe_get(workspace_obj, "id", None)

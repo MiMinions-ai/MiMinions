@@ -11,6 +11,8 @@ from typing import Any
 
 from miminions.workspace_fs.layout import WorkspaceLayout
 
+from .md_store import atomic_write_text
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_HISTORY_BUDGET_TOKENS = 16_000
@@ -72,11 +74,11 @@ class CompactionOutcome:
     facts_before: int
     facts_after: int
     facts_promoted: int
-    facts_dropped_duplicate: int
     size_before_tokens: int
     size_after_tokens: int
     succeeded: bool
     error: str = ""
+    skipped_reason: str = ""
 
 
 def _state_path(root_path: str | Path) -> Path:
@@ -149,7 +151,7 @@ def record_state(
 
     path = _state_path(root_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    atomic_write_text(path, json.dumps(state, indent=2, sort_keys=True) + "\n")
     return path
 
 
@@ -159,7 +161,7 @@ def enforce_history_budget(
     """Trim the oldest HISTORY.md lines so the file fits its token budget.
 
     HISTORY.md is append-only raw log data, so pressure relief here is
-    truncation (oldest first) rather than promotion/dedup.
+    truncation (oldest first) rather than promotion.
     """
     if budgets is None:
         budgets = MemoryBudgets()
@@ -168,13 +170,9 @@ def enforce_history_budget(
     history_file = layout.memory_dir / "HISTORY.md"
     triggered_at = datetime.now(timezone.utc).isoformat()
 
-    if not history_file.exists():
-        size = 0
-        lines_before = 0
-    else:
-        data = history_file.read_text(encoding="utf-8")
-        size = count_tokens(data)
-        lines_before = len(data.splitlines())
+    data = history_file.read_text(encoding="utf-8") if history_file.exists() else ""
+    size = count_tokens(data)
+    lines_before = len(data.splitlines())
 
     outcome = CompactionOutcome(
         tier="history",
@@ -182,21 +180,26 @@ def enforce_history_budget(
         facts_before=lines_before,
         facts_after=lines_before,
         facts_promoted=0,
-        facts_dropped_duplicate=0,
         size_before_tokens=size,
         size_after_tokens=size,
         succeeded=True,
     )
 
     if size <= budgets.history_tokens:
-        outcome.error = "no_pressure: under budget, no trim needed"
+        outcome.skipped_reason = "no_pressure"
         return outcome
 
-    lines = history_file.read_text(encoding="utf-8").splitlines(keepends=True)
-    while lines and count_tokens("".join(lines)) > budgets.history_tokens:
-        lines.pop(0)
-    trimmed = "".join(lines)
-    history_file.write_text(trimmed, encoding="utf-8")
+    lines = data.splitlines(keepends=True)
+    # Token count of the suffix is monotone in the start index, so bisect.
+    lo, hi = 0, len(lines)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if count_tokens("".join(lines[mid:])) > budgets.history_tokens:
+            lo = mid + 1
+        else:
+            hi = mid
+    trimmed = "".join(lines[lo:])
+    atomic_write_text(history_file, trimmed)
 
     outcome.facts_after = len(trimmed.splitlines())
     outcome.size_after_tokens = count_tokens(trimmed)
