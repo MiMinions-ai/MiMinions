@@ -235,3 +235,74 @@ def test_distill_session_warns_when_llm_filter_raises(tmp_path, caplog):
     assert has_llm_filter_error_reason, f"expect at least one item matching 'llm_filter_error' in reason as {True}, got {has_llm_filter_error_reason} with dropped_reasons {result.dropped_reasons}"
     has_llm_filter_failed_log = any("LLM filter failed" in r.message for r in caplog.records)
     assert has_llm_filter_failed_log, f"expect at least one item matching 'LLM filter failed' in r.message as {True}, got {has_llm_filter_failed_log} with messages {[r.message for r in caplog.records]}"
+
+
+def _over_budget_filter(**_kwargs):
+    return {
+        "history_summary": "summary",
+        "workspace_facts": [f"workspace fact number {i} with padding text" for i in range(40)],
+        "global_insights": [],
+    }
+
+
+def test_distill_session_passes_compactor_to_memory_compaction(tmp_path, monkeypatch):
+    from miminions.memory.budget import MemoryBudgets
+
+    _FakeSQLiteMemory.created = []
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    session_id = append_transcript(tmp_path)
+    calls: list[int] = []
+
+    def compactor(facts, target_tokens):
+        calls.append(target_tokens)
+        return [("Project Facts", "compacted")]
+
+    distiller = MemoryDistiller(
+        _over_budget_filter,
+        global_db_path=str(tmp_path / "global.db"),
+        budgets=MemoryBudgets(memory_tokens=150),
+        compactor=compactor,
+    )
+
+    result = distiller.distill_session(workspace={}, root_path=str(tmp_path), session_id=session_id)
+
+    assert calls == [120], f"expect compactor called once with 80% of budget as [120], got {calls}"
+    assert result.compaction is not None and result.compaction.succeeded, f"expect successful compaction outcome as True, got {result.compaction}"
+
+
+def test_distill_session_reports_memory_compaction_failure(tmp_path, monkeypatch):
+    from miminions.memory.budget import MemoryBudgets
+
+    class _BrokenSQLiteMemory:
+        def __init__(self, _db_path: str):
+            raise RuntimeError("sqlite unavailable")
+
+    _patch_sqlite_memory(monkeypatch, _BrokenSQLiteMemory)
+    session_id = append_transcript(tmp_path)
+    distiller = MemoryDistiller(
+        _over_budget_filter,
+        global_db_path=str(tmp_path / "global.db"),
+        budgets=MemoryBudgets(memory_tokens=150),
+    )
+
+    result = distiller.distill_session(workspace={}, root_path=str(tmp_path), session_id=session_id)
+
+    has_reason = any(r.startswith("memory_compaction_failed") for r in result.dropped_reasons)
+    assert has_reason, f"expect 'memory_compaction_failed' in dropped_reasons as True, got {result.dropped_reasons}"
+
+
+def test_distill_session_does_not_trim_history_when_over_budget(tmp_path, monkeypatch):
+    from miminions.memory.budget import MemoryBudgets
+
+    _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
+    session_id = append_transcript(tmp_path)
+    distiller = MemoryDistiller(
+        lambda **_: {"history_summary": "a long history entry " * 20, "workspace_facts": [], "global_insights": []},
+        global_db_path=str(tmp_path / "global.db"),
+        budgets=MemoryBudgets(history_tokens=1),
+    )
+
+    distiller.distill_session(workspace={}, root_path=str(tmp_path), session_id=session_id)
+
+    history_text = (tmp_path / "memory" / "HISTORY.md").read_text(encoding="utf-8")
+    assert "a long history entry" in history_text, f"expect HISTORY.md untouched despite tiny budget as True, got {history_text}"

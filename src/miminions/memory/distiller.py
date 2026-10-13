@@ -11,7 +11,7 @@ from typing import Any, Callable
 from miminions.core.paths import get_global_memory_db_path
 from miminions.session.store import JsonlSessionStore
 
-from .budget import CompactionOutcome, MemoryBudgets, check_pressure, enforce_history_budget
+from .budget import CompactionOutcome, MemoryBudgets, check_pressure
 from .compaction import compact_memory
 from .md_store import append_history, upsert_memory_section
 
@@ -40,10 +40,12 @@ class MemoryDistiller:
         llm_filter: Callable[..., dict[str, Any]],
         global_db_path: str | None = None,
         budgets: MemoryBudgets | None = None,
+        compactor: Callable[..., Any] | None = None,
     ):
         if not callable(llm_filter):
             raise TypeError("llm_filter must be callable")
         self.llm_filter = llm_filter
+        self.compactor = compactor
         self.global_db_path = global_db_path or get_global_memory_db_path(create_dir=True)
         self.budgets = budgets or MemoryBudgets()
 
@@ -197,7 +199,7 @@ class MemoryDistiller:
         return result
 
     def _enforce_budgets(self, root: Path, workspace: Any, result: DistillationResult) -> None:
-        """Check tier-1/tier-2 size pressure and trigger compaction if needed."""
+        """Compact MEMORY.md when over budget; HISTORY.md and the vector DB are left intact."""
         statuses = check_pressure(root, self.budgets)
 
         if statuses["memory"].over_budget:
@@ -206,12 +208,10 @@ class MemoryDistiller:
                 global_db_path=self.global_db_path,
                 budgets=self.budgets,
                 workspace=workspace,
+                compactor=self.compactor,
             )
             if not result.compaction.succeeded:
                 result.dropped_reasons.append(
-                    f"tier2_compaction_failed: {result.compaction.error}"
+                    f"memory_compaction_failed: {result.compaction.error}"
                 )
-
-        if statuses["history"].over_budget:
-            enforce_history_budget(root, self.budgets)
 

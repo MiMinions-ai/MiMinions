@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .budget import CompactionOutcome, MemoryBudgets, check_pressure, count_tokens, record_state
 from .md_store import read_memory, write_memory
@@ -13,6 +13,8 @@ from .md_store import read_memory, write_memory
 logger = logging.getLogger(__name__)
 
 _ARCHIVE_HEADING = "Archived Facts"
+_EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+_SEMANTIC_THRESHOLD = 0.92
 
 
 def _parse_facts(content: str) -> list[tuple[str, str]]:
@@ -29,19 +31,54 @@ def _parse_facts(content: str) -> list[tuple[str, str]]:
     return facts
 
 
-def _dedupe_facts(facts: list[tuple[str, str]]) -> tuple[list[tuple[str, str]], int]:
-    """Drop case-insensitive duplicate facts, keeping first occurrence."""
+def _exact_dedupe(facts: list[tuple[str, str]]) -> list[tuple[str, str]]:
     seen: set[str] = set()
     deduped: list[tuple[str, str]] = []
-    dropped = 0
     for heading, text in facts:
         key = text.casefold()
-        if key in seen:
-            dropped += 1
+        if key not in seen:
+            seen.add(key)
+            deduped.append((heading, text))
+    return deduped
+
+
+def _semantic_dedupe(
+    facts: list[tuple[str, str]], threshold: float
+) -> list[tuple[str, str]]:
+    """Drop facts whose embedding cosine similarity to a kept fact >= threshold."""
+    assert 0.0 < threshold <= 1.0
+    if len(facts) < 2:
+        return facts
+    try:
+        import numpy as np
+        from fastembed import TextEmbedding
+
+        model = TextEmbedding(_EMBED_MODEL)
+        vectors = np.array(list(model.embed([text for _, text in facts])), dtype=float)
+    except Exception as exc:  # fastembed missing or model unavailable
+        logger.warning("Semantic dedupe unavailable, using exact match only: %s", exc)
+        return facts
+
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    vectors = vectors / np.maximum(norms, 1e-12)
+    kept: list[int] = []
+    for i in range(len(facts)):
+        if kept and float(np.max(vectors[kept] @ vectors[i])) >= threshold:
             continue
-        seen.add(key)
-        deduped.append((heading, text))
-    return deduped, dropped
+        kept.append(i)
+    return [facts[i] for i in kept]
+
+
+def _dedupe_facts(
+    facts: list[tuple[str, str]], threshold: float = _SEMANTIC_THRESHOLD
+) -> tuple[list[tuple[str, str]], int]:
+    """Drop exact (case-insensitive) then semantically near-duplicate facts.
+
+    The first occurrence is kept. Falls back to exact matching if fastembed
+    is not installed.
+    """
+    deduped = _semantic_dedupe(_exact_dedupe(facts), threshold)
+    return deduped, len(facts) - len(deduped)
 
 
 def _workspace_id(workspace: Any) -> str:
@@ -50,6 +87,31 @@ def _workspace_id(workspace: Any) -> str:
     if isinstance(workspace, dict):
         return str(workspace.get("id", ""))
     return str(getattr(workspace, "id", ""))
+
+
+Compactor = Callable[[list[tuple[str, str]], int], list[tuple[str, str]]]
+_LLM_TARGET_RATIO = 0.8
+
+
+def _llm_compact(
+    facts: list[tuple[str, str]],
+    compactor: Compactor,
+    budget_tokens: int,
+    triggered_at: str,
+) -> list[tuple[str, str]] | None:
+    """Return LLM-compacted facts that fit the budget, or None to fall back."""
+    try:
+        compacted = compactor(facts, int(budget_tokens * _LLM_TARGET_RATIO))
+    except Exception as exc:
+        logger.warning("LLM compaction failed, using fallback: %s", exc)
+        return None
+    if not compacted:
+        return None
+    rendered = _render_memory(compacted, len(facts), triggered_at)
+    if count_tokens(rendered) > budget_tokens:
+        logger.warning("LLM compaction exceeded budget, using fallback")
+        return None
+    return compacted
 
 
 def _render_memory(facts: list[tuple[str, str]], promoted_count: int, triggered_at: str) -> str:
@@ -79,13 +141,16 @@ def compact_memory(
     global_db_path: str | None = None,
     budgets: MemoryBudgets | None = None,
     workspace: Any = None,
+    compactor: Compactor | None = None,
 ) -> CompactionOutcome:
     """Compact MEMORY.md when it exceeds its configured token budget.
 
-    Deduplicates facts, promotes the oldest half to the durable vector store
-    (with section/workspace provenance in the record metadata), and replaces
-    them with a compact archive pointer. If vector promotion fails, no facts
-    are dropped and the failure is recorded for observability.
+    Deduplicates facts, then, if a ``compactor`` (LLM rewrite) is given and its
+    result fits the budget, archives all original facts to the durable vector
+    store and keeps the rewritten ones. Otherwise promotes the oldest half to
+    the vector store (with section/workspace provenance) and replaces them
+    with a compact archive pointer. If vector promotion fails, no facts are
+    dropped and the failure is recorded for observability.
     """
     if budgets is None:
         budgets = MemoryBudgets()
@@ -116,6 +181,11 @@ def compact_memory(
     split = len(facts) // 2
     to_promote = facts[:split]
     to_keep = facts[split:]
+
+    if compactor is not None:
+        compacted = _llm_compact(facts, compactor, budgets.memory_tokens, triggered_at)
+        if compacted is not None:
+            to_promote, to_keep = facts, compacted
 
     promoted_count = 0
     try:

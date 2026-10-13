@@ -5,7 +5,7 @@ from .md_store import (
     write_memory,
 )
 from .distiller import DistillationResult, MemoryDistiller
-from .llm_filter import create_llm_filter
+from .llm_filter import create_llm_compactor, create_llm_filter
 from .budget import CompactionOutcome, MemoryBudgets, TierStatus, check_pressure
 from .compaction import compact_memory
 

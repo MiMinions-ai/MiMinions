@@ -40,6 +40,78 @@ def _parse_json_response(raw: str) -> tuple[dict[str, Any] | None, str]:
         return None, raw
 
 
+COMPACTION_PROMPT = """\
+You are compacting a long-term memory file. Rewrite the facts below so the whole
+file fits within about {target_tokens} tokens (roughly {target_chars} characters).
+
+Rules:
+- Merge duplicates and near-duplicates; drop superseded or trivial facts.
+- Keep concrete details (names, paths, decisions); do not invent anything.
+- Keep each fact short and keep its section.
+- Respond ONLY with JSON: {{"facts": [{{"section": "<heading>", "fact": "<text>"}}, ...]}}
+
+Facts:
+{facts}
+"""
+
+
+def _run_agent_sync(model: Any, instructions: str, prompt: str) -> str:
+    """Run a one-shot pydantic_ai agent from sync code, even inside a running loop."""
+    import asyncio
+    from pydantic_ai import Agent
+
+    agent = Agent(model=model, instructions=instructions)
+
+    async def _run() -> str:
+        result = await agent.run(prompt)
+        return result.output if hasattr(result, "output") else str(result.response)
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    if loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, _run()).result()
+    return loop.run_until_complete(_run())
+
+
+def create_llm_compactor(
+    model: Any,
+) -> Callable[[list[tuple[str, str]], int], list[tuple[str, str]]]:
+    """Return a ``compactor(facts, target_tokens)`` that rewrites facts via an LLM.
+
+    Raises ValueError when the response is not the expected JSON, so callers
+    can fall back to non-LLM compaction.
+    """
+
+    def compactor(facts: list[tuple[str, str]], target_tokens: int) -> list[tuple[str, str]]:
+        payload = json.dumps([{"section": h, "fact": t} for h, t in facts])
+        prompt = COMPACTION_PROMPT.format(
+            target_tokens=target_tokens, target_chars=target_tokens * 4, facts=payload
+        )
+        raw = _run_agent_sync(
+            model, "Compact memory facts. Respond with JSON only.", prompt
+        )
+        parsed, _ = _parse_json_response(raw)
+        items = parsed.get("facts") if parsed else None
+        if not isinstance(items, list):
+            raise ValueError("compactor response missing 'facts' list")
+        result: list[tuple[str, str]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            fact = str(item.get("fact", "")).strip()
+            if fact:
+                result.append((str(item.get("section", "General")).strip() or "General", fact))
+        return result
+
+    return compactor
+
+
 def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
     """Return a real LLM-backed ``llm_filter`` callable for ``MemoryDistiller``.
 
@@ -56,9 +128,6 @@ def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
         A synchronous callable with the signature
         ``(transcript, **kwargs) -> dict[str, Any]``.
     """
-    import asyncio
-    from pydantic_ai import Agent
-
     def llm_filter(transcript: str, **_kwargs: Any) -> dict[str, Any]:
         empty: dict[str, Any] = {
             "history_summary": "",
@@ -70,31 +139,9 @@ def create_llm_filter(model: Any) -> Callable[..., dict[str, Any]]:
             return empty
 
         prompt = EXTRACTION_PROMPT.format(transcript=transcript)
-        extraction_agent = Agent(
-            model=model,
-            instructions="Extract memory from transcripts. Respond with JSON only.",
+        raw = _run_agent_sync(
+            model, "Extract memory from transcripts. Respond with JSON only.", prompt
         )
-
-        async def _run() -> str:
-            result = await extraction_agent.run(prompt)
-            return result.output if hasattr(result, "output") else str(result.response)
-
-        # Bridge async → sync safely regardless of whether a loop is running.
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            # Already inside an event loop (e.g. inside the async chat loop).
-            # Use a new thread with its own event loop to avoid nesting.
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, _run())
-                raw = future.result()
-        else:
-            raw = loop.run_until_complete(_run())
 
         payload, raw = _parse_json_response(raw)
         if payload is None:

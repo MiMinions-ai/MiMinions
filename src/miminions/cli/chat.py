@@ -35,9 +35,10 @@ def _run_session_distillation(
     """
     from miminions.memory import MemoryDistiller
     if model is not None:
-        from miminions.memory import create_llm_filter
+        from miminions.memory import create_llm_compactor, create_llm_filter
 
         llm_filter = create_llm_filter(model)
+        compactor = create_llm_compactor(model)
     else:
         # Fallback: workspace-provided filter or empty placeholder.
         if hasattr(workspace, "memory_llm_filter"):
@@ -45,7 +46,7 @@ def _run_session_distillation(
         else:
             llm_filter = lambda **_kw: {"history_summary": "", "workspace_facts": [], "global_insights": []}
 
-    MemoryDistiller(llm_filter=llm_filter).distill_session(
+    MemoryDistiller(llm_filter=llm_filter, compactor=compactor).distill_session(
         workspace=workspace,
         root_path=str(root),
         session_id=session_id,
