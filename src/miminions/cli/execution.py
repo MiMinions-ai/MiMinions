@@ -18,13 +18,17 @@ from typing import Any, Optional
 
 from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
+from .dispatch import attachment_options, submit_task, validate_attachment
 # TODO(auth): Re-enable require_auth when execution sessions become account-backed.
-from miminions.agent import create_minion
-from miminions.tools import GenericTool
 from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
 
 
 # ── File helpers ──────────────────────────────────────────────────────────────
+
+def create_minion(*args, **kwargs):
+    from miminions.agent import create_minion as factory
+    return factory(*args, **kwargs)
+
 
 def _sessions_file() -> Path:
     return get_config_dir() / "sessions.json"
@@ -59,6 +63,7 @@ def _build_agent(session_id: str, session: dict):
 def _load_module(agent, path: str) -> int:
     """Load GenericTool instances from a .py file into the Minion via add_tool()."""
     import importlib.util
+    from miminions.tools import GenericTool
     spec = importlib.util.spec_from_file_location("_dyn_module", path)
 
     if spec is None:
@@ -113,11 +118,13 @@ def _record_interaction(
     workflow_run = WorkflowRun(agent_name=agent_name, trace=trace)
 
     # Persist
-    interactions = _load(_interactions_file())
-    if session_id not in interactions:
-        interactions[session_id] = []
-    interactions[session_id].append(workflow_run.to_dict())
-    _save(_interactions_file(), interactions)
+    from miminions.execution.processes import InstanceLock
+    with InstanceLock(get_config_dir() / "execution-interactions.lock"):
+        interactions = _load(_interactions_file())
+        if session_id not in interactions:
+            interactions[session_id] = []
+        interactions[session_id].append(workflow_run.to_dict())
+        _save(_interactions_file(), interactions)
 
     return workflow_run
 
@@ -263,39 +270,26 @@ def add_tool(path):
 @click.option("--input", "inputs", multiple=True, metavar="KEY=VALUE",
               help="Tool input as KEY=VALUE pairs.")
 # @require_auth  # TODO(auth): placeholder; local tool execution does not require sign-in yet.
-def run_tool(tool_name, inputs):
+@attachment_options
+def run_tool(tool_name, inputs, attach=False, detach=False):
     """Execute a tool in the active session."""
+    validate_attachment(attach, detach)
     sid, session = _active_session()
     if not sid:
-        click.echo("No active session.")
-        return
+        raise click.ClickException("No active session.")
 
     if not session or not isinstance(session, dict):
-        click.echo("Invalid session data.")
-        return
+        raise click.ClickException("Invalid session data.")
 
     parsed = {}
     for item in inputs:
         if "=" not in item:
-            click.echo(f"Invalid input format '{item}'. Use KEY=VALUE.")
-            return
+            raise click.ClickException(f"Invalid input format '{item}'. Use KEY=VALUE.")
         k, v = item.split("=", 1)
         parsed[k.strip()] = v.strip()
 
-    workflow_run, stdout_output = _run_tool(sid, session, tool_name, parsed)
-    tool_calls = [r for r in workflow_run.trace.records if isinstance(r, ToolCallRecord)]
-    tool_call = tool_calls[0] if tool_calls else None
-
-    if stdout_output:
-        click.echo(stdout_output, nl=False)
-
-    if tool_call and tool_call.error:
-        click.echo(f"Error: {tool_call.error}", err=True)
-    elif tool_call:
-        click.echo(f"Result: {tool_call.result}")
-
-    ms = tool_call.execution_time_ms if tool_call else 0.0
-    click.echo(f"Recorded as WorkflowRun {workflow_run.id} ({ms:.1f}ms)")
+    submit_task("session_tool", {"session_id": sid, "session": session, "tool_name": tool_name, "inputs": parsed},
+                attach=attach, detach=detach, session_key=f"tool-session:{sid}", home=get_config_dir())
 
 
 # ── Interaction commands ──────────────────────────────────────────────────────
@@ -378,78 +372,24 @@ def history_show(index, session_id, as_json):
 @click.command("test")
 @click.option("--prompt", default="Test all available tools.", help="Prompt to send to the agent.")
 # @require_auth  # TODO(auth): placeholder; local execution tests do not require sign-in yet.
-def run_test(prompt):
+@attachment_options
+def run_test(prompt, attach=False, detach=False):
     """
     Query the agent with all registered tools and record inputs/outputs.
 
     Builds the agent for the active session, runs each registered tool
     using its default parameters, and logs the full execution as a WorkflowRun.
     """
+    validate_attachment(attach, detach)
     sid, session = _active_session()
     if not sid:
-        click.echo("No active session.")
-        return
+        raise click.ClickException("No active session.")
 
     if not session or not isinstance(session, dict):
-        click.echo("Invalid session data.")
-        return
+        raise click.ClickException("Invalid session data.")
 
-    agent = _build_agent(sid, session)
-    agent_name = f"session-{sid}"
-    tool_names = agent.list_tools()
-
-    if not tool_names:
-        click.echo("No tools registered in this session.")
-        return
-
-    click.echo(f"Testing {len(tool_names)} tool(s) for agent '{agent_name}'...")
-
-    trace = WorkflowTrace()
-    final_outputs = []
-
-    for tool_name in tool_names:
-        tool_info = agent.get_tool_info(tool_name)
-        kwargs = {}
-        if tool_info and "parameters" in tool_info:
-            for param in tool_info["parameters"].get("properties", {}).values():
-                if "default" in param:
-                    kwargs[param["name"]] = param["default"]
-
-        start = datetime.now(timezone.utc)
-        result_val = None
-        error_val = None
-        status = "success"
-
-        try:
-            result_val = asyncio.get_event_loop().run_until_complete(
-                agent.execute_tool_async(tool_name, **kwargs)
-            )
-            click.echo(f"  ✓ {tool_name}: {result_val}")
-        except Exception as e:
-            error_val = str(e)
-            status = "error"
-            click.echo(f"  ✗ {tool_name}: {error_val}", err=True)
-
-        elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-        trace.add_tool_record(
-            tool_name=tool_name,
-            kwargs=kwargs,
-            result=result_val,
-            error=error_val,
-            status=status,
-            execution_time_ms=elapsed_ms,
-        )
-        final_outputs.append(f"{tool_name}: {result_val if result_val is not None else error_val}")
-
-    agent_rec = AgentRunRecord(prompt=prompt, output=" | ".join(final_outputs))
-    trace.add_agent_record(agent_rec)
-    wf = WorkflowRun(agent_name=agent_name, trace=trace)
-
-    interactions = _load(_interactions_file())
-    interactions.setdefault(sid, []).append(wf.to_dict())
-    _save(_interactions_file(), interactions)
-
-    click.echo(f"\nRecorded as WorkflowRun {wf.id} ({len(tool_names)} tool(s) tested)")
+    submit_task("tool_test", {"session_id": sid, "session": session, "prompt": prompt},
+                attach=attach, detach=detach, session_key=f"tool-session:{sid}", home=get_config_dir())
 
 
 __all__ = ["add_tool", "history", "run_test", "session"]

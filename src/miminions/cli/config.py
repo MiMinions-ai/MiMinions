@@ -12,7 +12,7 @@ from miminions.core.paths import get_config_dir
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 from miminions.utils.json_io import load_json, save_json
 
-_ALLOWED_KEYS = ("default_workspace", "default_agent")
+_ALLOWED_KEYS = ("default_workspace", "default_agent", "execution.max_concurrency")
 
 
 def get_config_file() -> Path:
@@ -59,7 +59,15 @@ def _resolve_agent_id(config_dir: Path, agent_id: str) -> str:
     return agent_id
 
 
-def _normalized_value(key: str, value: str) -> str:
+def _normalized_value(key: str, value: str) -> str | int:
+    if key == "execution.max_concurrency":
+        try:
+            capacity = int(value)
+        except ValueError as exc:
+            raise click.ClickException("execution.max_concurrency must be a positive integer") from exc
+        if capacity < 1:
+            raise click.ClickException("execution.max_concurrency must be a positive integer")
+        return capacity
     config_dir = get_config_dir()
     if key == "default_workspace":
         return _resolve_workspace_id(config_dir, value)
@@ -79,7 +87,7 @@ def config_get(key: str) -> None:
     """Get one config value by key."""
     _validate_key(key)
     config = load_config()
-    value = config.get(key)
+    value = config.get("execution", {}).get("max_concurrency", 4) if key == "execution.max_concurrency" else config.get(key)
     if value is None:
         raise click.ClickException(f"Key '{key}' is not set")
     click.echo(str(value))
@@ -92,6 +100,10 @@ def config_set(key: str, value: str) -> None:
     """Set one config value by key."""
     _validate_key(key)
     config = load_config()
-    config[key] = _normalized_value(key, value)
+    normalized = _normalized_value(key, value)
+    if key == "execution.max_concurrency":
+        config.setdefault("execution", {})["max_concurrency"] = normalized
+    else:
+        config[key] = normalized
     save_json(get_config_file(), config, ensure_parent=True)
-    click.echo(f"{key} set to {config[key]}")
+    click.echo(f"{key} set to {normalized}")

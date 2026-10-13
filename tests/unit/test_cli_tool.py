@@ -100,12 +100,16 @@ def test_tool_execute_rejects_invalid_arguments(isolated_cli_runner, tmp_path, m
     invalid_json = isolated_cli_runner.invoke(
         tool_cli, ["execute", "agent1", "cli_add", "--arguments", "nope"]
     )
-    _assert_exit_code(invalid_json, 0, "running a tool with invalid JSON")
+    _assert_exit_code(invalid_json, 1, "running a tool with invalid JSON")
     assert "Invalid JSON" in invalid_json.output
 
     not_object = isolated_cli_runner.invoke(
         tool_cli, ["execute", "agent1", "cli_add", "--arguments", "[1, 2]"]
     )
-    _assert_exit_code(not_object, 0, "running a tool with non-object arguments")
+    _assert_exit_code(not_object, 1, "running a tool with non-object arguments")
     assert "--arguments must be a JSON object" in not_object.output
     _tear_down_saved_agents()
+
+
+import pytest
+pytestmark = pytest.mark.usefixtures("inline_execution")

@@ -9,8 +9,55 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+import threading
 
 import pytest
+
+
+@pytest.fixture
+def inline_execution(monkeypatch):
+    """Exercise real handlers/events with local mocks; process isolation has its own suite."""
+    from miminions.execution import ExecutionService
+    from miminions.execution.worker import _run_task
+
+    class InlineExecutionService(ExecutionService):
+        def ensure_instance(self, on_start=None):
+            pass
+
+        def status(self):
+            return {"healthy": True}
+
+        def follow(self, task_id, after=0):
+            if self.get(task_id).status == "queued":
+                task = self.store.claim()
+                assert task.id == task_id
+
+                def run():
+                    import asyncio
+                    try:
+                        asyncio.run(_run_task(self.store, task_id))
+                        outcomes = [e.data for e in self.store.events(task_id) if e.type == "outcome"]
+                        outcome = outcomes[-1]
+                        self.store.finish(task_id, outcome["status"], result=outcome.get("result"), error=outcome.get("error"))
+                    except BaseException as exc:
+                        self.store.finish(task_id, "failed", error=f"Test worker failed: {exc}")
+
+                thread = threading.Thread(target=run)
+                thread.start()
+            else:
+                thread = None
+            yield from super().follow(task_id, after)
+            if thread is not None:
+                thread.join()
+
+    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", InlineExecutionService)
+    return InlineExecutionService
+
+
+@pytest.fixture(autouse=True)
+def _disable_live_model_requests(monkeypatch):
+    """Fail immediately if a test accidentally bypasses its provider mock."""
+    monkeypatch.setattr("pydantic_ai.models.ALLOW_MODEL_REQUESTS", False)
 
 # Provide placeholder credentials so model clients (OpenAI/OpenRouter/etc.)
 # can be constructed during tests without real secrets. Newer openai SDKs

@@ -4,7 +4,7 @@ Unit tests for the MiMinions CLI execution module.
 
 import json
 from contextlib import contextmanager
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -60,6 +60,7 @@ def active_session(config_dir):
 def mock_agent():
     """MagicMock standing in for a fully constructed Agent."""
     agent = MagicMock()
+    agent.cleanup = AsyncMock()
     agent.list_tools.return_value = ["calculator"]
     agent.get_tool.return_value = MagicMock()
     agent.execute_tool.return_value = "42"
@@ -212,13 +213,13 @@ class TestToolExecution:
         with _patched_config_dir(authenticated):
             result = runner.invoke(cli, ["tool", "test"])
 
-        assert result.exit_code == 0, result.output
+        assert result.exit_code == 1, result.output
         assert "No active session" in result.output
 
     def test_run_no_active_session(self, runner, authenticated):
         with _patched_config_dir(authenticated):
             result = runner.invoke(cli, ["tool", "session", "execute", "calculator"])
-            assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert result.exit_code == 1, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "No active session" in result.output, f"expect the result to contain 'No active session', got {result.output}"
 
     def test_run_tool_not_found(self, runner, authenticated, active_session, mock_agent):
@@ -230,7 +231,7 @@ class TestToolExecution:
             patch("miminions.cli.execution._build_agent", return_value=mock_agent),
         ):
             result = runner.invoke(cli, ["tool", "session", "execute", "nonexistent_tool"])
-            assert result.exit_code == 0, f"expect cli execution run nonexistent_tool to exit with 0, got {result.exit_code} with output: {result.output}"
+            assert result.exit_code == 1, f"expect cli execution run nonexistent_tool to exit with 0, got {result.exit_code} with output: {result.output}"
             assert "not found" in result.output, f"expect the result to contain 'not found', got {result.output}"
 
     def test_run_tool_success(self, runner, authenticated, active_session, mock_agent):
@@ -304,3 +305,6 @@ def test_removed_tool_run_is_unknown(runner):
     assert result.exit_code != 0
     assert "No such command 'run'" in result.output
 
+
+
+pytestmark = pytest.mark.usefixtures("inline_execution")

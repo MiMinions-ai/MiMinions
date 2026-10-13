@@ -1,341 +1,157 @@
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock
+"""Conversation handler persistence and streaming across isolated turn lifecycles."""
 
-from click.testing import CliRunner
+import json
+from unittest.mock import Mock
 
-from miminions.cli.chat import chat_command
-from miminions.workspace_fs.bootstrap import init_workspace
+import pytest
+from pydantic_ai.messages import ModelMessagesTypeAdapter
+from pydantic_ai.models.test import TestModel
 
-
-def test_chat_cli_requires_root_path(monkeypatch):
-    workspace = SimpleNamespace(id="ws1", name="Test WS", root_path=None)
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(chat_command, ["--workspace", "ws1"])
-
-    assert result.exit_code != 0, f"expect cli exit code != 0, got {result.exit_code} with output: {result.output}"
-    output_lower = result.output.lower()
-    assert "workspace init-files" in output_lower, f"expect contains 'workspace init-files', got {output_lower}"
+from miminions.agent import create_minion
+from miminions.core.workspace import WorkspaceManager, ensure_workspace
+from miminions.execution import ExecutionRequest
+from miminions.execution.handlers import TaskContext, get_handler
+from miminions.execution.store import ExecutionStore
+from miminions.session.store import JsonlSessionStore
 
 
-def test_chat_cli_creates_session_and_logs_messages(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
+@pytest.fixture
+def conversation(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    manager = WorkspaceManager(home)
+    workspace = manager.create_workspace("Chat")
+    workspace.root_path = str(tmp_path / "workspace")
+    manager.save_workspaces({workspace.id: workspace})
+    _, root = ensure_workspace(manager, workspace.id, init_files=True)
+    store = ExecutionStore(home)
+    agents = []
 
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
+    def factory(**kwargs):
+        agent = create_minion(**kwargs, model=TestModel(custom_output_text="reply", call_tools=[]))
+        agents.append(agent)
+        return agent
 
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "assistant reply"
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        lambda *args, **kwargs: MockMinion()
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="hello\n/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert "Session   :" in result.output, f"expect contains 'Session   :', got {result.output}"
-    assert "assistant reply" in result.output, f"expect contains 'assistant reply', got {result.output}"
-
-    sessions_dir = tmp_path / "sessions"
-    session_files = list(sessions_dir.glob("*.jsonl"))
-    session_file_count = len(session_files)
-    assert session_file_count == 1, f"expect chat session creates exactly one session jsonl file as 1, got {session_file_count}"
-
-    contents = session_files[0].read_text(encoding="utf-8")
-    assert '"role": "user"' in contents, f"expect contains '\"role\": \"user\"', got {contents}"
-    assert '"content": "hello"' in contents, f"expect contains '\"content\": \"hello\"', got {contents}"
-    assert '"role": "assistant"' in contents, f"expect contains '\"role\": \"assistant\"', got {contents}"
-    assert '"content": "assistant reply"' in contents, f"expect contains '\"content\": \"assistant reply\"', got {contents}"
+    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    return store, workspace, root, agents
 
 
-def test_chat_cli_streams_deltas_incrementally(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
-
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
-
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "foo"
-            yield "bar"
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        lambda *args, **kwargs: MockMinion()
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="hello\n/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert "foobar" in result.output, f"expect contains 'foobar', got {result.output}"
-
-    contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert '"content": "foobar"' in contents, f"expect contains '\"content\": \"foobar\"', got {contents}"
+def turn_context(conversation, prompt="hello", session="session"):
+    store, workspace, _, _ = conversation
+    key = f"workspace:{workspace.id}:session:{session}"
+    task_id = store.enqueue(ExecutionRequest("chat_turn", {"workspace": workspace.id, "session_id": session, "prompt": prompt}, session_key=key))
+    return TaskContext(store, store.claim())
 
 
-def test_chat_cli_persists_partial_reply_on_mid_stream_error(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
-
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
-
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "partial text"
-            raise RuntimeError("stream died")
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        lambda *args, **kwargs: MockMinion()
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="hello\n/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert "[error] RuntimeError: stream died" in result.output, f"expect contains '[error] RuntimeError: stream died', got {result.output}"
-
-    contents = next((tmp_path / "sessions").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert "partial text" in contents, f"expect contains 'partial text', got {contents}"
-    assert "[error] RuntimeError: stream died" in contents, f"expect contains '[error] RuntimeError: stream died', got {contents}"
+async def test_turn_stream_and_transcript_include_task_ids(conversation):
+    context = turn_context(conversation)
+    result = await get_handler("chat_turn")(context)
+    assert result == "reply"
+    events = context.store.events(context.task.id)
+    assert "".join(e.data["text"] for e in events if e.type == "text_delta") == "reply"
+    records = list(JsonlSessionStore(conversation[2]).iter_messages("session"))
+    assert [r["role"] for r in records] == ["user", "assistant"]
+    assert all(r["meta"]["task_id"] == context.task.id for r in records)
+    assert any(e.type == "turn_end" for e in events)
 
 
-def test_chat_cli_verbose_wires_hooks_into_minion(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
-
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
-
-    captured_kwargs = {}
-
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "assistant reply"
-
-    def _capturing_create_minion(*args, **kwargs):
-        captured_kwargs.update(kwargs)
-        return MockMinion()
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        _capturing_create_minion,
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1", "--verbose"],
-        input="/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    on_tool_call_is_callable = callable(captured_kwargs["on_tool_call"])
-    assert on_tool_call_is_callable, f"expect create_minion receives callable on_tool_call in verbose mode, got {on_tool_call_is_callable}"
-    on_turn_end_is_callable = callable(captured_kwargs["on_turn_end"])
-    assert on_turn_end_is_callable, f"expect create_minion receives callable on_turn_end in verbose mode, got {on_turn_end_is_callable}"
-
-    captured_kwargs.clear()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert captured_kwargs["on_tool_call"] is None, f"expect non-verbose chat creates minion with on_tool_call callback as None, got {captured_kwargs['on_tool_call']}"
-    assert captured_kwargs["on_turn_end"] is None, f"expect non-verbose chat creates minion with on_turn_end callback as None, got {captured_kwargs['on_turn_end']}"
+async def test_next_turn_restores_complete_model_checkpoint(conversation):
+    first = turn_context(conversation)
+    await get_handler("chat_turn")(first)
+    first.store.finish(first.task.id, "completed")
+    saved = ModelMessagesTypeAdapter.validate_json(first.store.checkpoint(first.task.request.session_key))
+    assert len(saved) >= 2
+    second = turn_context(conversation, "second")
+    await get_handler("chat_turn")(second)
+    assert len(conversation[3][-1]._last_messages) > len(saved)
+    assert len(list(JsonlSessionStore(conversation[2]).iter_messages("session"))) == 4
 
 
-def test_chat_cli_runs_distillation_once_on_exit(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
+async def test_checkpoint_preserves_tool_call_and_return_pairs(conversation, monkeypatch):
+    def factory(**kwargs):
+        agent = create_minion(**kwargs, model=TestModel(call_tools=["add"]))
+        def add(a: int, b: int) -> int:
+            return a + b
+        agent.register_tool("add", "Add numbers", add)
+        return agent
 
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
-
-    calls = []
-
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "assistant reply"
-
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        lambda *args, **kwargs: MockMinion()
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat._run_session_distillation",
-        lambda workspace, root, session_id, model=None: calls.append((workspace.id, root, session_id)),
-    )
-
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="hello\n/quit\n",
-    )
-
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    call_count = len(calls)
-    assert call_count == 1, f"expect chat exit runs session distillation exactly once as 1, got {call_count}"
-    assert calls[0][0] == "ws1", f"expect distillation receives workspace id from active chat workspace as 'ws1', got {calls[0][0]}"
-    assert calls[0][1] == tmp_path, f"expect tmp_path, got {calls[0][1]}"
-    session_id_value = calls[0][2]
-    assert session_id_value, f"expect distillation call includes a non-empty session_id, got {session_id_value}"
+    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    context = turn_context(conversation)
+    await get_handler("chat_turn")(context)
+    history = ModelMessagesTypeAdapter.validate_json(context.store.checkpoint(context.task.request.session_key))
+    parts = [part for message in history for part in message.parts]
+    assert any(part.part_kind == "tool-call" for part in parts)
+    assert any(part.part_kind == "tool-return" for part in parts)
 
 
-def test_chat_cli_distillation_error_is_warning_only(tmp_path: Path, monkeypatch):
-    init_workspace(tmp_path)
+async def test_one_shot_prompt_and_chat_share_session_checkpoint(conversation):
+    first = turn_context(conversation)
+    await get_handler("chat_turn")(first)
+    first.store.finish(first.task.id, "completed")
+    request = ExecutionRequest("prompt", {**first.params, "prompt": "one shot"}, session_key=first.task.request.session_key)
+    first.store.enqueue(request)
+    prompt = TaskContext(first.store, first.store.claim())
+    await get_handler("prompt")(prompt)
+    first.store.finish(prompt.task.id, "completed")
+    last = turn_context(conversation, "back to chat")
+    await get_handler("chat_turn")(last)
+    records = list(JsonlSessionStore(conversation[2]).iter_messages("session"))
+    assert len(records) == 6
+    assert records[2]["meta"]["source"] == "cli-prompt"
+    history = ModelMessagesTypeAdapter.validate_json(last.store.checkpoint(last.task.request.session_key))
+    assert len(history) >= 6
 
-    workspace = SimpleNamespace(
-        id="ws1",
-        name="Test WS",
-        root_path=str(tmp_path),
-        nodes=[],
-        rules=[],
-        state={},
-    )
-    manager = MagicMock()
-    manager.load_workspaces.return_value = {workspace.id: workspace}
 
-    class MockMinion:
-        def __init__(self, *args, **kwargs):
-            self._last_messages = []
-            self._model = None
-        def set_context(self, *args, **kwargs):
-            pass
-        async def run_stream(self, *args, **kwargs):
-            yield "assistant reply"
+async def test_resume_transcript_without_checkpoint(conversation):
+    transcript = JsonlSessionStore(conversation[2])
+    transcript.append("session", "user", "previous")
+    transcript.append("session", "assistant", "answer")
+    context = turn_context(conversation)
+    await get_handler("chat_turn")(context)
+    assert len(conversation[3][-1]._last_messages) >= 4
 
-    monkeypatch.setattr(
-        "miminions.cli.chat.WorkspaceManager",
-        lambda config_dir: manager,
-    )
-    monkeypatch.setattr(
-        "miminions.cli.chat.create_minion",
-        lambda *args, **kwargs: MockMinion()
-    )
 
-    def _boom(*_args, **_kwargs):
-        raise RuntimeError("distiller unavailable")
+async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(conversation, monkeypatch):
+    first = turn_context(conversation)
+    await get_handler("chat_turn")(first)
+    first.store.finish(first.task.id, "completed")
+    checkpoint = first.store.checkpoint(first.task.request.session_key)
+    second = turn_context(conversation, "fail")
+    factory = __import__("miminions.agent", fromlist=["create_minion"]).create_minion
 
-    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", _boom)
+    def failing_factory(**kwargs):
+        agent = factory(**kwargs)
+        async def stream(*args, **kwargs):
+            yield "partial"
+            raise RuntimeError("midstream")
+        agent.run_stream = stream
+        return agent
 
-    runner = CliRunner()
-    result = runner.invoke(
-        chat_command,
-        ["--workspace", "ws1"],
-        input="/quit\n",
-    )
+    monkeypatch.setattr("miminions.agent.create_minion", failing_factory)
+    with pytest.raises(RuntimeError, match="midstream"):
+        await get_handler("chat_turn")(second)
+    records = list(JsonlSessionStore(conversation[2]).iter_messages("session"))
+    assert records[-1]["content"] == "partial\n[error] RuntimeError: midstream"
+    assert records[-1]["meta"]["error"] is True
+    assert first.store.checkpoint(first.task.request.session_key) == checkpoint
 
-    assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
-    assert "Warning: memory distillation skipped" in result.output, f"expect contains 'Warning: memory distillation skipped', got {result.output}"
+
+async def test_distillation_is_visible_and_cleans_up(conversation, monkeypatch):
+    store, workspace, _, agents = conversation
+    distill = Mock()
+    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", distill)
+    task_id = store.enqueue(ExecutionRequest("session_distill", {"workspace": workspace.id, "session_id": "session"}))
+    context = TaskContext(store, store.claim())
+    await get_handler("session_distill")(context)
+    distill.assert_called_once()
+    assert any(e.data.get("message") == "Distilling session memory..." for e in store.events(task_id))
+    assert agents
+
+
+async def test_distillation_failure_is_recorded_as_a_task_failure(conversation, monkeypatch):
+    store, workspace, _, _ = conversation
+    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", Mock(side_effect=RuntimeError("distillation failed")))
+    task_id = store.enqueue(ExecutionRequest("session_distill", {"workspace": workspace.id, "session_id": "session"}))
+    from miminions.execution.worker import _run_task
+    store.claim()
+    await _run_task(store, task_id)
+    assert any(e.type == "outcome" and "distillation failed" in e.data.get("error", "") for e in store.events(task_id))
