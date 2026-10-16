@@ -31,6 +31,38 @@ CI runs only on `main`, so merges into `development` are ungated.
 - Trigger: a user wants distinct agent personas per workspace.
 - Size: small.
 
+### Cache context memory dedupe
+
+`ContextBuilder.build` runs semantic dedupe on MEMORY.md every build, loading
+the embedding model and embedding all bullets each turn.
+
+- Trigger: per-turn latency from context building becomes noticeable, or
+  `fastembed` model download fails in a user environment.
+- Options: cache by text hash, or make semantic dedupe opt-in (exact by default).
+- Size: small.
+
+### Decide the fate of HISTORY.md
+
+HISTORY.md is written by the distiller but never read into the agent context.
+`enforce_history_budget` and `MemoryBudgets.history_tokens` are only used by
+tests; the distiller no longer trims history, so the file grows unbounded.
+
+- Trigger: a user reports a large HISTORY.md, or history is wanted as agent context.
+- Options: add a budgeted `history` section to `ContextBuilder` and re-wire
+  trimming; or remove the unused trimming code.
+- Size: small to moderate.
+
+### Memory compaction cleanups
+
+- Narrow the broad `except Exception` around vector promotion in
+  `memory/compaction.py`.
+- Bound `LLMSummary._cache` in `context/strategies.py` (unbounded, keyed by
+  full section text).
+- `MemoryBudgets.vector_max_rows` is defined but never enforced.
+
+- Trigger: any of these causes a bug report, or the vector tier gets a size policy.
+- Size: small each.
+
 ## Blocked on a decision
 
 ### Widen the ruff rule set

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Iterable
 
@@ -34,6 +35,13 @@ def _ensure_memory_files(root_path: str | Path) -> WorkspaceLayout:
     return layout
 
 
+def atomic_write_text(path: Path, content: str) -> None:
+    """Write via a temp file and rename so a crash never leaves a truncated file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def read_memory(root_path: str | Path) -> str:
     """Read MEMORY.md content, creating the file if needed."""
     layout = _ensure_memory_files(root_path)
@@ -48,25 +56,15 @@ def write_memory(root_path: str | Path, content: str) -> Path:
 
     layout = _ensure_memory_files(root_path)
     memory_file = layout.memory_dir / "MEMORY.md"
-    memory_file.write_text(content, encoding="utf-8")
+    atomic_write_text(memory_file, content)
     return memory_file
 
 
 def append_history(root_path: str | Path, line: str) -> Path:
     """Append a single history entry to HISTORY.md.
-    
-    NOTE:
-    This function currently reads and writes the markdown file without enforcing
-    any maximum file size. As HISTORY.md grows, this may become a performance
-    bottleneck due to repeated full-file operations.
 
-    Future improvement ideas:
-    - Add a maximum size limit for HISTORY.md
-    - Implement truncation or rotation (keep last N entries)
-    - Use an append-only streaming approach instead of full reads
-    - Periodically consolidate history into summaries
-
-    For now, this is acceptable given expected small file sizes.
+    No size limit is applied here; use `miminions.memory.budget.enforce_history_budget`
+    to trim the oldest lines to a token budget.
     """
     if line is None:
         raise ValueError("line cannot be None")

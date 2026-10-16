@@ -5,13 +5,26 @@ from collections import Counter
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from miminions.core.paths import get_global_memory_db_path
+from miminions.memory.dedupe import dedupe_memory_text
 from miminions.memory.md_store import read_memory
 from miminions.workspace_fs.reader import list_skills, read_prompt_files
 
+from .strategies import KeepAll, SectionStrategy
+
 logger = logging.getLogger(__name__)
+
+# Identity and Tool Boundary are never compacted.
+COMPACTABLE_SECTIONS = (
+    "prompt_files",
+    "global_knowledge",
+    "memory",
+    "graph_summary",
+    "skills",
+)
+_KEEP_ALL = KeepAll()
 
 
 def _safe_get(obj: Any, name: str, default: Any = None) -> Any:
@@ -155,15 +168,36 @@ def _fetch_global_insights(top_k: int = 5, db_path: str | None = None) -> list[s
 class ContextBuilder:
     """Build a composed agent context from markdown files and workspace summary."""
 
-    def __init__(self, global_top_k: int = 5, global_db_path: str | None = None):
-        """Configure optional global memory injection.
+    def __init__(
+        self,
+        global_top_k: int = 5,
+        global_db_path: str | None = None,
+        strategies: Mapping[str, SectionStrategy] | None = None,
+        budgets: Mapping[str, int] | None = None,
+    ):
+        """Configure optional global memory injection and per-section compaction.
 
         Args:
             global_top_k: Number of global SQLite insights to inject. Set to 0 to disable.
             global_db_path: Override path to global_memory.db. Defaults to ~/.miminions/global_memory.db.
+            strategies: Section name (see COMPACTABLE_SECTIONS) -> compaction strategy.
+            budgets: Section name -> token budget. Sections without a budget are left as is.
         """
+        self.strategies = dict(strategies or {})
+        self.budgets = dict(budgets or {})
+        unknown = (set(self.strategies) | set(self.budgets)) - set(COMPACTABLE_SECTIONS)
+        if unknown:
+            raise ValueError(f"Unknown context sections: {sorted(unknown)}")
         self.global_top_k = global_top_k
         self.global_db_path = global_db_path
+
+    def _fit(self, section: str, body: list[str]) -> list[str]:
+        """Compact a section body with its strategy when a budget is configured."""
+        budget = self.budgets.get(section)
+        if budget is None:
+            return body
+        strategy = self.strategies.get(section, _KEEP_ALL)
+        return strategy.compact("\n".join(body), budget).split("\n")
 
     def build(
         self,
@@ -173,7 +207,7 @@ class ContextBuilder:
     ) -> str:
         root = Path(root_path)
         prompt_files = read_prompt_files(root)
-        memory_text = read_memory(root)
+        memory_text = dedupe_memory_text(read_memory(root))
         skills = list_skills(root)
 
         workspace_id = _safe_get(workspace_obj, "id", None)
@@ -210,14 +244,16 @@ class ContextBuilder:
         lines.append("")
 
         lines.append("## Prompt Files")
+        prompt_body: list[str] = []
         if prompt_files:
             for name in sorted(prompt_files.keys()):
-                lines.append(f"### {name}")
-                lines.append(prompt_files[name].rstrip())
-                lines.append("")
+                prompt_body.append(f"### {name}")
+                prompt_body.append(prompt_files[name].rstrip())
+                prompt_body.append("")
         else:
-            lines.append("No prompt files found.")
-            lines.append("")
+            prompt_body.append("No prompt files found.")
+            prompt_body.append("")
+        lines.extend(self._fit("prompt_files", prompt_body))
 
         if self.global_top_k > 0:
             global_insights = _fetch_global_insights(
@@ -225,47 +261,51 @@ class ContextBuilder:
             )
             if global_insights:
                 lines.append("## Global Knowledge")
-                for insight in global_insights:
-                    lines.append(f"- {insight}")
+                global_body = [f"- {insight}" for insight in global_insights]
+                lines.extend(self._fit("global_knowledge", global_body))
                 lines.append("")
 
         lines.append("## Memory")
-        lines.append(memory_text.rstrip())
+        lines.extend(self._fit("memory", [memory_text.rstrip()]))
         lines.append("")
 
         lines.append("## Workspace Graph Summary")
-        lines.append("### Node Counts By Type")
+        graph_body: list[str] = []
+        graph_body.append("### Node Counts By Type")
         if node_counts:
             for node_type, count in node_counts.items():
-                lines.append(f"- {node_type}: {count}")
+                graph_body.append(f"- {node_type}: {count}")
         else:
-            lines.append("- No nodes found.")
-        lines.append("")
+            graph_body.append("- No nodes found.")
+        graph_body.append("")
 
-        lines.append("### Top Rules By Priority")
+        graph_body.append("### Top Rules By Priority")
         if top_rules:
             for rule in top_rules:
-                lines.append(_format_rule_line(rule))
+                graph_body.append(_format_rule_line(rule))
         else:
-            lines.append("- No rules found.")
-        lines.append("")
+            graph_body.append("- No rules found.")
+        graph_body.append("")
 
-        lines.append("### State Keys")
+        graph_body.append("### State Keys")
         if state_key_list:
             for key in state_key_list:
-                lines.append(f"- {key}")
+                graph_body.append(f"- {key}")
         else:
-            lines.append("- No state keys found.")
-        lines.append("")
+            graph_body.append("- No state keys found.")
+        graph_body.append("")
+        lines.extend(self._fit("graph_summary", graph_body))
 
         lines.append("## Skills Index")
+        skills_body: list[str] = []
         if skills:
             for skill in skills:
                 skill_name = skill.get("name", "unknown")
                 skill_path = skill.get("path", "")
-                lines.append(f"- {skill_name}: {skill_path}")
+                skills_body.append(f"- {skill_name}: {skill_path}")
         else:
-            lines.append("- No skills found.")
+            skills_body.append("- No skills found.")
+        lines.extend(self._fit("skills", skills_body))
         lines.append("")
 
         if skills_index_only:

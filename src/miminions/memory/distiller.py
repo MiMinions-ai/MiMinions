@@ -11,6 +11,8 @@ from typing import Any, Callable
 from miminions.core.paths import get_global_memory_db_path
 from miminions.session.store import JsonlSessionStore
 
+from .budget import CompactionOutcome, MemoryBudgets, check_pressure
+from .compaction import compact_memory
 from .md_store import append_history, upsert_memory_section
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ class DistillationResult:
         default_factory=lambda: {"tier1": 0, "tier2": 0, "tier3": 0}
     )
     dropped_reasons: list[str] = field(default_factory=list)
+    compaction: CompactionOutcome | None = None
 
 
 class MemoryDistiller:
@@ -36,11 +39,15 @@ class MemoryDistiller:
         self,
         llm_filter: Callable[..., dict[str, Any]],
         global_db_path: str | None = None,
+        budgets: MemoryBudgets | None = None,
+        compactor: Callable[..., Any] | None = None,
     ):
         if not callable(llm_filter):
             raise TypeError("llm_filter must be callable")
         self.llm_filter = llm_filter
+        self.compactor = compactor
         self.global_db_path = global_db_path or get_global_memory_db_path(create_dir=True)
+        self.budgets = budgets or MemoryBudgets()
 
     def _compact_transcript(self, records: list[dict[str, Any]], max_messages: int = 80) -> str:
         """Build a compact transcript string for extraction."""
@@ -187,5 +194,24 @@ class MemoryDistiller:
                 )
                 result.dropped_reasons.append(f"tier3_unavailable: {exc}")
 
+        self._enforce_budgets(root, workspace, result)
+
         return result
+
+    def _enforce_budgets(self, root: Path, workspace: Any, result: DistillationResult) -> None:
+        """Compact MEMORY.md when over budget; HISTORY.md and the vector DB are left intact."""
+        statuses = check_pressure(root, self.budgets)
+
+        if statuses["memory"].over_budget:
+            result.compaction = compact_memory(
+                root,
+                global_db_path=self.global_db_path,
+                budgets=self.budgets,
+                workspace=workspace,
+                compactor=self.compactor,
+            )
+            if not result.compaction.succeeded:
+                result.dropped_reasons.append(
+                    f"memory_compaction_failed: {result.compaction.error}"
+                )
 
