@@ -17,7 +17,7 @@ def test_keep_all_returns_text_unchanged():
 
     result = KeepAll().compact(text, 1)
 
-    assert result == text, f"expect KeepAll leaves text unchanged as True, got {result == text}"
+    assert result == text, f"expect KeepAll leaves text unchanged, got result={result!r}, expected={text!r}"
 
 
 def test_truncate_lines_is_noop_under_budget():
