@@ -1,6 +1,5 @@
 """Conversation handler persistence and streaming across isolated turn lifecycles."""
 
-import json
 from unittest.mock import Mock
 
 import pytest
