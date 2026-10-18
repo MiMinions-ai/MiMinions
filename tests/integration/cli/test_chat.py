@@ -38,7 +38,7 @@ def conversation(tmp_path, monkeypatch):
 def turn_context(conversation, prompt="hello", session="session"):
     store, workspace, _, _ = conversation
     key = f"workspace:{workspace.id}:session:{session}"
-    task_id = store.enqueue(ExecutionRequest("chat_turn", {"workspace": workspace.id, "session_id": session, "prompt": prompt}, session_key=key))
+    store.enqueue(ExecutionRequest("chat_turn", {"workspace": workspace.id, "session_id": session, "prompt": prompt}, session_key=key))
     return TaskContext(store, store.claim())
 
 
