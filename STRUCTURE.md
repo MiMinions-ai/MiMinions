@@ -7,7 +7,7 @@ dependencies.
 ```text
 MiMinions/
 |-- README.md                  # Project overview and quick start
-|-- CHANGELOG.md               # Version history
+|-- (changelog lives in docs/changelog.md — single canonical copy, on the site)
 |-- CONTRIBUTING.md            # Contribution guidelines
 |-- CODE_OF_CONDUCT.md         # Community standards
 |-- LICENSE                    # MIT license
@@ -27,6 +27,9 @@ MiMinions/
 |   |-- getting-started.md
 |   |-- features.md
 |   |-- changelog.md
+|   |-- (internal docs: roadmap, ADRs, backlog, test notes — private MiMinions-ai/docs-internal repo, never in this tree)
+|   |-- architecture/
+|   |   `-- recursive-evolution.md  # Recursive, bounded evolution spec (L0 contract)
 |   |-- modules/
 |   |   |-- agent.md
 |   |   |-- cli.md
@@ -37,7 +40,12 @@ MiMinions/
 |   |   |-- tasks.md
 |   |   |-- tools.md
 |   |   `-- workspaces.md
+|   |-- use-cases/
+|   |-- overrides/
 |   `-- stylesheets/
+|
+|-- scripts/
+|   `-- check_structure.py     # Gated check: tree <-> map <-> nav <-> READMEs agree
 |
 |-- examples/
 |   |-- minion_agent_example.py
@@ -72,15 +80,21 @@ MiMinions/
 |       |   |-- tool.py       # Registered as `miminions tool`
 |       |   |-- workspace.py
 |       |   |-- workflow.py    # Internal-only workflow helpers; not a shipped CLI command
+|       |   |-- config.py      # Registered as `miminions config`
+|       |   |-- instance.py    # Registered as `miminions instance`
+|       |   |-- transfer.py    # Registered as `miminions export` / `import`
+|       |   |-- dispatch.py, persistence.py  # Internal CLI plumbing
 |       |   `-- README.md
 |       |
 |       |-- context/           # System-prompt assembly
 |       |   |-- context_builder.py
+|       |   |-- strategies.py    # Per-section compaction strategies
 |       |   `-- README.md
 |       |
 |       |-- core/              # Shared domain/runtime primitives
 |       |   |-- auth.py
 |       |   |-- bootstrap.py
+|       |   |-- paths.py, persistence.py  # Config-home paths, JSON persistence
 |       |   |-- workspace.py
 |       |   |-- gateway/       # Bus, channels, sessions, cron, orchestrator
 |       |   `-- README.md
@@ -91,6 +105,9 @@ MiMinions/
 |       |
 |       |-- memory/            # Markdown and SQLite memory backends
 |       |   |-- base_memory.py
+|       |   |-- budget.py        # Memory budgets and pressure checks
+|       |   |-- compaction.py    # Memory compaction
+|       |   |-- dedupe.py        # Context deduplication
 |       |   |-- distiller.py
 |       |   |-- llm_filter.py
 |       |   |-- md_store.py
@@ -98,13 +115,32 @@ MiMinions/
 |       |   |-- types.py
 |       |   `-- README.md
 |       |
+|       |-- execution/         # Durable local execution (persistent worker)
+|       |   |-- models.py        # ExecutionRequest, ExecutionTask, TaskEvent, TaskHandle
+|       |   |-- service.py       # ExecutionService client API
+|       |   |-- store.py, worker.py, processes.py, handlers.py
+|       |   `-- README.md
+|       |
 |       |-- session/           # JSONL chat transcript store
-|       |-- task/              # Task models and async runtime
+|       |   |-- store.py         # JsonlSessionStore, create_session_id
+|       |   `-- README.md
+|       |-- task/              # Task models and async runtime (in-memory)
+|       |   |-- model.py         # Task, AgentTask, TaskStatus, TaskPriority
+|       |   |-- control.py       # TaskRuntime
+|       |   `-- README.md
 |       |-- tools/             # Generic tools, schemas, MCP adapter
-|       |-- user/              # User dataclass and stub controller
+|       |   |-- __init__.py      # GenericTool, create_tool, tool, ToolSchema (dataclass)
+|       |   |-- schemas.py       # Pydantic ToolSchema (internal) + ToolDefinition
+|       |   `-- README.md
+|       |-- (user/ removed 2026-10-23: no callers; account features return via ADR when scoped)
 |       |-- utils/             # Chunking, generators, session helpers
-|       |-- workflow/          # Workflow trace models and controller
+|       |   `-- README.md
+|       |-- (workflow/ removed 2026-10-23: trace types moved to execution/trace.py; controller had no callers)
 |       `-- workspace_fs/      # On-disk workspace layout and readers
+|           |-- layout.py        # WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
+|           |-- bootstrap.py     # init_workspace scaffolding
+|           |-- reader.py        # Prompt/memory/skills readers
+|           `-- README.md
 |
 `-- tests/
     |-- README.md
@@ -123,7 +159,8 @@ MiMinions/
 Registered CLI command groups are:
 
 ```text
-auth, agent, tool, task, knowledge, workspace, chat, gateway, prompt
+auth, agent, tool, task, instance, knowledge, workspace, chat, gateway, prompt, config, export, import
+(plus the standalone `init` bootstrap command, eagerly registered in `cli/main.py` — 14 top-level entry points in total)
 ```
 
 `src/miminions/cli/workflow.py` remains in the tree for internal workflow-related
@@ -144,6 +181,8 @@ from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule
 from miminions.workspace_fs import WorkspaceLayout, init_workspace
 from miminions.data import LocalDataManager
 from miminions.task import TaskRuntime, Task, AgentTask
+from miminions.execution import ExecutionService, ExecutionRequest
+from miminions.session import JsonlSessionStore, create_session_id
 from miminions.core.gateway import MessageBus, ChannelManager, CronService
 ```
 
@@ -156,5 +195,9 @@ imported from their subpackages.
   by the attached memory backend.
 - `SQLiteMemory` requires the `sqlite` extra and lives at
   `miminions.memory.sqlite`.
+- Evolution is governed by [Recursive, Bounded Evolution](docs/architecture/recursive-evolution.md):
+  every module carries a five-block contract (Purpose / Public surface / State /
+  Lifecycle / Gate) in its `README.md`, and `scripts/check_structure.py` fails CI
+  when this map, the tracked tree, the MkDocs nav, and the CLI groups disagree.
 - `chat`, `prompt`, and gateway runtime paths use workspace files under
   `~/.miminions/` by default.

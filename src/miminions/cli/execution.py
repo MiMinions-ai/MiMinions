@@ -2,7 +2,7 @@
 Execution commands for MiMinions CLI.
 Handles tool execution, session management, and interaction tracking.
 
-Interaction records are persisted as WorkflowRun objects (from miminions.workflow.models),
+Interaction records are persisted as WorkflowRun objects (from miminions.execution.trace),
 ensuring consistency with the workflow tracing layer introduced in PR #46.
 """
 
@@ -20,7 +20,7 @@ from miminions.core.paths import get_config_dir
 from .persistence import load_json, save_json
 from .dispatch import attachment_options, submit_task, validate_attachment
 # TODO(auth): Re-enable require_auth when execution sessions become account-backed.
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
+from miminions.execution.trace import AgentRunRecord, WorkflowRun, ToolCallRecord, WorkflowTrace
 
 
 # ── File helpers ──────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ def _record_interaction(
     """
     Record a tool execution as a WorkflowRun and persist it to interactions.json.
 
-    Uses AgentRunRecord + ToolCallRecord from miminions.workflow.models so that
+    Uses AgentRunRecord + ToolCallRecord from miminions.execution.trace so that
     the CLI interaction log shares the same schema as the workflow tracing layer.
     stdout_output is stored in the ToolCallRecord's kwargs for full reproducibility.
     """

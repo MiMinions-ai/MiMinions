@@ -573,6 +573,182 @@ def ask_agent(agent_id, prompt, attach=False, detach=False):
 
 
 # TODO(cli-agent): Add commands for memory backends and memory tools:
-# - memory-attach --backend {sqlite,md}
+# Memory commands implemented below (agent memory-attach/store/recall/update/delete, ingest-document).
 # - memory-store / memory-recall / memory-update / memory-delete
 # - ingest-document
+
+# --- Memory backends (per-agent attach; contract: cli/README.md) ---
+
+def _agent_record_for_memory(agent_id):
+    agent_id = _resolve_agent_id(agent_id)
+    record = _get_agent_record_or_error(agent_id)
+    if not record:
+        raise click.exceptions.Exit(1)
+    return agent_id, record
+
+
+def _memory_config(record):
+    backend = record.get("memory_backend")
+    if not backend:
+        raise click.ClickException("No memory backend attached. Run 'agent memory-attach' first.")
+    return backend
+
+
+def _sqlite_memory(record):
+    try:
+        from miminions.memory.sqlite import SQLiteMemory
+    except ImportError as exc:
+        raise click.ClickException("SQLite memory requires the [sqlite] extra: pip install miminions[sqlite]") from exc
+    from miminions.core.paths import get_global_memory_db_path
+    return SQLiteMemory(record.get("memory_db") or get_global_memory_db_path())
+
+
+def _md_root(record):
+    root = record.get("memory_workspace")
+    if not root:
+        raise click.ClickException("md backend has no workspace. Re-attach with --workspace.")
+    return root
+
+
+def _parse_meta(pairs):
+    metadata = {}
+    for pair in pairs:
+        if "=" not in pair:
+            raise click.UsageError(f"--meta expects KEY=VALUE, got '{pair}'.")
+        key, value = pair.split("=", 1)
+        metadata[key.strip()] = value.strip()
+    return metadata
+
+
+@agent_cli.command("memory-attach")
+@click.argument("agent_id", required=False, default=None)
+@click.option("--backend", type=click.Choice(["sqlite", "md"]), required=True, help="Memory backend to attach.")
+@click.option("--db", "db_path", default=None, help="SQLite database path (sqlite backend).")
+@click.option("--workspace", "workspace_root", default=None, help="Workspace root (md backend).")
+def memory_attach(agent_id, backend, db_path, workspace_root):
+    """Attach a memory backend to an agent."""
+    agent_id, record = _agent_record_for_memory(agent_id)
+    agents = load_agents()
+    agents[agent_id]["memory_backend"] = backend
+    if backend == "sqlite":
+        if db_path:
+            agents[agent_id]["memory_db"] = db_path
+    else:
+        if not workspace_root:
+            raise click.UsageError("md backend requires --workspace (its MEMORY.md root).")
+        agents[agent_id]["memory_workspace"] = workspace_root
+    save_agents(agents)
+    click.echo(f"Memory backend '{backend}' attached to agent '{agent_id}'.")
+
+
+@agent_cli.command("memory-store")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("text")
+@click.option("--section", default=None, help="Section title (md backend; acts as the memory ID).")
+@click.option("--meta", "meta", multiple=True, help="Metadata KEY=VALUE (sqlite backend, repeatable).")
+def memory_store(agent_id, text, section, meta):
+    """Store a memory for an agent."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            memory_id = memory.create(text, _parse_meta(meta) or None)
+        click.echo(f"Stored memory {memory_id}")
+    else:
+        if not section:
+            raise click.UsageError("md backend requires --section (it is the memory ID).")
+        from miminions.memory import upsert_memory_section
+        upsert_memory_section(_md_root(record), section, [text])
+        click.echo(f"Stored memory section '{section}'")
+
+
+@agent_cli.command("memory-recall")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("query")
+@click.option("--top-k", default=5, show_default=True, help="Maximum results (sqlite backend).")
+def memory_recall(agent_id, query, top_k):
+    """Recall memories matching a query."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            results = memory.read(query, top_k=top_k)
+        if not results:
+            click.echo("No memories found.")
+        for item in results:
+            click.echo(f"{item.get('id')}: {item.get('text')}")
+    else:
+        from miminions.memory import search_memory_sections
+        sections = search_memory_sections(_md_root(record), query)
+        if not sections:
+            click.echo("No memories found.")
+        for item in sections:
+            click.echo(f"{item['heading']}: {item['body']}")
+
+
+@agent_cli.command("memory-update")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("memory_id")
+@click.argument("text")
+def memory_update(agent_id, memory_id, text):
+    """Replace a stored memory (sqlite ID, or md section title)."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            updated = memory.update(memory_id, text)
+        if not updated:
+            raise click.ClickException(f"Memory '{memory_id}' not found.")
+        click.echo(f"Updated memory {memory_id}")
+    else:
+        from miminions.memory import upsert_memory_section
+        upsert_memory_section(_md_root(record), memory_id, [text])
+        click.echo(f"Updated memory section '{memory_id}'")
+
+
+@agent_cli.command("memory-delete")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("memory_id")
+def memory_delete(agent_id, memory_id):
+    """Delete a stored memory (sqlite ID, or md section title)."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            deleted = memory.delete(memory_id)
+    else:
+        from miminions.memory import delete_memory_section
+        deleted = delete_memory_section(_md_root(record), memory_id)
+    if not deleted:
+        raise click.ClickException(f"Memory '{memory_id}' not found.")
+    click.echo(f"Deleted memory {memory_id}")
+
+
+@agent_cli.command("ingest-document")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--section", default=None, help="Section title (md backend; defaults to the file name).")
+def ingest_document(agent_id, path, section):
+    """Chunk a .txt/.md/.pdf file into an agent's memory."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    from pathlib import Path
+    file_path = Path(path)
+    if file_path.suffix.lower() == ".pdf":
+        try:
+            import pdfplumber
+        except ImportError as exc:
+            raise click.ClickException("PDF ingestion requires pdfplumber.") from exc
+        with pdfplumber.open(file_path) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+    else:
+        text = file_path.read_text(encoding="utf-8")
+    if not text.strip():
+        raise click.ClickException(f"No text extracted from '{file_path.name}'.")
+    from miminions.utils.chunker import TextChunker
+    chunks = TextChunker().chunk_text(text, metadata={"source": file_path.name})
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            for chunk in chunks:
+                memory.create(chunk["text"], chunk.get("metadata"))
+        click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}'")
+    else:
+        from miminions.memory import upsert_memory_section
+        title = section or file_path.stem
+        upsert_memory_section(_md_root(record), title, [c["text"] for c in chunks])
+        click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}' into section '{title}'")

@@ -16,6 +16,7 @@ Work in progress toward the next release.
 ### Added
 
 - Added a top-level `miminions tool` category for listing, inspecting, searching, and executing agent tools.
+- Added agent memory commands: `miminions agent memory-attach` (`--backend sqlite|md`), `memory-store`, `memory-recall`, `memory-update`, `memory-delete`, and `ingest-document`. Attach persists per agent; for the `md` backend the `MEMORY.md` section title acts as the memory ID.
 
 ### Changed
 

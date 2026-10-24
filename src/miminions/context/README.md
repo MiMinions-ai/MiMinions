@@ -26,3 +26,10 @@ system_prompt = ContextBuilder(global_top_k=5).build(workspace, root_path)
 ```
 
 Note the call shape: `build()` takes the workspace and root path as arguments.
+
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+> **Public surface:** `ContextBuilder` only. **State:** none (pure assembly).
+> **Lifecycle:** reads `prompt/` + `memory/MEMORY.md` + Tier-3 global + `skills/` (with per-section strategies/budgets) → one system-prompt string per run.
+> **Gate:** context tests (`tests/integration/context/`) + `scripts/check_structure.py`.

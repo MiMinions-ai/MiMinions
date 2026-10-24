@@ -1,5 +1,7 @@
 from .md_store import (
     append_history,
+    delete_memory_section,
+    search_memory_sections,
     read_memory,
     upsert_memory_section,
     write_memory,
@@ -11,6 +13,8 @@ from .compaction import compact_memory
 
 __all__ = [
     "append_history",
+    "delete_memory_section",
+    "search_memory_sections",
     "read_memory",
     "upsert_memory_section",
     "write_memory",

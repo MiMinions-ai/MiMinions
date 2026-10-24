@@ -12,7 +12,7 @@ default workspace + agent are bootstrapped on first run.
 | Module | Command | Purpose |
 |--------|---------|---------|
 | `auth.py` | `miminions auth` | Local sign-in, public-access mode, config |
-| `agent.py` | `miminions agent` | Manage and run agents |
+| `agent.py` | `miminions agent` | Manage and run agents; per-agent memory (`memory-attach/store/recall/update/delete`, `ingest-document`) |
 | `tool.py` | `miminions tool` | Discover, execute, and trace agent tools and tool sessions |
 | `chat.py` | `miminions chat` | Interactive async chat loop |
 | `prompt.py` | `miminions prompt` | One-shot prompt to a workspace agent |
@@ -34,3 +34,11 @@ miminions chat start --session <id>  # resume a prior session
   native `pydantic_ai` messages, restoring full conversational context.
 - **Background distillation** — typing `/exit` or `/quit` ends the session and
   runs `MemoryDistiller` to extract facts into the workspace's memory.
+
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v2 (v2: agent memory commands added; additive, no removals).
+> **Public surface:** `cli` with 13 lazy groups (`auth agent tool task instance knowledge workspace chat gateway prompt config export import`) plus the standalone `init` bootstrap command (eagerly registered) — 14 top-level entry points; root `--help` must stay lazy/cheap.
+> **State:** `~/.miminions/` (override `MIMINIONS_HOME`); default workspace/agent bootstrapped on first real subcommand only.
+> **Lifecycle:** lazy import per group; `workflow.py`/`execution.py`/`dispatch.py`/`persistence.py` stay internal (no shipped group).
+> **Gate:** `tests/integration/cli/` + `scripts/check_structure.py` (asserts this list matches `cli/main.py`).'s memory.

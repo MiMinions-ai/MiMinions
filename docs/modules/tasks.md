@@ -3,16 +3,15 @@
 This page covers two related runtime layers:
 
 - **Tasks** (`miminions.task`) — bind a [Minion](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
-- **Workflow tracing** (`miminions.workflow`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
+- **Workflow tracing** (`miminions.execution.trace`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
 
 !!! note "Import from the subpackages"
-    The top-level `import miminions` re-exports nothing. Import tasks from `miminions.task`, and workflow trace models from their submodules (`miminions.workflow` has **no** package-level exports).
+    The top-level `import miminions` re-exports nothing. Import tasks from `miminions.task`, and trace models from `miminions.execution.trace`.
 
     ```python
     from miminions.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPriority
     from miminions.task.model import TaskInput, TaskOutput
-    from miminions.workflow.models import WorkflowTrace, WorkflowRun, ToolCallRecord, AgentRunRecord
-    from miminions.workflow.controller import WorkflowController
+    from miminions.execution.trace import WorkflowTrace, WorkflowRun, ToolCallRecord, AgentRunRecord
     ```
 
 ---
@@ -135,17 +134,13 @@ runtime.clear_tasks()
 
 ## Part 2 — Workflow tracing
 
-The `miminions.workflow` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions tool`](cli.md#tool-sessions-and-history) history log.
+The `miminions.execution.trace` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions tool`](cli.md#tool-sessions-and-history) history log. (Before 2026-10-23 they lived in a `miminions.workflow` module; the persisted format is unchanged.)
 
-!!! note "No package-level exports"
-    `import miminions.workflow` exposes nothing. Import the concrete symbols from the submodules:
-
-    ```python
-    from miminions.workflow.models import (
-        WorkflowTrace, WorkflowRun, AgentRunRecord, ToolCallRecord,
-    )
-    from miminions.workflow.controller import WorkflowController
-    ```
+```python
+from miminions.execution.trace import (
+    WorkflowTrace, WorkflowRun, AgentRunRecord, ToolCallRecord,
+)
+```
 
 ### The records
 
@@ -161,7 +156,7 @@ Every record has `to_dict()` / `from_dict()` for round-tripping to JSON.
 ### Building a trace by hand
 
 ```python
-from miminions.workflow.models import WorkflowTrace, WorkflowRun, AgentRunRecord
+from miminions.execution.trace import WorkflowTrace, WorkflowRun, AgentRunRecord
 
 trace = WorkflowTrace()
 trace.add_agent_record(AgentRunRecord(prompt="Add 2 and 3", output="5"))
@@ -181,31 +176,6 @@ run = WorkflowRun(agent_name="Calculator", trace=trace)
 serialized = run.to_dict()                 # JSON-ready dict
 restored = WorkflowRun.from_dict(serialized)
 ```
-
-### `WorkflowController` — trace a Minion's tool calls
-
-`WorkflowController` bridges a [Minion](agent.md) and a trace. You create the `AgentRunRecord` and `WorkflowTrace`, hand them to the controller, and every `execute(...)` it proxies to the agent is recorded into the trace automatically.
-
-```python
-from miminions.agent import create_minion
-from miminions.workflow.models import AgentRunRecord, WorkflowTrace
-from miminions.workflow.controller import WorkflowController
-
-agent = create_minion("Calculator", provider="test")
-agent.register_tool("add", "Add two numbers", lambda a, b: a + b)
-
-record = AgentRunRecord(prompt="Add 6 and 7")
-trace = WorkflowTrace()
-controller = WorkflowController(agent, agent_record=record, trace=trace)
-
-# Proxies to agent.execute(...) and appends a ToolCallRecord to the trace
-result = controller.execute("add", arguments={"a": 6, "b": 7})
-
-run = controller.finish_run(output="13")   # -> WorkflowRun
-```
-
-!!! note
-    The controller only **appends** records — it never starts a run on its own. It uses the agent's `execute` / `execute_async` (which return `ToolExecutionResult` and never raise), so a failing tool is recorded with an `error` and `status` rather than crashing the trace. There is also an async `await controller.execute_async(...)`.
 
 ---
 
@@ -247,15 +217,6 @@ So the trace models on this page are real and in use — just consumed via `tool
 | `tool_usage_counts() -> dict[str, int]` | Count of calls per tool. |
 | `most_used_tool() -> str \| None` | Most-called tool, or `None`. |
 | `to_dict()` / `from_dict(data)` | JSON round-trip. |
-
-### `WorkflowController`
-
-| Method | Description |
-| --- | --- |
-| `WorkflowController(agent, agent_record, trace, agent_name=None)` | Bind an agent + record + trace; the record is appended to the trace. |
-| `execute(tool_name, arguments=None, **kwargs) -> ToolExecutionResult` | Proxy to `agent.execute` and record the call. |
-| `async execute_async(tool_name, arguments=None, **kwargs)` | Async variant. |
-| `finish_run(output) -> WorkflowRun` | Set the agent record's output and return a `WorkflowRun`. |
 
 ## See Also
 

@@ -100,6 +100,13 @@ The public `ToolSchema` exported from `miminions.tools` is a lightweight
 agent's `ToolDefinition` registry. When using the public tools API, you mean the
 dataclass.
 
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+> **Public surface:** `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass, in `__init__.py`). Invariant: the pydantic `ToolSchema` in `schemas.py` (backing `ToolDefinition`) is a different, internal type — never conflate them.
+> **State:** none. **Lifecycle:** typed function → auto-derived JSON schema → agent execution or MCP adaptation (`MCPTool` is async-only).
+> **Gate:** tools tests + `scripts/check_structure.py`.
+
 ## License
 
 MIT — part of the MiMinions project.

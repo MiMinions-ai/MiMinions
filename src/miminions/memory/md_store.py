@@ -87,6 +87,60 @@ def append_history(root_path: str | Path, line: str) -> Path:
     return history_file
 
 
+def _section_bounds(lines: list[str], clean_heading: str) -> tuple[int, int] | None:
+    """(start, end) line span of a `## heading` section, or None."""
+    target = f"## {clean_heading}"
+    start = None
+    for i, line in enumerate(lines):
+        if line.strip() == target:
+            start = i
+            break
+    if start is None:
+        return None
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i].startswith("## "):
+            end = i
+            break
+    return start, end
+
+
+def search_memory_sections(root_path: str | Path, query: str) -> list[dict]:
+    """Sections whose heading or body contains query (case-insensitive)."""
+    needle = str(query).strip().lower()
+    if not needle:
+        raise ValueError("query cannot be empty")
+    sections: list[dict] = []
+    heading: str | None = None
+    body: list[str] = []
+    for line in read_memory(root_path).splitlines():
+        if line.startswith("## "):
+            if heading is not None and needle in (heading + "\n" + "\n".join(body)).lower():
+                sections.append({"heading": heading, "body": "\n".join(body).strip()})
+            heading = line[3:].strip()
+            body = []
+        elif heading is not None:
+            body.append(line)
+    if heading is not None and needle in (heading + "\n" + "\n".join(body)).lower():
+        sections.append({"heading": heading, "body": "\n".join(body).strip()})
+    return sections
+
+
+def delete_memory_section(root_path: str | Path, heading: str) -> bool:
+    """Remove a `## heading` section. Returns False when absent."""
+    clean = str(heading).strip() if heading is not None else ""
+    if not clean:
+        raise ValueError("heading cannot be empty")
+    lines = read_memory(root_path).splitlines()
+    bounds = _section_bounds(lines, clean)
+    if bounds is None:
+        return False
+    start, end = bounds
+    kept = lines[:start] + lines[end:]
+    write_memory(root_path, "\n".join(kept).strip() + "\n")
+    return True
+
+
 def upsert_memory_section(
     root_path: str | Path,
     heading: str,

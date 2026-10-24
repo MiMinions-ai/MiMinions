@@ -28,6 +28,8 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install -e ".[dev,sqlite,docs]"
+    - name: Check structure contracts
+      run: python scripts/check_structure.py
     - name: Test with pytest
       run: pytest
     - name: Verify build
