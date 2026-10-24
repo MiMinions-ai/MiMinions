@@ -16,6 +16,9 @@ from miminions.utils import (
     generate_random_name, generate_random_description,
     load_json, save_json, append_transcript,
 )
+# Exact public surface (`__init__.__all__`): generate_random_name,
+# generate_random_description, load_json, save_json, append_transcript.
+# The gate verifies every exported name appears in this README.
 # TextChunker lives in miminions.utils.chunker (chunk_size=800, overlap=150).
 ```
 

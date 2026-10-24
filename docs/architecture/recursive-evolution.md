@@ -101,7 +101,7 @@ contracts live in each module `README.md`; this table is the index.
 | Module | Public surface (stable) | State owner | Lifecycle / promotion |
 |---|---|---|---|
 | `agent` | `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy) | In-memory agent; attached `BaseMemory` | `set_context()` rebuilds prompt via `ContextBuilder` each run |
-| `cli` | `cli` (13 lazy groups, see `cli/main.py`) | `~/.miminions/` (`MIMINIONS_HOME`) | Bootstrap on first real subcommand; help stays lazy/cheap |
+| `cli` | `cli` (13 lazy groups + standalone `init`, see `cli/main.py`) | `~/.miminions/` (`MIMINIONS_HOME`) | Bootstrap on first real subcommand; help stays lazy/cheap |
 | `context` | `ContextBuilder` | None (pure assembly) | Reads L3 prompt/memory/skills + Tier 3 → system prompt string |
 | `core` | Gateway symbols only; workspace/auth via submodules | Workspace JSON (`WorkspaceManager`, schema v1) | `ensure_default_setup()` idempotent first run |
 | `data` | `LocalDataManager` | Content-addressed files + master index + txn log | SHA-256 dedupe; append-only audit log |
@@ -169,5 +169,7 @@ gate checks the table's module set against the tree).
       13 CLI groups, new memory/context files).
 - [x] `scripts/check_structure.py` green locally and in CI; deliberate
       drift (rename without map update) makes it fail.
-- [ ] Cold-start test: a fresh agent, repo only, can state any module's
-      surface and invariants. That is the sharing criterion.
+- [x] Cold-start test: a fresh agent, repo only, stated every sampled
+      module's surface, state, and invariants (and caught the standalone
+      `init` command the gate had missed; gate now covers it and verifies
+      every `__all__` export is documented). That is the sharing criterion.

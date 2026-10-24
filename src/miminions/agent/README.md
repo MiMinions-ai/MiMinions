@@ -63,7 +63,7 @@ descriptors.
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy via `__init__`).
+> **Public surface:** `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy via `__init__`), plus pydantic-ai re-exports `PydanticAIAgent`, `Tool`, `RunContext` — exactly the `__init__.__all__` list; the gate verifies every name appears here.
 > **State:** in-memory agent + attached `BaseMemory`; workspace injected via `set_context()`.
 > **Lifecycle:** `ContextBuilder` rebuilds the system prompt on every run; tools/MCP registered explicitly.
 > **Gate:** agent tests + `scripts/check_structure.py`. Bump version on any surface change.

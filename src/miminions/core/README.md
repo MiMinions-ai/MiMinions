@@ -26,7 +26,7 @@ See the [Workspaces](https://miminions.ai/modules/workspaces/) and
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** gateway symbols via `core/__init__`; `WorkspaceManager/Workspace/Node/Rule`, `ensure_default_setup`, `require_auth` via submodules only (invariant: `__init__` re-exports gateway only).
+> **Public surface:** via `core/__init__` exactly: `BaseChannel`, `ChannelManager`, `CronJob`, `CronSchedule`, `CronService`, `GatewayOrchestrator`, `InboundMessage`, `Lifecycle`, `MessageBus`, `OutboundMessage`, `Phase`, `Session`, `SessionManager`; `WorkspaceManager/Workspace/Node/Rule`, `ensure_default_setup`, `require_auth` via submodules only (invariant: `__init__` re-exports gateway only).
 > **State:** workspace JSON records (`WORKSPACE_SCHEMA_VERSION = 1` — bump + migrate on break).
 > **Lifecycle:** idempotent first-run bootstrap under `~/.miminions/`; rule engine stays primitive by design.
 > **Gate:** core/gateway tests + `scripts/check_structure.py`.

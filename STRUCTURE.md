@@ -162,6 +162,7 @@ Registered CLI command groups are:
 
 ```text
 auth, agent, tool, task, instance, knowledge, workspace, chat, gateway, prompt, config, export, import
+(plus the standalone `init` bootstrap command, eagerly registered in `cli/main.py` — 14 top-level entry points in total)
 ```
 
 `src/miminions/cli/workflow.py` remains in the tree for internal workflow-related

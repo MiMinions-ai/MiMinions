@@ -43,3 +43,14 @@ def test_gate_flags_uncontracted_package(tmp_path):
     (tmp_path / "memory").mkdir()
     failures = gate.run_checks(tmp_path)
     assert any("docs-internal" in failure for failure in failures)
+
+    # Undocumented exports must fail: give foo a contract README that
+    # never mentions its declared export.
+    (pkg / "README.md").write_text(
+        "# foo\n\nRecursive, Bounded Evolution\n", encoding="utf-8"
+    )
+    (pkg / "__init__.py").write_text(
+        '__all__ = ["NotDocumented"]\n', encoding="utf-8"
+    )
+    failures = gate.run_checks(tmp_path)
+    assert any("NotDocumented" in failure for failure in failures)

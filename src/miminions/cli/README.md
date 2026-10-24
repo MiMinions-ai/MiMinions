@@ -38,7 +38,7 @@ miminions chat start --session <id>  # resume a prior session
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** `cli` with 13 lazy groups (`auth agent tool task instance knowledge workspace chat gateway prompt config export import`); root `--help` must stay lazy/cheap.
+> **Public surface:** `cli` with 13 lazy groups (`auth agent tool task instance knowledge workspace chat gateway prompt config export import`) plus the standalone `init` bootstrap command (eagerly registered) — 14 top-level entry points; root `--help` must stay lazy/cheap.
 > **State:** `~/.miminions/` (override `MIMINIONS_HOME`); default workspace/agent bootstrapped on first real subcommand only.
 > **Lifecycle:** lazy import per group; `workflow.py`/`execution.py`/`dispatch.py`/`persistence.py` stay internal (no shipped group).
 > **Gate:** `tests/integration/cli/` + `scripts/check_structure.py` (asserts this list matches `cli/main.py`).'s memory.
