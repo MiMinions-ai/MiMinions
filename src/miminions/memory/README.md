@@ -54,7 +54,7 @@ When the chat session ends (e.g., you type `exit`), the `MemoryDistiller` spins 
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** exactly `__init__.__all__`: `append_history`, `read_memory`, `upsert_memory_section`, `write_memory`, `DistillationResult`, `MemoryDistiller`, `create_llm_filter`, `CompactionOutcome`, `MemoryBudgets`, `TierStatus`, `check_pressure`, `compact_memory` (`create_llm_compactor` is imported but not exported); `SQLiteMemory` via `miminions.memory.sqlite` (needs `[sqlite]`).
+> **Public surface:** exactly `__init__.__all__`: `append_history`, `delete_memory_section`, `search_memory_sections`, `read_memory`, `upsert_memory_section`, `write_memory`, `DistillationResult`, `MemoryDistiller`, `create_llm_filter`, `CompactionOutcome`, `MemoryBudgets`, `TierStatus`, `check_pressure`, `compact_memory` (`create_llm_compactor` is imported but not exported); `SQLiteMemory` via `miminions.memory.sqlite` (needs `[sqlite]`).
 > **State:** Tier 1 `HISTORY.md` (append-only) + Tier 2 `MEMORY.md` (upserted) are truth; Tier 3 `global_memory.db` is a derived, deduped index. Markdown outranks SQLite on conflict.
 > **Lifecycle:** post-chat distill → dedupe → compaction under budget → next-session `ContextBuilder` read. Nothing is written during chat except the session transcript.
 > **Gate:** `tests/integration/memory/` + `tests/integration/context/` + `scripts/check_structure.py`.

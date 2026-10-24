@@ -308,6 +308,27 @@ miminions agent remove researcher
 
 `show <ref>` accepts an exact id, an id prefix, or an exact agent name.
 
+### Memory backends
+
+Attach a memory backend to an agent record, then store/recall/update/delete
+directly from the CLI — no Python required. `sqlite` uses `SQLiteMemory`
+(requires `miminions[sqlite]`; `--db` defaults to the global memory DB);
+`md` uses the workspace `MEMORY.md`, where the section title acts as the
+memory ID.
+
+```bash
+miminions agent memory-attach researcher --backend sqlite
+miminions agent memory-store researcher "Python is a language" --meta topic=python
+miminions agent memory-recall researcher "Python"
+miminions agent memory-update researcher <id> "Python is a programming language"
+miminions agent memory-delete researcher <id>
+miminions agent ingest-document researcher notes.txt
+
+miminions agent memory-attach researcher --backend md --workspace ./my-workspace
+miminions agent memory-store researcher "likes tea" --section Prefs
+miminions agent memory-recall researcher "tea"
+```
+
 `agent run --detach` submits the stored goal and returns after acknowledgement.
 The old `--async` placeholder flag is no longer accepted.
 
