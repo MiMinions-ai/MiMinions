@@ -1,3 +1,11 @@
+"""Execution-owned trace types (moved from the removed workflow module).
+
+Persisted shape is unchanged: WorkflowRun dicts keep schema_version 2 and
+the "agent"/"tool" record types, so existing interactions.json files load
+identically. Owned by execution because its handlers and the CLI
+execution layer are the only producers/consumers.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

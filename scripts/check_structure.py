@@ -113,10 +113,6 @@ def run_checks(root: Path) -> list[str]:
     if (root / "docs" / "test-quality-control.md").is_file():
         failures.append("docs/test-quality-control.md: internal docs belong in the private docs-internal repo (quality/)")
 
-    workflow_init = src_root / "workflow" / "__init__.py"
-    if workflow_init.is_file() and workflow_init.read_text(encoding="utf-8").strip():
-        failures.append("workflow: __init__.py gained a surface; declare it in workflow/README.md + spec first")
-
     return failures
 
 

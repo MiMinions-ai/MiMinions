@@ -7,7 +7,7 @@ from click.testing import CliRunner
 
 from miminions.cli.execution import history_list
 from miminions.cli.tool import tool_cli
-from miminions.workflow.models import AgentRunRecord, WorkflowRun, WorkflowTrace
+from miminions.execution.trace import AgentRunRecord, WorkflowRun, WorkflowTrace
 
 
 def _auth_enabled():

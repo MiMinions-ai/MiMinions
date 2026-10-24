@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from miminions.cli.main import cli
-from miminions.workflow.models import (
+from miminions.execution.trace import (
     AgentRunRecord,
     ToolCallRecord,
     WorkflowRun,

@@ -19,7 +19,11 @@ from miminions.execution import (
 
 `ExecutionRequest(kind, params, cwd, session_key)` is the serialisable
 input; `ExecutionTask` carries `status` with terminal set
-`{completed, failed, cancelled}` (`models.TERMINAL`). Everything else
+`{completed, failed, cancelled}` (`models.TERMINAL`). Trace types
+(`WorkflowTrace`, `WorkflowRun`, `AgentRunRecord`, `ToolCallRecord`,
+persisted at schema_version 2) live in `execution.trace` — moved here
+from the removed `workflow` module, whose only live consumers were
+execution handlers and the CLI execution layer. Everything else
 (`store`, `worker`, `processes`, `handlers`) is private.
 
 ## State

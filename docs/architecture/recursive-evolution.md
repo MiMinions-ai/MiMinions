@@ -110,9 +110,9 @@ contracts live in each module `README.md`; this table is the index.
 | `session` | `JsonlSessionStore`, `create_session_id` | `sessions/*.jsonl` transcripts | Append during chat; history trimmed at turn boundaries |
 | `task` | `TaskRuntime`, `Task`, `AgentTask`, `TaskStatus`, `TaskPriority` | In-memory runtime (`DEFAULT_RUNTIME`) | Async add/run/update; distinct from durable `execution` |
 | `tools` | `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass) | None | Function → schema → agent/MCP; pydantic `ToolSchema` in `schemas.py` is internal — do not confuse the two |
-| `user` | `User`, `UserController` | Stub/local | CRUD + API-key fields; optional-import guard |
+| *(removed)* `user` | — | — | Removed 2026-10-23 (OQ-11): zero callers; returns via ADR if account features are scoped |
 | `utils` | `generate_*`, `load_json/save_json`, `append_transcript` | None | Pure helpers; no domain state |
-| `workflow` | *(none — empty `__init__`)* | Trace records (`WorkflowTrace`) | Caller-owned records; `WorkflowController` only appends. Internal until a surface is declared |
+| *(removed)* `workflow` | — | — | Removed 2026-10-23 (OQ-10): trace types moved to `execution.trace` (schema v2 unchanged); controller had no production callers |
 | `workspace_fs` | `WorkspaceLayout`, `BOOTSTRAP_PROMPT_FILES`, `init_workspace`, readers | On-disk L3 layout | `init_workspace()` scaffolds; readers omit missing files |
 
 Invariants that must never regress: `core/__init__` re-exports gateway

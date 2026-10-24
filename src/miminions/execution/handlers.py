@@ -174,7 +174,7 @@ async def _session_tool(context: TaskContext):
 
 async def _tool_test(context: TaskContext):
     from miminions.cli.execution import _build_agent, _load, _save, _interactions_file
-    from miminions.workflow.models import WorkflowTrace, WorkflowRun, AgentRunRecord
+    from miminions.execution.trace import WorkflowTrace, WorkflowRun, AgentRunRecord
     from .processes import InstanceLock
     params = context.params
     agent = context.wire(_build_agent(params["session_id"], params["session"]))

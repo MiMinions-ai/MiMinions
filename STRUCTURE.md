@@ -132,12 +132,10 @@ MiMinions/
 |       |   |-- __init__.py      # GenericTool, create_tool, tool, ToolSchema (dataclass)
 |       |   |-- schemas.py       # Pydantic ToolSchema (internal) + ToolDefinition
 |       |   `-- README.md
-|       |-- user/              # User dataclass and stub controller
-|       |   `-- README.md
+|       |-- (user/ removed 2026-10-23: no callers; account features return via ADR when scoped)
 |       |-- utils/             # Chunking, generators, session helpers
 |       |   `-- README.md
-|       |-- workflow/          # Workflow trace models and controller (internal; no public surface)
-|       |   `-- README.md
+|       |-- (workflow/ removed 2026-10-23: trace types moved to execution/trace.py; controller had no callers)
 |       `-- workspace_fs/      # On-disk workspace layout and readers
 |           |-- layout.py        # WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
 |           |-- bootstrap.py     # init_workspace scaffolding

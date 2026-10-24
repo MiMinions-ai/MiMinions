@@ -20,7 +20,7 @@ See [`local/README.md`](local/README.md) for the full API and the
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** `LocalDataManager` only (implementation in `local/`).
+> **Public surface:** `LocalDataManager` only (implementation in `local/`). Status: library-only (OQ-12) — no internal callers; supported as public API, exercised by integration/e2e tests.
 > **State:** content-addressed files + JSON master index + append-only transaction log (source of truth: file hashes + log).
 > **Lifecycle:** store → SHA-256 dedupe → index; never mutate logged history.
 > **Gate:** `tests/data/` + `tests/e2e/test_data_management_e2e.py` + `scripts/check_structure.py`.
