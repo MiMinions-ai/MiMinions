@@ -47,6 +47,8 @@ nav:
   - Features: features.md
   - Documentation:
       - Getting Started: getting-started.md
+      - Architecture:
+          - Recursive Evolution: architecture/recursive-evolution.md
       - Use Cases:
           - Real-estate deal desk: use-cases/real-estate-deal-desk.md
       - Modules:

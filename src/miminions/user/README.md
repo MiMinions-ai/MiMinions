@@ -46,3 +46,10 @@ restored = User.from_dict(data)
 If you need per-user persistence today, use the `User` dataclass with your own
 storage, or model identities at the workspace/agent layer (see the
 [CLI](https://miminions.ai/modules/cli/) `auth` and `agent` commands).
+
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+> **Public surface:** `User` (implemented dataclass with `to_dict`/`from_dict`); `UserController` is a stub raising `NotImplementedError` — not part of the stable surface until implemented.
+> **State:** caller-owned (no persistence in this module). **Lifecycle:** none; identities needing persistence live at the workspace/agent layer today.
+> **Gate:** `scripts/check_structure.py` (asserts the stub is never documented as working).

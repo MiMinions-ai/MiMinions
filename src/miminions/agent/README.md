@@ -59,3 +59,11 @@ results = await agent.execute_many_async([
 `max_concurrency` defaults to `16` and must be greater than zero. Lower it for
 tools that consume constrained resources such as database connections or file
 descriptors.
+
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+> **Public surface:** `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy via `__init__`).
+> **State:** in-memory agent + attached `BaseMemory`; workspace injected via `set_context()`.
+> **Lifecycle:** `ContextBuilder` rebuilds the system prompt on every run; tools/MCP registered explicitly.
+> **Gate:** agent tests + `scripts/check_structure.py`. Bump version on any surface change.

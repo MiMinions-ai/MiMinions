@@ -17,6 +17,14 @@ Describe the reasoning of the changes made
 Describe the method to validate the changes as intended.
 Can be a cli command with changed behavior.
 
+## Contract (gated — see docs/architecture/recursive-evolution.md)
+
+- [ ] No module contract touched, or: contract updated in the same PR
+      (module README Purpose / Public surface / State / Lifecycle / Gate).
+- [ ] Public surface or on-disk state changed? Contract version bumped
+      with a migration note. Otherwise: no version bump needed.
+- [ ] `python scripts/check_structure.py` passes locally.
+
 ## Testing
 
 Describe how you tested these changes:
