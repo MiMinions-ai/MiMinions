@@ -1,5 +1,7 @@
 """Integration tests for `miminions agent` memory commands (both backends)."""
 
+import re
+
 from click.testing import CliRunner
 
 from miminions.cli.agent import agent_cli, load_agents, save_agents
@@ -68,8 +70,9 @@ def test_sqlite_backend_full_flow(tmp_path):
     _invoke(runner, ["memory-attach", AGENT_ID, "--backend", "sqlite", "--db", db_path])
 
     result = _invoke(runner, ["memory-store", AGENT_ID, "Python is a language", "--meta", "topic=python"])
-    memory_id = result.output.strip().removeprefix("Stored memory ").strip()
-    assert memory_id, f"expect a stored memory id in result.output, got {result.output}"
+    match = re.search(r"Stored memory (\S+)", result.output)
+    assert match, f"expect a 'Stored memory <id>' line in result.output, got {result.output}"
+    memory_id = match.group(1)
 
     result = _invoke(runner, ["memory-recall", AGENT_ID, "Python"])
     assert memory_id in result.output, (
