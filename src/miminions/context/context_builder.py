@@ -204,6 +204,8 @@ class ContextBuilder:
         workspace_obj: Any,
         root_path: str | Path,
         skills_index_only: bool = True,
+        *,
+        project_context: Any = None,
     ) -> str:
         root = Path(root_path)
         prompt_files = read_prompt_files(root)
@@ -239,8 +241,15 @@ class ContextBuilder:
         lines.append("")
 
         lines.append("## Tool Boundary")
-        lines.append("Only read and write workspace data inside the data_dir shown above.")
-        lines.append("Do not assume access outside the workspace boundary.")
+        if project_context is None:
+            lines.append("Only read and write workspace data inside the data_dir shown above.")
+            lines.append("Do not assume access outside the workspace boundary.")
+        else:
+            lines.append("MiMinions state and memory live in the state workspace shown above.")
+            lines.append(f"The separate project directory is: {project_context.root}")
+            lines.append("State-workspace data/ guidance applies to built-in data operations. "
+                         "Project functions may operate on project files only after per-call user approval.")
+            lines.append("Approval permits Python imports and their side effects; execution is not sandboxed.")
         lines.append("")
 
         lines.append("## Prompt Files")
@@ -315,4 +324,6 @@ class ContextBuilder:
 
         lines.append("")
 
+        if project_context is not None:
+            lines.extend(["## Project Context", project_context.prompt(), ""])
         return "\n".join(lines)
