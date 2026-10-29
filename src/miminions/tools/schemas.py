@@ -28,10 +28,13 @@ class ToolParameter(BaseModel):
 class ToolSchema(BaseModel):
     """Tool parameters schema with JSON Schema conversion."""
     parameters: List[ToolParameter] = Field(default_factory=list)
+    json_schema: Optional[Dict[str, Any]] = None
     model_config = {"extra": "forbid"}
 
     def to_json_schema(self) -> Dict[str, Any]:
         """Convert to JSON Schema format."""
+        if self.json_schema is not None:
+            return self.json_schema
         props = {}
         req = []
         for p in self.parameters:

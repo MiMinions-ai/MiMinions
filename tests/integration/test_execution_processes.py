@@ -1,6 +1,7 @@
 """Real isolated processes, without model network calls."""
 
 import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -72,6 +73,74 @@ def test_concurrent_first_submissions_start_one_instance(service, tmp_path):
         assert handle.get().status == "completed", handle.get().error
     assert service.status()["pid"] == pid
     assert len({h.id for h in handles}) == 4
+
+
+@pytest.mark.parametrize("runtime", [None, {"executable": "another-python", "prefix": "another-environment"}])
+def test_idle_environment_mismatch_restarts_before_project_dependencies_are_imported(service, tmp_path, runtime):
+    from miminions.execution.service import worker_runtime
+
+    service.ensure_instance()
+    old_pid = service.status()["pid"]
+    service.store.set_instance(runtime=runtime)
+    handle = service.submit(tool_request(tmp_path, "def probe():\n    import pathspec, sys\n    return sys.executable\n"))
+    list(handle.follow())
+    assert handle.get().status == "completed", handle.get().error
+    assert handle.get().result == sys.executable
+    assert service.status()["pid"] != old_pid
+    assert service.status()["runtime"] == worker_runtime()
+
+
+def test_project_dotenv_rotation_and_isolation_with_warm_supervisor(service, tmp_path, monkeypatch):
+    from miminions.execution.environment import PROVIDER_KEYS
+
+    for name in PROVIDER_KEYS:
+        monkeypatch.delenv(name, raising=False)
+    service.ensure_instance()
+    supervisor_pid = service.status()["pid"]
+    first, second, empty = (tmp_path / name for name in ("first", "second", "empty"))
+    for project in (first, second, empty):
+        project.mkdir()
+    body = ("def probe():\n    import os, hashlib\n"
+            "    return hashlib.sha256(os.environ['OPENROUTER_API_KEY'].encode()).hexdigest()\n")
+    for project, secret in ((first, "fake-first-private-key"), (second, "fake-second-private-key"),
+                            (first, "fake-rotated-private-key")):
+        (project / ".env").write_text(f"OPENROUTER_API_KEY={secret}\n", encoding="utf-8")
+        handle = service.submit(tool_request(project, body))
+        list(handle.follow())
+        assert handle.get().status == "completed", handle.get().error
+        assert handle.get().result == hashlib.sha256(secret.encode()).hexdigest()
+        assert service.status()["pid"] == supervisor_pid
+        assert secret not in json.dumps(handle.get().to_dict())
+        assert secret not in json.dumps([event.to_dict() for event in service.store.events(handle.id)])
+        assert secret.encode() not in service.store.path.read_bytes()
+    # The shared supervisor must not retain either project's file credentials.
+    missing = service.submit(tool_request(empty, body))
+    list(missing.follow())
+    assert missing.get().status == "failed"
+    assert "OPENROUTER_API_KEY is not set" in missing.get().error
+    assert str(empty / ".env") in missing.get().error
+
+
+def test_explicit_project_credentials_override_launch_directory_dotenv(service, tmp_path, monkeypatch):
+    from miminions.execution.environment import PROVIDER_KEYS
+    from miminions.core.workspace import Workspace, WorkspaceManager
+
+    for name in PROVIDER_KEYS:
+        monkeypatch.delenv(name, raising=False)
+    project = tmp_path / "selected"
+    launch = tmp_path / "launch"
+    project.mkdir()
+    launch.mkdir()
+    (project / ".env").write_text("OPENROUTER_API_KEY=fake-selected-key\n", encoding="utf-8")
+    (launch / ".env").write_text("OPENROUTER_API_KEY=fake-unrelated-key\n", encoding="utf-8")
+    workspace = Workspace(name="Selected", state={"project_root": str(project)})
+    WorkspaceManager(service.store.home).save_workspaces({workspace.id: workspace})
+    request = tool_request(launch, "def probe():\n    import os\n    return os.environ['OPENROUTER_API_KEY'] == 'fake-selected-key'\n")
+    request.params["workspace"] = workspace.id
+    handle = service.submit(request)
+    list(handle.follow())
+    assert handle.get().status == "completed", handle.get().error
+    assert handle.get().result is True
 
 
 def test_blocking_task_heartbeat_cancellation_and_descendant_cleanup(service, tmp_path):

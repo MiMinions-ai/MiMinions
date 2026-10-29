@@ -11,6 +11,8 @@ requires-python = ">=3.12"
 license = "MIT"
 dependencies = [
     "click>=8.0.0",
+    "pathspec>=0.12,<2",
+    "python-dotenv>=1.0",
     "pydantic>=2.0.0",
     "pydantic-ai>=1.0.0,<2.0.0",
     "openai>=2.14.0",

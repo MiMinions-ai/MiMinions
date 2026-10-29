@@ -12,6 +12,7 @@ from miminions.core.workspace import WorkspaceManager, ensure_workspace
 
 @pytest.fixture
 def chat_setup(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     home = tmp_path / "home"
     manager = WorkspaceManager(home)
     workspace = manager.create_workspace("Chat")
@@ -65,7 +66,7 @@ def test_interrupted_turn_exits_and_queues_finalization(chat_setup):
 
 def test_missing_default_workspace(monkeypatch):
     monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {})
-    result = CliRunner().invoke(chat_command, [])
+    result = CliRunner().invoke(chat_command, ["--no-discovery"])
     assert result.exit_code == 1
     assert "no default workspace" in result.output
 

@@ -26,6 +26,80 @@ miminions init --force
 !!! warning "Authentication gating is uneven"
     A `require_auth` decorator gates the commands in `task`, `knowledge`, and `workspace`: when you are signed out (and public access is off) they print a sign-in hint and refuse to run. The `agent` group, however, currently uses a **no-op stand-in** while auth is stabilized, and the `chat`, `prompt`, and `tool` commands are not wrapped at all — don't rely on those being blocked when signed out.
 
+## Work with an existing Python project
+
+```bash
+cd my-python-project
+miminions chat start
+miminions prompt ask "What reports can this project generate?"
+miminions chat start --project ../another-project
+miminions prompt ask --no-discovery "Use my default workspace"
+```
+
+Chat and prompt automatically recognize Python source or Python project manifests
+in the current directory. `--project PATH` selects a directory explicitly; it
+cannot be combined with `--workspace` or `--no-discovery`. An explicit workspace
+always takes precedence over automatic detection. Nonproject directories retain
+the previous defaults: chat uses the configured workspace, and prompt uses `default`.
+
+MiMinions scans Python ASTs without importing modules, evaluating annotations,
+or executing defaults. Nested `.gitignore` rules are honored, dependency and
+generated directories are excluded, and symlinks/junctions are skipped. Scanning
+is limited to 10,000 entries and 1 MiB per file; skipped or unreadable code produces
+warnings rather than blocking the conversation.
+
+Chat starts with a local capability overview and example requests without a model
+call. The agent can use `workspace_search_tools` to search function names,
+signatures, paths, and docstrings, then call the relevant functions. Only public,
+plain, top-level functions with supported JSON inputs are eligible. Decorators,
+methods, tests, generators, variadic/positional-only signatures, custom parameter
+classes, and executable defaults are excluded. Both sync and async functions work;
+flat projects and `src/` packages support local and package-relative imports.
+
+Every invocation requires approval showing the function, source, and arguments.
+Approval also permits imports and their top-level side effects: functions execute
+with your operating-system permissions, without a sandbox. Denial prevents import.
+Changed source requires a new turn and approval. The interpreter is the one running
+MiMinions; install MiMinions in the project environment when dependencies are needed.
+For detached or piped work, answer pending approvals with
+`miminions task approve <task-id> <request-id> --allow` or `--deny`.
+
+Project associations use canonical absolute paths. Sessions, memory, and a
+rebuildable metadata cache live under `MIMINIONS_HOME/workspaces/`, without adding
+framework files to the project. Moving a directory creates a new association;
+existing saved agents and manually registered tools continue to work.
+
+If a persistent execution instance was started from another Python environment,
+the next submission switches it to the current environment once it is idle. An
+instance with accepted work or pending approvals is left running; finish that work
+before retrying from another environment. This prevents a virtualenv CLI from
+silently executing project tools with a system Python that lacks its dependencies.
+
+## Provider credentials from `.env`
+
+CLI execution tasks read API keys from the selected project's `.env`. For a
+nonproject workflow, the file is `.env` in the directory where the task was
+submitted. With `--project PATH`, the selected project supplies the file even when
+you launch the CLI elsewhere. Parent directories are not searched.
+
+```dotenv
+OPENROUTER_API_KEY="your-key"
+```
+
+Only `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
+and `GOOGLE_API_KEY` are loaded. Nonempty exported values win over `.env` values.
+Keys are reread for each task, including session memory distillation, and remain
+inside that task's process. They are not saved in task requests, logs, or model
+context, and changing a project's `.env` does not require restarting the supervisor.
+Keep `.env` out of version control. Direct SDK use still requires environment
+variables or explicit credential configuration.
+
+In PowerShell you can alternatively set a key for the current terminal:
+
+```powershell
+$env:OPENROUTER_API_KEY = 'your-key'
+```
+
 ## Command groups at a glance
 
 <div class="grid cards" markdown>
@@ -150,7 +224,7 @@ Session ended.
 ```
 
 !!! tip "Needs an LLM backend"
-    Chat (and `prompt`) call the live model. With the default OpenRouter provider you must export `OPENROUTER_API_KEY` — without it, agent construction fails with a clear `ValueError`. Errors during a turn are shown as an `[error] ...` line; if a reply was partially streamed before the error, the partial text is kept in the transcript alongside the error marker. See [Agent](agent.md#model-provider-selection) for switching providers.
+    Chat (and `prompt`) call the live model. Set `OPENROUTER_API_KEY` in your terminal environment or the selected project's `.env`. Without either, agent construction fails with a clear `ValueError` identifying the credential file. Errors during a turn are shown as an `[error] ...` line; if a reply was partially streamed before the error, the partial text is kept in the transcript alongside the error marker. See [Agent](agent.md#model-provider-selection) for switching providers.
 
 ??? note "Bounded LLM context (how it works)"
     Before each turn the in-memory history passed to the LLM is capped at the most recent **40 messages** via `trim_message_history`, cutting only at a user-prompt turn boundary so tool call/return pairs are never split. The JSONL transcript on disk always stays complete — only the model's context window is bounded.
