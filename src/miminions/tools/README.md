@@ -63,7 +63,10 @@ During `await agent.run(...)`, the model decides when to call registered tools.
 
 - `@tool(name=None, description=None)` — wrap a function as a `GenericTool`
   (name/description default to `__name__`/`__doc__`).
-- `create_tool(name, description, func) -> GenericTool`.
+- `create_tool(name, description, func, *, schema=None) -> GenericTool`.
+- `GenericTool(..., schema=None)` can accept an explicit dataclass `ToolSchema`.
+  Its optional `json_schema` preserves a complete input schema, including nested
+  containers, nullable values, and additional-property rules.
 
 ### Type mapping
 
@@ -102,7 +105,17 @@ dataclass.
 
 ## Contract
 
-> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+Workspace tools live in the internal `workspace.py` adapter. It builds lazy
+callables from AST metadata, validates inputs before approval, and registers via
+`create_tool` / `Minion.add_tool`. Metadata search activates at most 32 recent
+tools; it never imports code or grants permission. Each invocation uses the
+execution service's approval broker, then checks the source digest before import.
+Source changes require a new turn and approval. Sync/async calls share a process
+lock while import paths and cwd are temporarily configured; these are restored
+after execution. Local imports read current source rather than cached bytecode.
+Python runs in the current interpreter with OS permissions, without a sandbox.
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional explicit schemas; additive, no migration).
 > **Public surface:** `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass, in `__init__.py`). Invariant: the pydantic `ToolSchema` in `schemas.py` (backing `ToolDefinition`) is a different, internal type — never conflate them.
 > **State:** none. **Lifecycle:** typed function → auto-derived JSON schema → agent execution or MCP adaptation (`MCPTool` is async-only).
 > **Gate:** tools tests + `scripts/check_structure.py`.
