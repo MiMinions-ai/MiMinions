@@ -15,6 +15,14 @@ from .processes import InstanceLock, alive
 from .store import ExecutionStore
 
 
+def worker_runtime() -> dict[str, str]:
+    """Identify the Python environment without resolving virtualenv symlinks."""
+    # One-file CLI launches extract into a different temporary prefix each time.
+    prefix = str(Path(sys.executable).parent) if getattr(sys, "frozen", False) else sys.prefix
+    return {"executable": os.path.normcase(os.path.abspath(sys.executable)),
+            "prefix": os.path.normcase(os.path.abspath(prefix))}
+
+
 def worker_command(home: Path, task_id: str | None = None) -> list[str]:
     if getattr(sys, "frozen", False):
         command = [sys.executable, "_execution-worker"]
@@ -50,6 +58,26 @@ class ExecutionService:
         heartbeat = state.get("heartbeat")
         fresh = bool(heartbeat and (datetime.now(timezone.utc) - datetime.fromisoformat(heartbeat)).total_seconds() < 15)
         return {**state, "healthy": bool(state.get("running") and fresh and alive(state.get("pid")))}
+
+    def _prepare_submission_runtime(self, on_start=None) -> None:
+        """Replace an idle supervisor from another environment, preserving accepted work."""
+        state = self.status()
+        expected = worker_runtime()
+        if not state.get("healthy") or not state.get("running") or state.get("stopping") or state.get("runtime") == expected:
+            return
+        with InstanceLock(self.store.home / "execution-start.lock"):
+            state = self.status()
+            if not state.get("healthy") or not state.get("running") or state.get("stopping"):
+                return
+            if not self.store.drain_for_runtime(expected):
+                return
+            if on_start:
+                on_start("Switching the idle execution instance to the current Python environment...")
+            deadline = time.monotonic() + 10
+            while self.status().get("healthy"):
+                if time.monotonic() >= deadline:
+                    raise ValueError("The previous execution instance is still stopping. Retry the operation shortly.")
+                time.sleep(0.1)
 
     def ensure_instance(self, on_start=None) -> None:
         if self.status().get("healthy"):
@@ -98,8 +126,10 @@ class ExecutionService:
         if not cwd.is_dir():
             raise ValueError(f"Working directory does not exist: {cwd}")
         request = replace(request, cwd=str(cwd))
+        self._prepare_submission_runtime(on_start)
         self.ensure_instance(on_start)
-        return TaskHandle(self.store.enqueue(request, released=not defer_start, submitter_pid=os.getpid()), self)
+        return TaskHandle(self.store.enqueue(request, released=not defer_start, submitter_pid=os.getpid(),
+                                             expected_runtime=worker_runtime()), self)
 
     def get(self, task_id: str):
         return self.store.get(task_id)
