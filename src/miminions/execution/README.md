@@ -40,6 +40,28 @@ source of truth for execution state; in-memory handles are views.
 handlers emit `phase`/approval events via `TaskContext` → terminal status
 is final. Cancellation is cooperative (`cancel_requested`).
 
+For project-associated prompt/chat tasks, the handler scans source metadata and
+registers lazy tools before model execution. Their imports and function calls use
+the same durable approval broker as commands. `params.no_discovery` opts out;
+ordinary workspaces and saved-agent handlers retain their existing behavior.
+This adds no execution-request fields or database migration.
+
+The supervisor records its Python executable and environment prefix in instance
+metadata. Submission replaces an incompatible idle supervisor (including legacy
+instances without runtime metadata) with one using the caller's interpreter.
+Accepted work and pending approvals are preserved: an incompatible busy instance
+requires that work to finish before new submissions from another environment.
+Enqueueing checks runtime identity transactionally to reject startup races.
+
+Each task loads provider API keys from the selected project's `.env`, or from
+`.env` in its captured working directory for nonproject tasks. Nonempty exported
+keys take precedence. Only provider credential variables are loaded, before model
+construction, including during distillation. Values are scoped to the task and
+restored on exit; the supervisor, persisted requests, logs, and transcripts never
+receive dotenv credentials. Files are reread for every task, so key rotation and
+distinct project credentials work with a warm supervisor. SDK model construction
+remains environment-based; no request or database migration is needed.
+
 ## Gate
 
 `pytest tests/unit/test_execution_dispatch.py tests/integration/test_execution_processes.py`

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 
 import click
+from pathlib import Path
 from .dispatch import attachment_options, submit_task, validate_attachment
+from .project import project_options, select_project
 
 from miminions.core.paths import get_config_dir
 
@@ -16,17 +18,20 @@ def prompt_cli() -> None:
 
 
 @prompt_cli.command("ask")
-@click.option("--workspace", "workspace_ref", default="default", show_default=True, help="Workspace id or name.")
+@click.option("--workspace", "workspace_ref", default=None, help="Workspace id or name; defaults to project detection, then 'default'.")
 @click.option("--session", "session_id", default=None, help="Optional existing session id.")
 @click.argument("prompt_parts", nargs=-1, required=True)
 @attachment_options
-def ask_prompt(workspace_ref: str, session_id: str | None, prompt_parts: tuple[str, ...], attach=False, detach=False) -> None:
+@project_options
+def ask_prompt(workspace_ref: str | None, session_id: str | None, prompt_parts: tuple[str, ...], attach=False, detach=False,
+               project: Path | None = None, no_discovery: bool = False) -> None:
     """Send a single prompt to the Minion runtime."""
     user_prompt = " ".join(prompt_parts).strip()
     if not user_prompt:
         raise click.ClickException("Prompt cannot be empty.")
 
     validate_attachment(attach, detach)
+    workspace_ref = select_project(get_config_dir(), workspace_ref, project, no_discovery) or "default"
     from miminions.session.store import create_session_id
     from miminions.core.workspace import WorkspaceManager, resolve_workspace
     from miminions.execution.processes import InstanceLock
@@ -47,5 +52,6 @@ def ask_prompt(workspace_ref: str, session_id: str | None, prompt_parts: tuple[s
             workspace_ref = workspace.id
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
-    submit_task("prompt", {"workspace": workspace_ref, "session_id": session_id, "prompt": user_prompt},
+    submit_task("prompt", {"workspace": workspace_ref, "session_id": session_id, "prompt": user_prompt,
+                           "no_discovery": no_discovery},
                 attach=attach, detach=detach, session_key=conversation_key(workspace_ref, session_id), home=get_config_dir())

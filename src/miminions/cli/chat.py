@@ -13,6 +13,7 @@ from miminions.core.paths import get_config_dir
 from miminions.cli.config import load_config
 from miminions.session.store import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
+from .project import project_options, select_project
 
 
 # ---------------------------------------------------------------------------
@@ -83,10 +84,13 @@ def chat_cli():
     default=False,
     help="Show tool calls, token usage and latency per turn.",
 )
-def chat_command(workspace_ref: str | None, session_id: str | None, verbose: bool) -> None:
+@project_options
+def chat_command(workspace_ref: str | None, session_id: str | None, verbose: bool,
+                 project: Path | None = None, no_discovery: bool = False) -> None:
     """Start an interactive async chat session for a workspace."""
     if verbose:
         logging.basicConfig(level=logging.INFO)
+    workspace_ref = select_project(get_config_dir(), workspace_ref, project, no_discovery, init_files=True)
     if not workspace_ref:
         config = load_config()
 
@@ -100,7 +104,7 @@ def chat_command(workspace_ref: str | None, session_id: str | None, verbose: boo
             )
         
         workspace_ref = default_workspace
-    asyncio.run(_chat_loop(workspace_ref, session_id, verbose))
+    asyncio.run(_chat_loop(workspace_ref, session_id, verbose, no_discovery=no_discovery))
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +112,8 @@ def chat_command(workspace_ref: str | None, session_id: str | None, verbose: boo
 # ---------------------------------------------------------------------------
 
 
-async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool = False) -> None:
+async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool = False,
+                     *, no_discovery: bool = False) -> None:
     """Interactive terminal frontend; the execution instance owns every turn."""
     from .dispatch import submit_task
     from miminions.execution.models import conversation_key
@@ -127,6 +132,14 @@ async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool =
     workspace_name = getattr(workspace, "name", getattr(workspace, "id", "unknown"))
     click.echo(f"Workspace : {workspace_name}")
     click.echo(f"Session   : {session_id}")
+    if not no_discovery:
+        from .project import load_project_context
+        try:
+            project_context = load_project_context(workspace, root)
+        except (ValueError, OSError) as exc:
+            raise click.ClickException(str(exc)) from exc
+        if project_context is not None:
+            click.echo(project_context.overview())
     click.echo("Type '/exit' or '/quit' to end the session.\n")
     submitted = False
     try:
@@ -144,7 +157,7 @@ async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool =
             submitted = True
             try:
                 submit_task("chat_turn", {"workspace": workspace.id, "session_id": session_id,
-                                          "prompt": user_text, "verbose": verbose},
+                                          "prompt": user_text, "verbose": verbose, "no_discovery": no_discovery},
                             session_key=session_key, home=get_config_dir())
             except click.exceptions.Exit as exc:
                 if exc.exit_code == 130:

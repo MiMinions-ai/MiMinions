@@ -77,7 +77,8 @@ class ExecutionStore:
             (task_id, task_id, now(), event_type, encode(data)),
         )
 
-    def enqueue(self, request: ExecutionRequest, *, released: bool = True, submitter_pid: int | None = None) -> str:
+    def enqueue(self, request: ExecutionRequest, *, released: bool = True, submitter_pid: int | None = None,
+                expected_runtime: dict | None = None) -> str:
         # Validate JSON before changing state; callable/live runtime payloads are forbidden.
         serialized = json.dumps(request.to_dict(), ensure_ascii=False)
         task_id = "exec_" + uuid.uuid4().hex
@@ -89,6 +90,8 @@ class ExecutionStore:
                     raise ValueError("Execution instance is draining. Wait for it to stop before submitting work.")
                 if not instance.get("running"):
                     raise ValueError("Execution instance stopped during submission. Submit the operation again.")
+                if expected_runtime is not None and instance.get("runtime") != expected_runtime:
+                    raise ValueError("Execution instance changed Python environments during submission. Retry the operation.")
             db.execute(
                 "INSERT INTO tasks(id,request,session_key,status,created_at,released,submitter_pid) VALUES (?,?,?,'queued',?,?,?)",
                 (task_id, serialized, request.session_key, now(), int(released), submitter_pid),
@@ -237,6 +240,23 @@ class ExecutionStore:
             value.update(changes)
             db.execute("INSERT OR REPLACE INTO instance VALUES (1,?)", (encode(value),))
         return value
+
+    def drain_for_runtime(self, expected_runtime: dict) -> bool:
+        """Atomically stop incompatible idle instances, never abandoning accepted work."""
+        with self.connection(True) as db:
+            row = db.execute("SELECT data FROM instance WHERE id=1").fetchone()
+            state = json.loads(row[0]) if row else {}
+            if not state.get("running") or state.get("stopping") or state.get("runtime") == expected_runtime:
+                return False
+            busy = db.execute("SELECT 1 FROM tasks WHERE status NOT IN ('completed','failed','cancelled') LIMIT 1").fetchone()
+            if busy:
+                raise ValueError(
+                    "The execution instance uses another Python environment or predates environment tracking, "
+                    "and still has accepted work. Wait for that work to finish, then retry from this environment."
+                )
+            state["stopping"] = True
+            db.execute("UPDATE instance SET data=? WHERE id=1", (encode(state),))
+            return True
 
     def recover(self) -> None:
         for task in self.list():

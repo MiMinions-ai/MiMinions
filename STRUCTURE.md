@@ -76,6 +76,7 @@ MiMinions/
 |       |   |-- gateway.py     # Registered as `miminions gateway`
 |       |   |-- knowledge.py
 |       |   |-- prompt.py
+|       |   |-- project.py     # Project detection and state-workspace association
 |       |   |-- task.py
 |       |   |-- tool.py       # Registered as `miminions tool`
 |       |   |-- workspace.py
@@ -116,6 +117,7 @@ MiMinions/
 |       |   `-- README.md
 |       |
 |       |-- execution/         # Durable local execution (persistent worker)
+|       |   |-- environment.py   # Per-task provider credentials from project .env
 |       |   |-- models.py        # ExecutionRequest, ExecutionTask, TaskEvent, TaskHandle
 |       |   |-- service.py       # ExecutionService client API
 |       |   |-- store.py, worker.py, processes.py, handlers.py
@@ -129,6 +131,7 @@ MiMinions/
 |       |   |-- control.py       # TaskRuntime
 |       |   `-- README.md
 |       |-- tools/             # Generic tools, schemas, MCP adapter
+|       |   |-- workspace.py    # Lazy project tools and per-invocation approval
 |       |   |-- __init__.py      # GenericTool, create_tool, tool, ToolSchema (dataclass)
 |       |   |-- schemas.py       # Pydantic ToolSchema (internal) + ToolDefinition
 |       |   `-- README.md
@@ -137,6 +140,7 @@ MiMinions/
 |       |   `-- README.md
 |       |-- (workflow/ removed 2026-10-23: trace types moved to execution/trace.py; controller had no callers)
 |       `-- workspace_fs/      # On-disk workspace layout and readers
+|           |-- discovery.py     # Bounded AST discovery and metadata cache
 |           |-- layout.py        # WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
 |           |-- bootstrap.py     # init_workspace scaffolding
 |           |-- reader.py        # Prompt/memory/skills readers

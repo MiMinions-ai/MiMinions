@@ -336,3 +336,98 @@ def test_conversation_key_matches_transcript_aliases():
     assert conversation_key("workspace", " session ") == conversation_key("workspace", "session")
     if os.name == "nt":
         assert conversation_key("workspace", "SESSION") == conversation_key("workspace", "session")
+
+
+def test_submission_replaces_idle_legacy_instance_with_current_environment(tmp_path, monkeypatch):
+    import os
+    from miminions.execution.service import worker_runtime
+    from miminions.execution.store import now
+
+    service = ExecutionService(tmp_path)
+    service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now())
+    messages = []
+
+    def drained(message):
+        messages.append(message)
+        assert service.store.instance()["stopping"]
+        service.store.set_instance(running=False)
+
+    def start(on_start=None):
+        service.store.set_instance(running=True, stopping=False, runtime=worker_runtime(), heartbeat=now())
+
+    monkeypatch.setattr(service, "ensure_instance", start)
+    handle = service.submit(ExecutionRequest("agent_tool"), on_start=drained)
+    assert handle.get().status == "queued"
+    assert service.store.instance()["runtime"] == worker_runtime()
+    assert messages and "Python environment" in messages[0]
+
+
+def test_environment_mismatch_does_not_interrupt_accepted_work(tmp_path):
+    import os
+    from miminions.execution.store import now
+
+    service = ExecutionService(tmp_path)
+    task_id = service.store.enqueue(ExecutionRequest("agent_tool"))
+    service.store.claim()
+    request_id = service.store.request_approval(task_id, "Keep this approval pending")
+    service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now(),
+                               runtime={"executable": "other-python", "prefix": "other-environment"})
+    with pytest.raises(ValueError, match="still has accepted work"):
+        service.submit(ExecutionRequest("agent_tool"))
+    assert service.get(task_id).status == "waiting_for_input"
+    assert service.store.approval_response(task_id, request_id) is None
+    assert not service.store.instance()["stopping"]
+    assert not service.get(task_id).cancel_requested
+    assert len(service.store.list()) == 1
+
+
+def test_compatible_environment_can_accept_work_while_busy(tmp_path, monkeypatch):
+    import os
+    from miminions.execution.service import worker_runtime
+    from miminions.execution.store import now
+
+    service = ExecutionService(tmp_path)
+    service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now(), runtime=worker_runtime())
+    first = service.store.enqueue(ExecutionRequest("agent_tool"))
+    service.store.claim()
+    monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
+    second = service.submit(ExecutionRequest("agent_tool"))
+    assert second.get().status == "queued" and service.get(first).status == "running"
+
+
+def test_runtime_change_during_startup_cannot_accept_wrong_environment(tmp_path, monkeypatch):
+    import os
+    from miminions.execution.store import now
+
+    service = ExecutionService(tmp_path)
+    def start_other_environment(on_start=None):
+        service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now(),
+                                   runtime={"executable": "other-python", "prefix": "other-environment"})
+    monkeypatch.setattr(service, "ensure_instance", start_other_environment)
+    with pytest.raises(ValueError, match="changed Python environments"):
+        service.submit(ExecutionRequest("agent_tool"))
+    assert service.store.list() == []
+
+
+def test_runtime_identity_preserves_virtual_environment_paths(tmp_path, monkeypatch):
+    import os
+    import sys
+    from miminions.execution.service import worker_runtime
+
+    python = tmp_path / "project-env" / "bin" / "python"
+    monkeypatch.setattr(sys, "executable", str(python))
+    monkeypatch.setattr(sys, "prefix", str(python.parent.parent))
+    assert worker_runtime() == {"executable": os.path.normcase(str(python)),
+                                "prefix": os.path.normcase(str(python.parent.parent))}
+
+
+def test_frozen_runtime_identity_ignores_temporary_extraction_prefix(tmp_path, monkeypatch):
+    import sys
+    from miminions.execution.service import worker_runtime
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "miminions.exe"))
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "extraction_one"))
+    first = worker_runtime()
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "extraction_two"))
+    assert worker_runtime() == first

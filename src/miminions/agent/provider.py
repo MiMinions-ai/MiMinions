@@ -20,8 +20,9 @@ class ModelFactory:
             api_key = os.environ.get("OPENROUTER_API_KEY")
             if not api_key:
                 raise ValueError(
-                    "OPENROUTER_API_KEY is not set. Export it before using the "
-                    "'openrouter' provider (e.g. `export OPENROUTER_API_KEY=...`)."
+                    "OPENROUTER_API_KEY is not set. Add it to the selected project's .env for CLI tasks, "
+                    "or set it in your terminal environment "
+                    "(PowerShell: $env:OPENROUTER_API_KEY = 'your-key')."
                 )
             provider = OpenAIProvider(
                 base_url="https://openrouter.ai/api/v1",

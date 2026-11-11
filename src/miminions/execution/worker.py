@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .models import TERMINAL
 from .processes import InstanceLock, ProcessTree, alive
-from .service import worker_command, worker_environment
+from .service import worker_command, worker_environment, worker_runtime
 from .store import ExecutionStore, now
 
 
@@ -51,7 +51,7 @@ def supervise(store: ExecutionStore):
         if not isinstance(capacity, int) or isinstance(capacity, bool) or capacity < 1:
             raise ValueError("execution.max_concurrency must be a positive integer")
         store.set_instance(pid=os.getpid(), generation=generation, heartbeat=now(), running=True,
-                           stopping=False, max_concurrency=capacity)
+                           stopping=False, max_concurrency=capacity, runtime=worker_runtime())
         last_heartbeat = time.monotonic()
         last_queue_heartbeat = time.monotonic()
         while True:

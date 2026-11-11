@@ -103,7 +103,18 @@ async def _prompt(context: TaskContext):
     reply = ""
     try:
         minion = context.wire(create_minion(name="MiMinions", description=f"MiMinions agent for workspace '{workspace.name}'."))
-        minion.set_context(workspace, root)
+        project = None
+        if not params.get("no_discovery", False) and workspace.state.get("project_root"):
+            from miminions.cli.project import load_project_context
+            from miminions.tools.workspace import WorkspaceTools
+            context.phase("Discovering project capabilities without importing code...")
+            project = await asyncio.to_thread(load_project_context, workspace, root)
+            project_tools = WorkspaceTools(project, context.approval, root / "discovery.json")
+            project_tools.register(minion)
+        if project is None:
+            minion.set_context(workspace, root)
+        else:
+            minion.set_context(workspace, root, project_context=project)
         context.phase("Requesting model response...")
         reply = await _stream(context, minion, params["prompt"], history)
         context.store.save_checkpoint(session_key, ModelMessagesTypeAdapter.dump_json(minion._last_messages).decode("utf-8"))
@@ -241,7 +252,10 @@ def get_handler(kind):
 
     async def execute(context):
         from miminions.tools.default import command_callbacks
-        with command_callbacks(context.approval, lambda stream, text: context.emit(stream, text=text)):
+        from .environment import provider_environment
+        with provider_environment(context), command_callbacks(
+            context.approval, lambda stream, text: context.emit(stream, text=text),
+        ):
             return await handler(context)
 
     return execute

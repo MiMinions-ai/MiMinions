@@ -18,6 +18,7 @@ class FakeContextBuilder:
 
 
 def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | None = None) -> MagicMock:
+    monkeypatch.chdir(tmp_path)
     fake = fake_minion or MagicMock()
     if not hasattr(fake, "run") or not isinstance(fake.run, AsyncMock):
         fake.run = AsyncMock(return_value="assistant reply")

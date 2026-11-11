@@ -25,16 +25,17 @@ class ToolSchema:
     description: str
     parameters: Dict[str, Any]
     required: list[str]
+    json_schema: Optional[Dict[str, Any]] = None
 
 
 class GenericTool:
     """Base class for generic tools that can be adapted to different frameworks"""
 
-    def __init__(self, name: str, description: str, func: Callable):
+    def __init__(self, name: str, description: str, func: Callable, *, schema: Optional[ToolSchema] = None):
         self.name = name
         self.description = description
         self.func = func
-        self._schema = self._extract_schema()
+        self._schema = schema or self._extract_schema()
 
     def _extract_schema(self) -> ToolSchema:
         """Extract schema from function signature"""
@@ -101,7 +102,7 @@ class GenericTool:
         return {
             "name": self.name,
             "description": self.description,
-            "parameters": {
+            "parameters": self.schema.json_schema if self.schema.json_schema is not None else {
                 "type": "object",
                 "properties": self.schema.parameters,
                 "required": self.schema.required,
@@ -109,9 +110,9 @@ class GenericTool:
         }
 
 
-def create_tool(name: str, description: str, func: Callable) -> GenericTool:
+def create_tool(name: str, description: str, func: Callable, *, schema: Optional[ToolSchema] = None) -> GenericTool:
     """Factory function to create a generic tool"""
-    return GenericTool(name=name, description=description, func=func)
+    return GenericTool(name=name, description=description, func=func, schema=schema)
 
 
 def tool(name: Optional[str] = None, description: Optional[str] = None):

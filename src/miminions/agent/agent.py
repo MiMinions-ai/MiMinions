@@ -210,14 +210,18 @@ class Minion:
             _ws = _workspace
             _rp = _root_path
 
-            @agent.system_prompt
+            @agent.system_prompt(dynamic=getattr(self, "_project_context", None) is not None)
             def _build_system_prompt() -> str:  # type: ignore[misc]
+                project = getattr(self, "_project_context", None)
+                if project is not None:
+                    return ContextBuilder().build(_ws, _rp, project_context=project)
                 return ContextBuilder().build(_ws, _rp)
 
         self._pydantic_ai_agent = agent
     
     # tool management
-    def register_tool(self, name: str, description: str, func: Callable, schema: Optional[ToolSchema] = None) -> ToolDefinition:
+    def register_tool(self, name: str, description: str, func: Callable, schema: Optional[ToolSchema] = None,
+                      *, enabled: Optional[Callable[[], bool]] = None) -> ToolDefinition:
         """Register a tool with the agent."""
         schema = schema or _extract_schema(func)
         definition = ToolDefinition(name=name, description=description, schema=schema)
@@ -245,6 +249,7 @@ class Minion:
             name=name,
             description=description,
             takes_ctx=False,
+            prepare=(lambda _ctx, definition: definition if enabled() else None) if enabled else None,
         )
         self._pydantic_ai_tools.append(pydantic_ai_tool)
         
@@ -254,7 +259,7 @@ class Minion:
         """Alias for register_tool."""
         return self.register_tool(name, description, func)
 
-    def add_tool(self, tool: GenericTool) -> ToolDefinition:
+    def add_tool(self, tool: GenericTool, *, enabled: Optional[Callable[[], bool]] = None) -> ToolDefinition:
         """Add a GenericTool."""
         params = []
         serialized = tool.to_dict()
@@ -275,8 +280,16 @@ class Minion:
                     required=pname in required,
                     default=pinfo.get("default"),
                 ))
-        func = tool.arun if inspect.iscoroutinefunction(tool.func) else tool.run
-        return self.register_tool(tool.name, tool.description, func, ToolSchema(parameters=params))
+        if inspect.iscoroutinefunction(tool.func):
+            @wraps(tool.func)
+            async def func(**kwargs):
+                return await tool.arun(**kwargs)
+        else:
+            @wraps(tool.func)
+            def func(**kwargs):
+                return tool.run(**kwargs)
+        return self.register_tool(tool.name, tool.description, func,
+                                  ToolSchema(parameters=params, json_schema=parameter_schema), enabled=enabled)
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name."""
@@ -671,7 +684,7 @@ class Minion:
                 except Exception:
                     logger.exception("on_turn_end callback failed")
 
-    def set_context(self, workspace: Any, root_path: str | Path) -> None:
+    def set_context(self, workspace: Any, root_path: str | Path, *, project_context: Any = None) -> None:
         """Attach workspace context so ContextBuilder feeds the system prompt.
 
         Call this before the first ``run()`` to enable the
@@ -682,9 +695,11 @@ class Minion:
         Args:
             workspace: The Workspace object (or dict with equivalent keys).
             root_path: Filesystem root of the workspace.
+            project_context: Optional import-free project metadata, separate from state files.
         """
         self._workspace = workspace
         self._root_path = Path(root_path)
+        self._project_context = project_context
 
     def set_model(self, model: Any) -> None:
         self._model = model
