@@ -1,7 +1,6 @@
 """Lazy search, validated execution, and durable approval integration."""
 
 import asyncio
-import json
 import os
 import py_compile
 import sys
