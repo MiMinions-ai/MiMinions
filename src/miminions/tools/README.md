@@ -113,6 +113,11 @@ execution service's approval broker, then checks the source digest before import
 Source changes require a new turn and approval. Sync/async calls share a process
 lock while import paths and cwd are temporarily configured; these are restored
 after execution. Local imports read current source rather than cached bytecode.
+Project modules use their normal Python package names so absolute and relative
+imports share class identities and module state. The selected top-level package
+is loaded fresh for each approved call; any preexisting modules under that name
+are restored afterward. Newly imported project modules, including namespace
+packages, are removed on success or failure.
 Python runs in the current interpreter with OS permissions, without a sandbox.
 
 > [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional explicit schemas; additive, no migration).

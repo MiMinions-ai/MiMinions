@@ -4,6 +4,7 @@ import asyncio
 import os
 import py_compile
 import sys
+import types
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -112,6 +113,87 @@ async def test_packages_relative_absolute_imports_and_async_functions(tmp_path, 
     await agent.cleanup(rebuild=False)
 
 
+@pytest.mark.parametrize("layout", ["", "src/"])
+@pytest.mark.parametrize("namespace_package", [False, True])
+async def test_mixed_imports_share_classes_exceptions_and_module_state(tmp_path, layout, namespace_package):
+    source = '''
+from .models import Job, JobError, registry
+from review_imports.models import registry as absolute_registry
+from review_imports.helpers import make_job, fail
+def report():
+    from review_imports.tasks import report as absolute_report
+    try:
+        fail()
+    except JobError:
+        caught = True
+    except Exception:
+        caught = False
+    registry.append("ran")
+    return [isinstance(make_job(), Job), caught, registry is absolute_registry,
+            absolute_report is report, len(absolute_registry)]
+'''
+    agent, tools, approval, path = runtime(tmp_path, source, relative=f"{layout}review_imports/tasks.py")
+    if not namespace_package:
+        (path.parent / "__init__.py").write_text("", encoding="utf-8")
+    (path.parent / "models.py").write_text(
+        "from pathlib import Path\n"
+        "with Path('imports.txt').open('a') as stream: stream.write('loaded\\n')\n"
+        "class Job: pass\nclass JobError(Exception): pass\nregistry = []\n",
+        encoding="utf-8",
+    )
+    (path.parent / "helpers.py").write_text(
+        "from review_imports.models import Job, JobError\n"
+        "def make_job(): return Job()\ndef fail(): raise JobError('expected')\n",
+        encoding="utf-8",
+    )
+    try:
+        for _ in range(2):
+            result = await agent.execute_async(tools.project.functions[0].tool_name)
+            assert result.error is None
+            assert result.result == [True, True, True, True, 1]
+            assert not any(name == "review_imports" or name.startswith("review_imports.") for name in sys.modules)
+        assert (tools.project.root / "imports.txt").read_text() == "loaded\nloaded\n"
+        assert approval.call_count == 2
+    finally:
+        await agent.cleanup(rebuild=False)
+
+
+@pytest.mark.parametrize("fail", [False, True])
+async def test_import_namespace_restores_preexisting_modules(tmp_path, monkeypatch, fail):
+    source = '''
+def work():
+    from review_imports.tasks import work as absolute_work
+    from . import added
+    if FAIL:
+        raise RuntimeError("project failure")
+    return absolute_work is work
+'''.replace("FAIL", repr(fail))
+    agent, tools, _, path = runtime(tmp_path, source, relative="review_imports/tasks.py")
+    (path.parent / "__init__.py").write_text("", encoding="utf-8")
+    (path.parent / "added.py").write_text("VALUE = 1\n", encoding="utf-8")
+    previous = types.ModuleType("review_imports")
+    previous.__path__ = [str(tmp_path / "unrelated")]
+    previous_task = types.ModuleType("review_imports.tasks")
+    previous_task.work = lambda: "previous"
+    previous.tasks = previous_task
+    monkeypatch.setitem(sys.modules, "review_imports", previous)
+    monkeypatch.setitem(sys.modules, "review_imports.tasks", previous_task)
+    before_cwd, before_path, before_finders = Path.cwd(), sys.path[:], sys.meta_path[:]
+    try:
+        result = await agent.execute_async(tools.project.functions[0].tool_name)
+        if fail:
+            assert "project failure" in result.error
+        else:
+            assert result.error is None and result.result is True
+        assert sys.modules["review_imports"] is previous
+        assert sys.modules["review_imports.tasks"] is previous_task
+        assert previous.tasks is previous_task
+        assert "review_imports.added" not in sys.modules
+        assert Path.cwd() == before_cwd and sys.path == before_path and sys.meta_path == before_finders
+    finally:
+        await agent.cleanup(rebuild=False)
+
+
 async def test_import_errors_are_returned_without_retry(tmp_path):
     agent, tools, approval, _ = runtime(tmp_path, "import missing_project_dependency_123\ndef work(): return 1")
     result = await agent.execute_async(tools.project.functions[0].tool_name)
@@ -197,6 +279,44 @@ async def test_project_root_package_functions(tmp_path):
     result = await agent.execute_async(tools.project.functions[0].tool_name)
     assert result.error is None and result.result == 42
     await agent.cleanup(rebuild=False)
+
+
+@pytest.mark.parametrize("layout,package", [("", "project"), ("src/", "src")])
+@pytest.mark.parametrize("entry", ["__init__.py", "tasks.py"])
+async def test_root_packages_use_one_identity_for_mixed_imports(tmp_path, layout, package, entry):
+    source = (f"from .models import Job\nfrom {package}.helpers import make_job\n"
+              "def work(): return isinstance(make_job(), Job)\n")
+    agent, tools, _, path = runtime(tmp_path, source, relative=layout + entry)
+    if entry != "__init__.py":
+        (path.parent / "__init__.py").write_text("", encoding="utf-8")
+    (path.parent / "models.py").write_text("class Job: pass\n", encoding="utf-8")
+    (path.parent / "helpers.py").write_text(
+        f"from {package}.models import Job\ndef make_job(): return Job()\n", encoding="utf-8",
+    )
+    try:
+        result = await agent.execute_async(tools.project.functions[0].tool_name)
+        assert result.error is None
+        assert result.result is True
+    finally:
+        await agent.cleanup(rebuild=False)
+
+
+@pytest.mark.parametrize("layout", ["", "src/"])
+async def test_flat_module_identity_and_namespace_dependencies_are_isolated(tmp_path, layout):
+    source = ("def work():\n    from main import work as absolute_work\n"
+              "    from review_namespace.helper import VALUE\n    return [absolute_work is work, VALUE]\n")
+    for index in range(2):
+        agent, tools, _, path = runtime(tmp_path / str(index), source, relative=layout + "main.py")
+        namespace = path.parent / "review_namespace"
+        namespace.mkdir()
+        (namespace / "helper.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+        try:
+            result = await agent.execute_async(tools.project.functions[0].tool_name)
+            assert result.error is None and result.result == [True, index]
+            assert "review_namespace" not in sys.modules
+            assert "review_namespace.helper" not in sys.modules
+        finally:
+            await agent.cleanup(rebuild=False)
 
 
 async def test_function_failure_restores_process_settings(tmp_path):

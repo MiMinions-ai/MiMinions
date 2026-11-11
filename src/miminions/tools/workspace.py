@@ -13,7 +13,6 @@ import os
 import re
 import sys
 import threading
-import types
 import typing
 from collections import OrderedDict
 from pathlib import Path
@@ -22,7 +21,7 @@ from typing import Any, Callable
 from pydantic import ConfigDict, Field, create_model
 
 from miminions.tools import ToolSchema, create_tool
-from miminions.workspace_fs.discovery import FunctionMetadata, ProjectContext, project_key, scan_project, source_bytes
+from miminions.workspace_fs.discovery import FunctionMetadata, ProjectContext, scan_project, source_bytes
 
 _execution_lock = threading.Lock()
 
@@ -51,6 +50,19 @@ def _safe_type(spec: dict) -> Any:
     return {"str": str, "int": int, "float": float, "bool": bool, "none": type(None), "any": Any}[kind]
 
 
+def _module_location(root: Path, selected: Path) -> tuple[str, list[str]]:
+    relative = selected.relative_to(root)
+    source_root = root / "src" if len(relative.parts) > 1 and relative.parts[0] == "src" else root
+    parts = list(selected.relative_to(source_root).with_suffix("").parts)
+    if parts[-1] == "__init__":
+        parts.pop()
+    search_paths = [str(root / "src"), str(root)]
+    if (source_root / "__init__.py").is_file():
+        parts.insert(0, source_root.name)
+        search_paths.insert(0, str(source_root.parent))
+    return ".".join(parts), search_paths
+
+
 class _SourceLoader(importlib.machinery.SourceFileLoader):
     """Use current source, never stale bytecode, for approved workspace imports."""
 
@@ -70,19 +82,27 @@ class _SourceLoader(importlib.machinery.SourceFileLoader):
 class _ProjectFinder(importlib.abc.MetaPathFinder):
     def __init__(self, root, selected, data, module_name):
         self.root, self.selected, self.data, self.module_name = root, selected, data, module_name
+        self.loaded: set[str] = set()
 
     def find_spec(self, fullname, path=None, target=None):
         if fullname == self.module_name:
             source_bytes(self.root, self.selected.relative_to(self.root).as_posix())
             loader = _SourceLoader(fullname, str(self.selected), self.root, self.selected, self.data)
             options = {"submodule_search_locations": [str(self.selected.parent)]} if self.selected.name == "__init__.py" else {}
+            self.loaded.add(fullname)
             return importlib.util.spec_from_file_location(fullname, self.selected, loader=loader, **options)
         spec = importlib.machinery.PathFinder.find_spec(fullname, path)
         if spec and spec.origin and spec.origin.endswith(".py"):
             origin = Path(spec.origin).resolve()
             if origin.is_relative_to(self.root):
                 spec.loader = _SourceLoader(fullname, spec.origin, self.root, self.selected, self.data)
+                self.loaded.add(fullname)
                 return spec
+        if spec and spec.submodule_search_locations and any(
+            Path(location).resolve().is_relative_to(self.root) for location in spec.submodule_search_locations
+        ):
+            self.loaded.add(fullname)
+            return spec
         return None
 
 
@@ -172,34 +192,23 @@ class WorkspaceTools:
     async def _execute(self, function: FunctionMetadata, data: bytes, arguments: dict) -> Any:
         root = self.project.root
         selected = root / function.path
-        relative = Path(function.path)
-        if relative.parts[0] == "src":
-            relative = Path(*relative.parts[1:])
-        parts = list(relative.with_suffix("").parts)
-        if parts[-1] == "__init__":
-            parts.pop()
-        prefix = f"_miminions_project_{project_key(root)}"
-        module_name = ".".join([prefix, *parts])
-        namespace = types.ModuleType(prefix)
-        namespace.__path__ = [str(root / "src"), str(root)]
-        namespace.__package__ = prefix
+        module_name, search_paths = _module_location(root, selected)
+        package_name = module_name.split(".")[0]
         finder = _ProjectFinder(root, selected, data, module_name)
         old_path, old_cwd = sys.path[:], Path.cwd()
         old_modules = dict(sys.modules)
+        replaced = {name: module for name, module in old_modules.items()
+                    if name == package_name or name.startswith(package_name + ".")}
         try:
-            sys.modules[prefix] = namespace
-            sys.path[:0] = [str(root / "src"), str(root)]
+            # Both import styles must resolve to the same fresh package for this call.
+            for name in replaced:
+                sys.modules.pop(name, None)
+            sys.path[:0] = search_paths
             sys.meta_path.insert(0, finder)
             os.chdir(root)
             importlib.invalidate_caches()
 
             def load():
-                if module_name == prefix:
-                    spec = importlib.util.spec_from_file_location(prefix, selected, submodule_search_locations=[str(root)])
-                    spec.loader = _SourceLoader(prefix, str(selected), root, selected, data)
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[prefix] = module
-                    spec.loader.exec_module(module)
                 module = importlib.import_module(module_name)
                 if Path(getattr(module, "__file__", "")).resolve() != selected:
                     raise ImportError(f"Loaded module does not match discovered source: {function.path}")
@@ -219,9 +228,10 @@ class WorkspaceTools:
                 sys.meta_path.remove(finder)
             for name, module in list(sys.modules.items()):
                 origin = getattr(module, "__file__", None)
-                if name == prefix or name.startswith(prefix + ".") or (
+                if name == package_name or name.startswith(package_name + ".") or name in finder.loaded or (
                     name not in old_modules and origin and Path(origin).resolve().is_relative_to(root)
                 ):
                     sys.modules.pop(name, None)
                     if name in old_modules:
                         sys.modules[name] = old_modules[name]
+            sys.modules.update(replaced)
