@@ -1,6 +1,6 @@
 import json
 
-from miminions.cli.auth import (
+from miminions.interface.cli.auth import (
     AuthTimeoutError,
     auth_cli,
     get_auth_timeout,
@@ -9,8 +9,8 @@ from miminions.cli.auth import (
     save_config,
     with_timeout,
 )
-from miminions.cli.config import load_config
-from miminions.core.auth import require_auth
+from miminions.interface.config import load_config
+from miminions.system.auth.auth import require_auth
 
 
 def test_require_auth_placeholder_does_not_block():

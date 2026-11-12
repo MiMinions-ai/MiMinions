@@ -1,4 +1,4 @@
-from miminions.cli.main import main
+from miminions.interface.cli.main import main
 
 
 if __name__ == "__main__":

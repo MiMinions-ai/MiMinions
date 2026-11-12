@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from miminions.core.gateway.services import (
+from miminions.daemon.services import (
     CronJob,
     CronJobState,
     CronPayload,

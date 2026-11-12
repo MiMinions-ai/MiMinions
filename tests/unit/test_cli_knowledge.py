@@ -1,6 +1,6 @@
 import json
 
-from miminions.cli.knowledge import knowledge_cli, load_knowledge, save_knowledge
+from miminions.interface.cli.management.knowledge import knowledge_cli, load_knowledge, save_knowledge
 
 
 def _entry(content="First"):

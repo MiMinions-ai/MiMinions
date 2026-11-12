@@ -13,11 +13,11 @@ import logging
 import os
 from pathlib import Path
 
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 from miminions.core.workspace import Workspace
-from miminions.workspace_fs.bootstrap import init_workspace
-from miminions.memory import MemoryDistiller, create_llm_filter
-from miminions.session.store import JsonlSessionStore
+from miminions.core.workspace.bootstrap import init_workspace
+from miminions.core.agent.memory import MemoryDistiller, create_llm_filter
+from miminions.interface.session import JsonlSessionStore
 
 
 # Configure basic logging to hide HTTP trace spam but show errors

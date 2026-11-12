@@ -1,7 +1,7 @@
 """Unit tests for gateway.bus module."""
 
-from miminions.core.gateway.bus import MessageBus
-from miminions.core.gateway.events import InboundMessage, OutboundMessage
+from miminions.daemon.bus import MessageBus
+from miminions.daemon.events import InboundMessage, OutboundMessage
 
 
 def _make_inbound(content="hi", channel="test", sender="u1", chat="c1"):

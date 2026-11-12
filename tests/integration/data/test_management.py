@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from miminions.data.local import (
+from miminions.system.file import (
     CSVFileHandler,
     FileHandlerRegistry,
     FileMetadata,

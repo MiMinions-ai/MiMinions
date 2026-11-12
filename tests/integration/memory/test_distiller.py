@@ -7,8 +7,8 @@ from typing import ClassVar, Self
 
 import pytest
 
-from miminions.memory import DistillationResult, MemoryDistiller
-from miminions.utils.session import append_transcript
+from miminions.core.agent.memory import DistillationResult, MemoryDistiller
+from miminions.interface.session import append_transcript
 
 
 class _FakeSQLiteMemory:
@@ -246,7 +246,7 @@ def _over_budget_filter(**_kwargs):
 
 
 def test_distill_session_passes_compactor_to_memory_compaction(tmp_path, monkeypatch):
-    from miminions.memory.budget import MemoryBudgets
+    from miminions.core.context.budget import MemoryBudgets
 
     _FakeSQLiteMemory.created = []
     _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
@@ -271,7 +271,7 @@ def test_distill_session_passes_compactor_to_memory_compaction(tmp_path, monkeyp
 
 
 def test_distill_session_reports_memory_compaction_failure(tmp_path, monkeypatch):
-    from miminions.memory.budget import MemoryBudgets
+    from miminions.core.context.budget import MemoryBudgets
 
     class _BrokenSQLiteMemory:
         def __init__(self, _db_path: str):
@@ -292,7 +292,7 @@ def test_distill_session_reports_memory_compaction_failure(tmp_path, monkeypatch
 
 
 def test_distill_session_does_not_trim_history_when_over_budget(tmp_path, monkeypatch):
-    from miminions.memory.budget import MemoryBudgets
+    from miminions.core.context.budget import MemoryBudgets
 
     _patch_sqlite_memory(monkeypatch, _FakeSQLiteMemory)
     session_id = append_transcript(tmp_path)

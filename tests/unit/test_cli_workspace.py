@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from miminions.cli.workspace import _parse_json_or_shorthand, workspace_cli
+from miminions.interface.cli.management.workspace import _parse_json_or_shorthand, workspace_cli
 from miminions.core.workspace import Rule, RulePriority, Workspace, WorkspaceManager
 
 

@@ -2,8 +2,8 @@
 
 import asyncio
 from pathlib import Path
-from miminions.agent import create_minion, ExecutionStatus
-from miminions.memory.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion, ExecutionStatus
+from miminions.system.db.sqlite import SQLiteMemory
 
 
 async def main():

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from miminions.tools.default import (
+from miminions.core.tool.default import (
     CommandPermissionPolicy,
     PermissionDecision,
     cli_run_command,

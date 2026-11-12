@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent.agent import Minion, _is_retryable_error
+from miminions.core.agent.agent import Minion, _is_retryable_error
 
 
 def _http_error(status_code: int) -> ModelHTTPError:

@@ -1,0 +1,754 @@
+"""
+Agent management commands for MiMinions CLI.
+"""
+
+import click
+import asyncio
+import json
+import re
+from datetime import datetime, timezone
+from enum import Enum
+
+from ..persistence import load_json, save_json
+from ...config import load_config
+# TODO(auth): Re-enable require_auth for account-backed advanced features.
+from miminions.core.paths import get_config_dir
+from ..operations.dispatch import attachment_options, submit_task, validate_attachment
+
+
+def create_minion(*args, **kwargs):
+    """Load the model runtime only for operations that use it."""
+    from miminions.core.agent import create_minion as factory
+    return factory(*args, **kwargs)
+
+
+class AgentAction(str, Enum):
+    """Supported operations for a prepared CLI agent runtime."""
+
+    RUN = "run"
+    ASK = "ask"
+    TOOL_LIST = "tool-list"
+    TOOL_INFO = "tool-info"
+    TOOL_SEARCH = "tool-search"
+    TOOL_RUN = "tool-run"
+
+
+_ACTION_PARAM_TYPES = {
+    AgentAction.RUN: {"prompt": str},
+    AgentAction.ASK: {"prompt": str},
+    AgentAction.TOOL_LIST: {},
+    AgentAction.TOOL_INFO: {"tool_name": str},
+    AgentAction.TOOL_SEARCH: {"query": str},
+    AgentAction.TOOL_RUN: {"tool_name": str, "arguments": dict},
+}
+
+
+def _slugify(name):
+    """Turn a friendly name into a filesystem/id-safe slug.
+
+    Collapses any run of non-alphanumeric characters into a single underscore
+    so distinct-looking names don't silently diverge; falls back to "agent"
+    when a name has no usable characters.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return slug or "agent"
+
+
+def _unique_agent_id(name, agents):
+    """Derive a unique agent id from a name, suffixing on collision."""
+    base = _slugify(name)
+    agent_id = base
+    suffix = 2
+    while agent_id in agents:
+        agent_id = f"{base}_{suffix}"
+        suffix += 1
+    return agent_id
+
+
+def get_agents_file():
+    """Get the agents configuration file path."""
+    return get_config_dir() / "agents.json"
+
+
+def load_agents():
+    """Load agents from configuration."""
+    return load_json(get_agents_file())
+
+
+def save_agents(agents):
+    """Save agents to configuration."""
+    save_json(get_agents_file(), agents)
+
+
+def _build_cli_extension_agent(agent_data):
+    """Create a CLI extension Minion from persisted CLI agent settings."""
+    name = agent_data.get("name", "Unnamed Agent")
+    base_description = agent_data.get("description", "")
+    cli_description = (
+        "CLI extension of the core Minion runtime. "
+        "Inherit default runtime behavior first; CLI-specific behavior is additive."
+    )
+    description = f"{base_description}\n\n{cli_description}" if base_description else cli_description
+    runtime_agent = create_minion(name=name, description=description)
+    _register_default_cli_tools(runtime_agent)
+    return runtime_agent
+
+
+def _validate_agent_action(operation, params):
+    """Return a validated action or raise a user-facing Click error."""
+    try:
+        action = AgentAction(operation)
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(
+            f"Unsupported agent runtime operation: {operation}"
+        ) from exc
+
+    expected = _ACTION_PARAM_TYPES[action]
+    missing = expected.keys() - params.keys()
+    if missing:
+        names = ", ".join(sorted(missing))
+        raise click.ClickException(
+            f"Missing parameter(s) for agent action '{action.value}': {names}"
+        )
+
+    unexpected = params.keys() - expected.keys()
+    if unexpected:
+        names = ", ".join(sorted(unexpected))
+        raise click.ClickException(
+            f"Unexpected parameter(s) for agent action '{action.value}': {names}"
+        )
+
+    for name, expected_type in expected.items():
+        value = params[name]
+        if not isinstance(value, expected_type):
+            raise click.ClickException(
+                f"Invalid parameter '{name}' for agent action '{action.value}': "
+                f"expected {expected_type.__name__}"
+            )
+        if expected_type is str and not value.strip():
+            raise click.ClickException(
+                f"Invalid parameter '{name}' for agent action '{action.value}': "
+                "value cannot be empty"
+            )
+    return action
+
+
+async def _execute_agent_action(runtime_agent, operation, **params):
+    """Execute one supported CLI operation against a prepared agent runtime."""
+    action = _validate_agent_action(operation, params)
+    if action is AgentAction.RUN:
+        state = runtime_agent.get_state()
+        click.echo(
+            "Initialized core Minion runtime "
+            f"(tools={state.tool_count}, has_memory={state.has_memory}, "
+            f"servers={len(state.connected_servers)})"
+        )
+        return await runtime_agent.run(params["prompt"])
+    if action is AgentAction.ASK:
+        return await runtime_agent.run(params["prompt"])
+    if action is AgentAction.TOOL_LIST:
+        return [
+            (name, runtime_agent.get_tool_info(name))
+            for name in runtime_agent.list_tools()
+        ]
+    if action is AgentAction.TOOL_INFO:
+        return runtime_agent.get_tool_info(params["tool_name"])
+    if action is AgentAction.TOOL_SEARCH:
+        return runtime_agent.search_tools(params["query"])
+    if action is AgentAction.TOOL_RUN:
+        return await runtime_agent.execute_async(
+            params["tool_name"], arguments=params["arguments"]
+        )
+    raise click.ClickException(f"Unhandled agent action: {action.value}")
+
+
+async def _run_with_agent_runtime(agent_data, operation, **params):
+    """Build an agent, attach its configured MCP servers, and always clean up."""
+    from mcp import StdioServerParameters
+    runtime_agent = _build_cli_extension_agent(agent_data)
+    try:
+        for server_name, config in agent_data.get("mcp_servers", {}).items():
+            try:
+                server_params = StdioServerParameters(
+                    command=config["command"],
+                    args=list(config.get("args", [])),
+                )
+                await runtime_agent.connect_mcp_server(server_name, server_params)
+                await runtime_agent.load_tools_from_mcp_server(server_name)
+            except Exception as exc:
+                raise click.ClickException(
+                    f"Failed to load MCP server '{server_name}': {exc}"
+                ) from exc
+        return await _execute_agent_action(runtime_agent, operation, **params)
+    finally:
+        await runtime_agent.cleanup(rebuild=False)
+
+
+def _register_default_cli_tools(runtime_agent):
+    """Register a minimal default CLI toolset on top of the core runtime."""
+
+    def cli_echo(text: str) -> str:
+        return text
+
+    def cli_add(a: int, b: int) -> int:
+        return a + b
+
+    def cli_now_utc() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    runtime_agent.register_tool("cli_echo", "Echo input text", cli_echo)
+    runtime_agent.register_tool("cli_add", "Add two integers", cli_add)
+    runtime_agent.register_tool("cli_now_utc", "Get current UTC timestamp", cli_now_utc)
+
+
+def _resolve_agent_id(agent_id: str | None) -> str | None:
+    """Return agent_id, falling back to default_agent from config when None."""
+    if agent_id:
+        return agent_id
+    default = load_config().get("default_agent")
+    if not default:
+        raise click.ClickException(
+            "No agent id given and no default_agent configured. "
+            "Pass an agent id or run 'miminions agent add' first."
+        )
+    if not isinstance(default, str) or not default.strip():
+        raise click.ClickException(
+            "Configured default_agent is invalid. "
+            "Please set a valid agent id in the config."
+        )
+    return default
+
+
+def _get_agent_record_or_error(agent_id: str | None):
+    """Resolve and load one persisted CLI agent record with user-facing errors."""
+    agent_id = _resolve_agent_id(agent_id)
+    agents = load_agents()
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return None
+    return agents[agent_id]
+
+
+def _resolve_agent_ref_or_error(agent_ref: str, agents: dict) -> str | None:
+    """Resolve an agent by exact id, id prefix, or exact name."""
+    if agent_ref in agents:
+        return agent_ref
+
+    matches = []
+
+    for current_id in agents:
+        if str(current_id).startswith(agent_ref):
+            matches.append(current_id)
+
+    for current_id, data in agents.items():
+        if str(data.get("name", "")) == agent_ref and current_id not in matches:
+            matches.append(current_id)
+
+    if not matches:
+        click.echo(f"Agent '{agent_ref}' not found.", err=True)
+        return None
+
+    if len(matches) > 1:
+        click.echo(
+            f"Agent reference '{agent_ref}' is ambiguous: {', '.join(matches)}",
+            err=True,
+        )
+        return None
+
+    return matches[0]
+
+
+def _extract_first_two_ints(text):
+    """Extract first two integers from text for simple arithmetic routing."""
+    values = [int(v) for v in re.findall(r"-?\d+", text)]
+    if len(values) >= 2:
+        return values[0], values[1]
+    return None
+
+
+async def _execute_prompt_with_tool_fallback(runtime_agent, prompt):
+    """Run prompt via model, then fallback to deterministic tool routing if needed."""
+    lower = prompt.lower()
+
+    if "add" in lower or "sum" in lower or "plus" in lower:
+        pair = _extract_first_two_ints(prompt)
+        if pair:
+            tool_result = runtime_agent.execute("cli_add", arguments={"a": pair[0], "b": pair[1]})
+            if tool_result.error:
+                return f"Tool error: {tool_result.error}"
+            return f"Used tool cli_add -> {tool_result.result}"
+
+    if "time" in lower or "utc" in lower or "now" in lower:
+        tool_result = runtime_agent.execute("cli_now_utc")
+        if tool_result.error:
+            return f"Tool error: {tool_result.error}"
+        return f"Used tool cli_now_utc -> {tool_result.result}"
+
+    if lower.startswith("echo "):
+        payload = prompt[5:]
+        tool_result = runtime_agent.execute("cli_echo", arguments={"text": payload})
+        if tool_result.error:
+            return f"Tool error: {tool_result.error}"
+        return f"Used tool cli_echo -> {tool_result.result}"
+
+    output = await runtime_agent.run(prompt)
+
+    return output
+
+
+@click.group()
+def agent_cli():
+    """Agent management commands."""
+    pass
+
+
+@agent_cli.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local agent list does not require sign-in yet.
+def list_agents(as_json):
+    """List all agents."""
+    agents = load_agents()
+
+    if as_json:
+        payload = [
+            {
+                "id": agent_id,
+                "name": agent_data.get("name", agent_id),
+                "description": agent_data.get("description", "No description"),
+                "status": agent_data.get("status", "inactive"),
+                "type": agent_data.get("type"),
+                "goal": agent_data.get("goal"),
+            }
+            for agent_id, agent_data in agents.items()
+        ]
+        click.echo(json.dumps(payload, indent=2))
+        return
+    
+    if not agents:
+        click.echo("No agents configured.")
+        return
+    
+    click.echo("Agents:")
+    for agent_id, agent_data in agents.items():
+        status = agent_data.get("status", "inactive")
+        name = agent_data.get("name", agent_id)
+        description = agent_data.get("description", "No description")
+        click.echo(f"  {agent_id}: {name} ({status}) - {description}")
+
+
+@agent_cli.command("add")
+@click.option("--name", prompt="Agent name", help="Name of the agent")
+@click.option("--description", prompt="Description", help="Description of the agent")
+@click.option("--type", prompt="Agent type", help="Type of agent")
+# @require_auth  # TODO(auth): placeholder; local agent creation does not require sign-in yet.
+def add_agent(name, description, type):
+    """Add a new agent."""
+    agents = load_agents()
+
+    agent_id = _unique_agent_id(name, agents)
+
+    agents[agent_id] = {
+        "name": name,
+        "description": description,
+        "type": type,
+        "base_agent": "miminions.agent.Minion",
+        "mode": "cli_extension",
+        "status": "inactive",
+        "goal": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    save_agents(agents)
+    click.echo(f"Agent '{name}' added successfully with ID: {agent_id}")
+
+
+@agent_cli.command("update")
+@click.argument("agent_id")
+@click.option("--name", help="New name for the agent")
+@click.option("--description", help="New description for the agent")
+@click.option("--type", help="New type for the agent")
+# @require_auth  # TODO(auth): placeholder; local agent updates do not require sign-in yet.
+def update_agent(agent_id, name, description, type):
+    """Update an existing agent."""
+    agents = load_agents()
+    
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return
+    
+    agent = agents[agent_id]
+    
+    if name:
+        agent["name"] = name
+    if description:
+        agent["description"] = description
+    if type:
+        agent["type"] = type
+    
+    save_agents(agents)
+    click.echo(f"Agent '{agent_id}' updated successfully")
+
+
+@agent_cli.command("show")
+@click.argument("agent_ref")
+@click.option("--json", "as_json", is_flag=True, help="Output machine-readable JSON.")
+# @require_auth  # TODO(auth): placeholder; local agent inspection does not require sign-in yet.
+def show_agent(agent_ref, as_json):
+    """Show one agent by id, id prefix, or exact name."""
+    agents = load_agents()
+    if not agents:
+        click.echo("No agents configured.")
+        return
+
+    agent_id = _resolve_agent_ref_or_error(agent_ref, agents)
+    if not agent_id:
+        return
+
+    agent = agents[agent_id]
+    payload = {
+        "id": agent_id,
+        "name": agent.get("name", agent_id),
+        "description": agent.get("description", "No description"),
+        "type": agent.get("type", "unknown"),
+        "status": agent.get("status", "inactive"),
+        "goal": agent.get("goal"),
+        "base_agent": agent.get("base_agent", "miminions.agent.Minion"),
+        "mode": agent.get("mode", "cli_extension"),
+        "created_at": agent.get("created_at", ""),
+    }
+
+    if as_json:
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    click.echo(f"Agent: {agent.get('name', agent_id)}")
+    click.echo(f"ID: {agent_id}")
+    click.echo(f"Description: {agent.get('description', 'No description')}")
+    click.echo(f"Type: {agent.get('type', 'unknown')}")
+    click.echo(f"Status: {agent.get('status', 'inactive')}")
+    click.echo(f"Goal: {agent.get('goal')}")
+    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.agent.Minion')}")
+    click.echo(f"Mode: {agent.get('mode', 'cli_extension')}")
+    click.echo(f"Created: {agent.get('created_at', '')}")
+
+
+@agent_cli.command("remove")
+@click.argument("agent_id")
+@click.confirmation_option(prompt="Are you sure you want to remove this agent?")
+# @require_auth  # TODO(auth): placeholder; local agent removal does not require sign-in yet.
+def remove_agent(agent_id):
+    """Remove an agent."""
+    agents = load_agents()
+    
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return
+    
+    del agents[agent_id]
+    save_agents(agents)
+    click.echo(f"Agent '{agent_id}' removed successfully")
+
+
+@agent_cli.command("mcp-add")
+@click.argument("agent_id")
+@click.argument("server_name")
+@click.option("--command", required=True, help="MCP server executable.")
+@click.option("--arg", "args", multiple=True, help="MCP server argument; may be repeated.")
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
+def add_mcp_server(agent_id, server_name, command, args):
+    """Register a stdio MCP server for an agent without starting it."""
+    agents = load_agents()
+    if agent_id not in agents:
+        raise click.ClickException(f"Agent '{agent_id}' not found.")
+    command = command.strip()
+    if not command:
+        raise click.ClickException("MCP server command cannot be empty.")
+    servers = agents[agent_id].setdefault("mcp_servers", {})
+    if server_name in servers:
+        raise click.ClickException(
+            f"MCP server '{server_name}' already exists for agent '{agent_id}'."
+        )
+    servers[server_name] = {"command": command, "args": list(args)}
+    save_agents(agents)
+    click.echo(f"MCP server '{server_name}' added to agent '{agent_id}'.")
+
+
+@agent_cli.command("mcp-list")
+@click.argument("agent_id")
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
+def list_mcp_servers(agent_id):
+    """List MCP servers registered for an agent."""
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        return
+    servers = agent_data.get("mcp_servers", {})
+    if not servers:
+        click.echo(f"No MCP servers configured for agent '{agent_id}'.")
+        return
+    click.echo(f"MCP servers for '{agent_id}':")
+    for name, config in servers.items():
+        command = " ".join([config["command"], *config.get("args", [])])
+        click.echo(f"  {name}: {command}")
+
+
+@agent_cli.command("mcp-remove")
+@click.argument("agent_id")
+@click.argument("server_name")
+@click.confirmation_option(prompt="Are you sure you want to remove this MCP server?")
+# @require_auth  # TODO(auth): placeholder; local MCP server config does not require sign-in yet.
+def remove_mcp_server(agent_id, server_name):
+    """Remove an MCP server registration from an agent."""
+    agents = load_agents()
+    if agent_id not in agents:
+        raise click.ClickException(f"Agent '{agent_id}' not found.")
+    servers = agents[agent_id].get("mcp_servers", {})
+    if server_name not in servers:
+        raise click.ClickException(
+            f"MCP server '{server_name}' not found for agent '{agent_id}'."
+        )
+    del servers[server_name]
+    save_agents(agents)
+    click.echo(f"MCP server '{server_name}' removed from agent '{agent_id}'.")
+
+
+@agent_cli.command("set-goal")
+@click.argument("agent_id", required=False, default=None)
+@click.option("--goal", prompt="Goal", help="Goal for the agent")
+# @require_auth  # TODO(auth): placeholder; local agent goals do not require sign-in yet.
+def set_goal(agent_id, goal):
+    """Set a goal for an agent (defaults to the configured default agent)."""
+    agent_id = _resolve_agent_id(agent_id)
+    agents = load_agents()
+
+    if agent_id not in agents:
+        click.echo(f"Agent '{agent_id}' not found.", err=True)
+        return
+
+    agents[agent_id]["goal"] = goal
+    save_agents(agents)
+    click.echo(f"Goal set for agent '{agent_id}': {goal}")
+
+
+@agent_cli.command("run")
+@click.argument("agent_id", required=False, default=None)
+@attachment_options
+#@click.option("--async", "async_run", is_flag=True, help="Run agent asynchronously")
+# @require_auth  # TODO(auth): placeholder; local agent runs do not require sign-in yet.
+#def run_agent(agent_id, async_run):
+def run_agent(agent_id, attach=False, detach=False):
+    """Run an agent (defaults to the configured default agent)."""
+    validate_attachment(attach, detach)
+    agent_id = _resolve_agent_id(agent_id)
+    agents = load_agents()
+
+    if agent_id not in agents:
+        raise click.ClickException(f"Agent '{agent_id}' not found.")
+
+    agent = agents[agent_id]
+    
+    if not agent.get("goal"):
+        raise click.ClickException(f"Agent '{agent_id}' has no goal set. Use 'set-goal' command first.")
+
+    submit_task("agent_run", {"agent_id": agent_id, "agent": agent, "prompt": agent["goal"]},
+                attach=attach, detach=detach, home=get_config_dir())
+
+
+@agent_cli.command("ask")
+@click.argument("agent_id", required=False, default=None)
+@click.option("--prompt", required=True, help="Prompt to send to the agent.")
+@attachment_options
+# @require_auth  # TODO(auth): placeholder; local agent prompts do not require sign-in yet.
+def ask_agent(agent_id, prompt, attach=False, detach=False):
+    """Ask an agent for a one-off response (defaults to the configured default agent)."""
+    validate_attachment(attach, detach)
+    if not prompt.strip():
+        raise click.UsageError("Prompt cannot be empty.")
+    agent_id = _resolve_agent_id(agent_id)
+    agent_data = _get_agent_record_or_error(agent_id)
+    if not agent_data:
+        raise click.exceptions.Exit(1)
+
+    submit_task("agent_ask", {"agent_id": agent_id, "agent": agent_data, "prompt": prompt},
+                attach=attach, detach=detach, home=get_config_dir())
+
+
+# TODO(cli-agent): Add commands for memory backends and memory tools:
+# Memory commands implemented below (agent memory-attach/store/recall/update/delete, ingest-document).
+# - memory-store / memory-recall / memory-update / memory-delete
+# - ingest-document
+
+# --- Memory backends (per-agent attach; contract: cli/README.md) ---
+
+def _agent_record_for_memory(agent_id):
+    agent_id = _resolve_agent_id(agent_id)
+    record = _get_agent_record_or_error(agent_id)
+    if not record:
+        raise click.exceptions.Exit(1)
+    return agent_id, record
+
+
+def _memory_config(record):
+    backend = record.get("memory_backend")
+    if not backend:
+        raise click.ClickException("No memory backend attached. Run 'agent memory-attach' first.")
+    return backend
+
+
+def _sqlite_memory(record):
+    try:
+        from miminions.system.db.sqlite import SQLiteMemory
+    except ImportError as exc:
+        raise click.ClickException("SQLite memory requires the [sqlite] extra: pip install miminions[sqlite]") from exc
+    from miminions.core.paths import get_global_memory_db_path
+    return SQLiteMemory(record.get("memory_db") or get_global_memory_db_path())
+
+
+def _md_root(record):
+    root = record.get("memory_workspace")
+    if not root:
+        raise click.ClickException("md backend has no workspace. Re-attach with --workspace.")
+    return root
+
+
+def _parse_meta(pairs):
+    metadata = {}
+    for pair in pairs:
+        if "=" not in pair:
+            raise click.UsageError(f"--meta expects KEY=VALUE, got '{pair}'.")
+        key, value = pair.split("=", 1)
+        metadata[key.strip()] = value.strip()
+    return metadata
+
+
+@agent_cli.command("memory-attach")
+@click.argument("agent_id", required=False, default=None)
+@click.option("--backend", type=click.Choice(["sqlite", "md"]), required=True, help="Memory backend to attach.")
+@click.option("--db", "db_path", default=None, help="SQLite database path (sqlite backend).")
+@click.option("--workspace", "workspace_root", default=None, help="Workspace root (md backend).")
+def memory_attach(agent_id, backend, db_path, workspace_root):
+    """Attach a memory backend to an agent."""
+    agent_id, record = _agent_record_for_memory(agent_id)
+    agents = load_agents()
+    agents[agent_id]["memory_backend"] = backend
+    if backend == "sqlite":
+        if db_path:
+            agents[agent_id]["memory_db"] = db_path
+    else:
+        if not workspace_root:
+            raise click.UsageError("md backend requires --workspace (its MEMORY.md root).")
+        agents[agent_id]["memory_workspace"] = workspace_root
+    save_agents(agents)
+    click.echo(f"Memory backend '{backend}' attached to agent '{agent_id}'.")
+
+
+@agent_cli.command("memory-store")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("text")
+@click.option("--section", default=None, help="Section title (md backend; acts as the memory ID).")
+@click.option("--meta", "meta", multiple=True, help="Metadata KEY=VALUE (sqlite backend, repeatable).")
+def memory_store(agent_id, text, section, meta):
+    """Store a memory for an agent."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            memory_id = memory.create(text, _parse_meta(meta) or None)
+        click.echo(f"Stored memory {memory_id}")
+    else:
+        if not section:
+            raise click.UsageError("md backend requires --section (it is the memory ID).")
+        from miminions.core.agent.memory import upsert_memory_section
+        upsert_memory_section(_md_root(record), section, [text])
+        click.echo(f"Stored memory section '{section}'")
+
+
+@agent_cli.command("memory-recall")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("query")
+@click.option("--top-k", default=5, show_default=True, help="Maximum results (sqlite backend).")
+def memory_recall(agent_id, query, top_k):
+    """Recall memories matching a query."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            results = memory.read(query, top_k=top_k)
+        if not results:
+            click.echo("No memories found.")
+        for item in results:
+            click.echo(f"{item.get('id')}: {item.get('text')}")
+    else:
+        from miminions.core.agent.memory import search_memory_sections
+        sections = search_memory_sections(_md_root(record), query)
+        if not sections:
+            click.echo("No memories found.")
+        for item in sections:
+            click.echo(f"{item['heading']}: {item['body']}")
+
+
+@agent_cli.command("memory-update")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("memory_id")
+@click.argument("text")
+def memory_update(agent_id, memory_id, text):
+    """Replace a stored memory (sqlite ID, or md section title)."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            updated = memory.update(memory_id, text)
+        if not updated:
+            raise click.ClickException(f"Memory '{memory_id}' not found.")
+        click.echo(f"Updated memory {memory_id}")
+    else:
+        from miminions.core.agent.memory import upsert_memory_section
+        upsert_memory_section(_md_root(record), memory_id, [text])
+        click.echo(f"Updated memory section '{memory_id}'")
+
+
+@agent_cli.command("memory-delete")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("memory_id")
+def memory_delete(agent_id, memory_id):
+    """Delete a stored memory (sqlite ID, or md section title)."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            deleted = memory.delete(memory_id)
+    else:
+        from miminions.core.agent.memory import delete_memory_section
+        deleted = delete_memory_section(_md_root(record), memory_id)
+    if not deleted:
+        raise click.ClickException(f"Memory '{memory_id}' not found.")
+    click.echo(f"Deleted memory {memory_id}")
+
+
+@agent_cli.command("ingest-document")
+@click.argument("agent_id", required=False, default=None)
+@click.argument("path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--section", default=None, help="Section title (md backend; defaults to the file name).")
+def ingest_document(agent_id, path, section):
+    """Chunk a .txt/.md/.pdf file into an agent's memory."""
+    _agent_id, record = _agent_record_for_memory(agent_id)
+    from pathlib import Path
+    file_path = Path(path)
+    if file_path.suffix.lower() == ".pdf":
+        try:
+            import pdfplumber
+        except ImportError as exc:
+            raise click.ClickException("PDF ingestion requires pdfplumber.") from exc
+        with pdfplumber.open(file_path) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+    else:
+        text = file_path.read_text(encoding="utf-8")
+    if not text.strip():
+        raise click.ClickException(f"No text extracted from '{file_path.name}'.")
+    from miminions.utils.chunker import TextChunker
+    chunks = TextChunker().chunk_text(text, metadata={"source": file_path.name})
+    if _memory_config(record) == "sqlite":
+        with _sqlite_memory(record) as memory:
+            for chunk in chunks:
+                memory.create(chunk["text"], chunk.get("metadata"))
+        click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}'")
+    else:
+        from miminions.core.agent.memory import upsert_memory_section
+        title = section or file_path.stem
+        upsert_memory_section(_md_root(record), title, [c["text"] for c in chunks])
+        click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}' into section '{title}'")

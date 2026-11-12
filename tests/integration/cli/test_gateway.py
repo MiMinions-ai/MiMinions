@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from miminions.cli.main import cli
-from miminions.core.gateway import SessionManager
+from miminions.interface.cli.main import cli
+from miminions.daemon import SessionManager
 
 
 class DummyManager:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from miminions.context.strategies import KeepAll, LLMSummary, TruncateLines
-from miminions.memory.budget import count_tokens
+from miminions.core.context.strategies import KeepAll, LLMSummary, TruncateLines
+from miminions.core.context.budget import count_tokens
 
 
 def _lines(count: int, width: int = 40) -> str:

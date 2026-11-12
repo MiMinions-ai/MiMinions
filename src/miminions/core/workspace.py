@@ -534,7 +534,7 @@ def ensure_workspace(
         raise ValueError("This workspace has no root_path yet. Run workspace init-files first.")
 
     if init_files:
-        from miminions.workspace_fs import init_workspace
+        from miminions.core.workspace import init_workspace
 
         init_workspace(root)
         manager.save_workspaces(workspaces)

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from miminions.cli.workspace import workspace_cli
+from miminions.interface.cli.management.workspace import workspace_cli
 
 
 def test_workspace_add_with_init_files_creates_root_path_and_files(tmp_path, monkeypatch):

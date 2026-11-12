@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from miminions.tools.mcp_adapter import MCPTool, MCPToolAdapter
+from miminions.core.tool.mcp_adapter import MCPTool, MCPToolAdapter
 
 # -----------------------------
 # Fixtures (mock MCP-like objects)

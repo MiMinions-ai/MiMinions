@@ -2,9 +2,9 @@
 import asyncio
 from dataclasses import dataclass
 
-from miminions.core.gateway.bus import MessageBus
-from miminions.core.gateway.channel import BaseChannel, ChannelManager
-from miminions.core.gateway.events import OutboundMessage
+from miminions.daemon.bus import MessageBus
+from miminions.daemon.channel import BaseChannel, ChannelManager
+from miminions.daemon.events import OutboundMessage
 
 # ── Helpers ──────────────────────────────────────────────────────────
 

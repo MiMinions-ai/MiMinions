@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from miminions.data.local import LocalDataManager
+from miminions.system.file import LocalDataManager
 
 
 class TestDataManagementE2E(unittest.TestCase):

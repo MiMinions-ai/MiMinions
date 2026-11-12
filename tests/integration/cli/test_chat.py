@@ -6,12 +6,12 @@ import pytest
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext, get_handler
-from miminions.execution.store import ExecutionStore
-from miminions.session.store import JsonlSessionStore
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext, get_handler
+from miminions.system.execution.store import ExecutionStore
+from miminions.interface.session import JsonlSessionStore
 
 
 @pytest.fixture
@@ -150,7 +150,7 @@ async def test_distillation_failure_is_recorded_as_a_task_failure(conversation, 
     store, workspace, _, _ = conversation
     monkeypatch.setattr("miminions.cli.chat._run_session_distillation", Mock(side_effect=RuntimeError("distillation failed")))
     task_id = store.enqueue(ExecutionRequest("session_distill", {"workspace": workspace.id, "session_id": "session"}))
-    from miminions.execution.worker import _run_task
+    from miminions.system.execution.worker import _run_task
     store.claim()
     await _run_task(store, task_id)
     assert any(e.type == "outcome" and "distillation failed" in e.data.get("error", "") for e in store.events(task_id))

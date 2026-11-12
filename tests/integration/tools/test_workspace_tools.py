@@ -13,12 +13,12 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext
-from miminions.execution.store import ExecutionStore
-from miminions.tools.workspace import WorkspaceTools
-from miminions.workspace_fs.discovery import scan_project
+from miminions.core.agent import create_minion
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext
+from miminions.system.execution.store import ExecutionStore
+from miminions.core.tool.workspace import WorkspaceTools
+from miminions.core.workspace.discovery import scan_project
 
 
 def runtime(tmp_path, source, approval=None, relative="main.py"):

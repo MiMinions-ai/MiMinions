@@ -6,9 +6,9 @@ import pytest
 
 pytest.importorskip("sqlite_vec")
 
-from miminions.agent import create_minion
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.tools.schemas import ExecutionStatus
+from miminions.core.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.tool.schemas import ExecutionStatus
 
 
 async def test_ingest_text(tmp_path):

@@ -1,4 +1,4 @@
-from miminions.execution.trace import (
+from miminions.system.execution.trace import (
     AgentRunRecord,
     ToolCallRecord,
     WorkflowRun,

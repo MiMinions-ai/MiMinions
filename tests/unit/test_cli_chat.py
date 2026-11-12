@@ -6,7 +6,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from miminions.cli.chat import chat_command
+from miminions.interface.cli.operations.chat import chat_command
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 
 

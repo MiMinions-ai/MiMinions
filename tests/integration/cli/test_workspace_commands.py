@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from miminions.cli.workspace import workspace_cli
+from miminions.interface.cli.management.workspace import workspace_cli
 from miminions.core.workspace import Workspace
 
 

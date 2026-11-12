@@ -12,9 +12,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from miminions.execution import ExecutionRequest, ExecutionService
-from miminions.execution.models import TERMINAL
-from miminions.execution.processes import alive
+from miminions.system.execution import ExecutionRequest, ExecutionService
+from miminions.system.execution.models import TERMINAL
+from miminions.system.execution.processes import alive
 
 
 def wait_for(predicate, timeout=30):
@@ -77,7 +77,7 @@ def test_concurrent_first_submissions_start_one_instance(service, tmp_path):
 
 @pytest.mark.parametrize("runtime", [None, {"executable": "another-python", "prefix": "another-environment"}])
 def test_idle_environment_mismatch_restarts_before_project_dependencies_are_imported(service, tmp_path, runtime):
-    from miminions.execution.service import worker_runtime
+    from miminions.system.execution.service import worker_runtime
 
     service.ensure_instance()
     old_pid = service.status()["pid"]
@@ -91,7 +91,7 @@ def test_idle_environment_mismatch_restarts_before_project_dependencies_are_impo
 
 
 def test_project_dotenv_rotation_and_isolation_with_warm_supervisor(service, tmp_path, monkeypatch):
-    from miminions.execution.environment import PROVIDER_KEYS
+    from miminions.system.execution.environment import PROVIDER_KEYS
 
     for name in PROVIDER_KEYS:
         monkeypatch.delenv(name, raising=False)
@@ -122,7 +122,7 @@ def test_project_dotenv_rotation_and_isolation_with_warm_supervisor(service, tmp
 
 
 def test_explicit_project_credentials_override_launch_directory_dotenv(service, tmp_path, monkeypatch):
-    from miminions.execution.environment import PROVIDER_KEYS
+    from miminions.system.execution.environment import PROVIDER_KEYS
     from miminions.core.workspace import Workspace, WorkspaceManager
 
     for name in PROVIDER_KEYS:
@@ -224,8 +224,8 @@ def test_supervisor_crash_fails_active_task_and_preserves_queue(service, tmp_pat
 
 
 def test_warm_cli_detach_acknowledges_within_one_second(service, tmp_path):
-    from miminions.core.bootstrap import ensure_default_setup
-    from miminions.execution.service import worker_environment
+    from miminions.interface.bootstrap import ensure_default_setup
+    from miminions.system.execution.service import worker_environment
     ensure_default_setup(service.store.home)
     service.ensure_instance()
     env = {**worker_environment(), "MIMINIONS_HOME": str(service.store.home)}
@@ -247,9 +247,9 @@ def test_warm_cli_detach_acknowledges_within_one_second(service, tmp_path):
 
 
 def test_broken_cli_output_pipe_detaches_with_130_and_task_finishes(service, tmp_path):
-    from miminions.core.bootstrap import ensure_default_setup
+    from miminions.interface.bootstrap import ensure_default_setup
     from miminions.core.persistence import save_json
-    from miminions.execution.service import worker_environment
+    from miminions.system.execution.service import worker_environment
     request = tool_request(tmp_path, "import time\ndef probe():\n    print('early', flush=True)\n    time.sleep(1)\n    print('late', flush=True)\n    return 'done'\n")
     ensure_default_setup(service.store.home)
     save_json(service.store.home / "sessions.json", {"probe": {**request.params["session"], "status": "active"}})

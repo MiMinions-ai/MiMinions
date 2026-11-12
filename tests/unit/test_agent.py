@@ -14,11 +14,11 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import FunctionModel
 
-from miminions.agent import (
+from miminions.core.agent import (
     create_minion,
 )
-from miminions.tools.mcp_adapter import MCPTool
-from miminions.tools.schemas import (
+from miminions.core.tool.mcp_adapter import MCPTool
+from miminions.core.tool.schemas import (
     ExecutionStatus,
     ParameterType,
     ToolDefinition,

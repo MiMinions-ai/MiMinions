@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from click.testing import CliRunner
 
-from miminions.cli.main import cli
+from miminions.interface.cli.main import cli
 from miminions.core.workspace import Workspace, WorkspaceManager
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 class FakeContextBuilder:

@@ -1,6 +1,6 @@
 import json
 
-from miminions.cli.task import load_tasks, save_tasks, task_cli
+from miminions.interface.cli.management.task import load_tasks, save_tasks, task_cli
 
 
 def test_task_storage_round_trip(tmp_path, monkeypatch):

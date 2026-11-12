@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from miminions.context.context_builder import ContextBuilder
-from miminions.memory.md_store import read_memory, upsert_memory_section
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.context.context_builder import ContextBuilder
+from miminions.system.file.md_store import read_memory, upsert_memory_section
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 @pytest.fixture(autouse=True)

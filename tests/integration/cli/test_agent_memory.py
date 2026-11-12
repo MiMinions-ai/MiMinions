@@ -4,7 +4,7 @@ import re
 
 from click.testing import CliRunner
 
-from miminions.cli.agent import agent_cli, load_agents, save_agents
+from miminions.interface.cli.management.agent import agent_cli, load_agents, save_agents
 
 AGENT_ID = "mem_agent"
 

@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.agent import agent_cli
-from miminions.cli.auth import auth_cli
-from miminions.cli.main import cli
+from miminions.interface.cli.management.agent import agent_cli
+from miminions.interface.cli.auth import auth_cli
+from miminions.interface.cli.main import cli
 
 
 def test_basic_cli_help_and_auth_status(tmp_path):

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import click
 import pytest
 
-from miminions.cli.gateway import (
+from miminions.interface.cli.daemon import (
     GatewayPaths,
     _build_cron_service,
     _confirm_or_force,
@@ -22,7 +22,7 @@ from miminions.cli.gateway import (
     _validate_name_and_message,
     gateway_cli,
 )
-from miminions.core.gateway import (
+from miminions.daemon import (
     CronJob,
     CronJobState,
     CronPayload,

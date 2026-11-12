@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from mcp import StdioServerParameters
 
-from miminions.tools.mcp_adapter import MCPToolAdapter
+from miminions.core.tool.mcp_adapter import MCPToolAdapter
 
 
 @pytest.mark.asyncio

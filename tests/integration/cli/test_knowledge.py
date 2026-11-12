@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.knowledge import knowledge_cli
+from miminions.interface.cli.management.knowledge import knowledge_cli
 
 
 def _auth_enabled():

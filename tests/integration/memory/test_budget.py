@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from miminions.memory.budget import (
+from miminions.core.context.budget import (
     MemoryBudgets,
     check_pressure,
     enforce_history_budget,
@@ -14,8 +14,8 @@ from miminions.memory.budget import (
     load_state,
     record_state,
 )
-from miminions.memory.md_store import append_history, write_memory
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.system.file.md_store import append_history, write_memory
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 def test_check_pressure_reports_under_budget_for_fresh_workspace(tmp_path: Path):

@@ -1,7 +1,7 @@
 """Unit tests for gateway.orchestrator module."""
 import pytest
 
-from miminions.core.gateway.orchestrator import (
+from miminions.daemon.orchestrator import (
     GatewayOrchestrator,
     Lifecycle,
     Phase,

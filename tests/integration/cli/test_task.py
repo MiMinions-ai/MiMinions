@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.task import task_cli
+from miminions.interface.cli.management.task import task_cli
 
 
 def _write(path: Path, payload: dict) -> None:

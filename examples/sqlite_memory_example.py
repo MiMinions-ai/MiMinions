@@ -1,7 +1,7 @@
 """SQLite Memory Example - CRUD and Search operations."""
 
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 
 def main():

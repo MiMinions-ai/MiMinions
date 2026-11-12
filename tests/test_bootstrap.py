@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from miminions.core.bootstrap import ensure_default_setup
+from miminions.interface.bootstrap import ensure_default_setup
 
 
 def _workspace_root(config_dir, config):

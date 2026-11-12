@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from miminions.context import ContextBuilder
-from miminions.memory.md_store import write_memory
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.context import ContextBuilder
+from miminions.system.file.md_store import write_memory
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 class DummyRule:

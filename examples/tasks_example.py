@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from unittest.mock import MagicMock
 
-from miminions.task import TaskRuntime, AgentTask, TaskStatus
+from miminions.core.task import TaskRuntime, AgentTask, TaskStatus
 
 # Configure logging
 logging.basicConfig(

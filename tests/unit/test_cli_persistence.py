@@ -2,7 +2,7 @@
 
 import pytest
 
-from miminions.cli.persistence import load_json, save_json
+from miminions.core.persistence import load_json, save_json
 
 
 def test_load_missing_file_returns_empty(tmp_path):

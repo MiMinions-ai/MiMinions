@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from miminions.cli.main import cli
-from miminions.execution.trace import (
+from miminions.interface.cli.main import cli
+from miminions.system.execution.trace import (
     AgentRunRecord,
     ToolCallRecord,
     WorkflowRun,

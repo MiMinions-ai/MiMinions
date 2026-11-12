@@ -2,7 +2,7 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
-from miminions.task.model import (
+from miminions.core.task.model import (
     AgentTask,
     Task,
     TaskInput,

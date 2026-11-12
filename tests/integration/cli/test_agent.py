@@ -15,7 +15,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from miminions.cli.agent import (
+from miminions.interface.cli.management.agent import (
     AgentAction,
     _execute_agent_action,
     _run_with_agent_runtime,
@@ -24,7 +24,7 @@ from miminions.cli.agent import (
     load_agents,
     save_agents,
 )
-from miminions.cli.tool import tool_cli
+from miminions.interface.cli.management.tool import tool_cli
 
 
 class TestAgentFunctions:

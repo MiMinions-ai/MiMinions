@@ -1,6 +1,6 @@
 import pytest
 
-from miminions.workspace_fs import (
+from miminions.core.workspace import (
     BOOTSTRAP_PROMPT_FILES,
     WorkspaceLayout,
     init_workspace,

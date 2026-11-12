@@ -1,7 +1,7 @@
 """Tool CLI tests persist only under pytest-managed ``tmp_path`` directories."""
 
-from miminions.cli.agent import save_agents
-from miminions.cli.tool import tool_cli
+from miminions.interface.cli.management.agent import save_agents
+from miminions.interface.cli.management.tool import tool_cli
 
 NONEXISTENT_AGENT_ID = "agent-does-not-exist"
 NONEXISTENT_TOOL_NAME = "tool-does-not-exist"

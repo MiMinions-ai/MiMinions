@@ -2,7 +2,7 @@
 
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 
 def _echo(text: str) -> str:

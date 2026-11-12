@@ -29,7 +29,7 @@ def _fresh_cli():
     for name in list(sys.modules):
         if name == "miminions.cli.main" or name.startswith("miminions.cli.main."):
             sys.modules.pop(name, None)
-    from miminions.cli import main as main_mod
+    from miminions.interface.cli import main as main_mod
 
     return main_mod.cli, main_mod
 

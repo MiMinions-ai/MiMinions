@@ -2,7 +2,7 @@
 
 import pytest
 
-from miminions.agent.provider import ModelFactory
+from miminions.core.agent.provider import ModelFactory
 
 
 def test_openrouter_fails_fast_without_api_key(monkeypatch):

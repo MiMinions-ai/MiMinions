@@ -1,4 +1,4 @@
-from miminions.cli.agent import (
+from miminions.interface.cli.management.agent import (
     agent_cli,
     load_agents,
     save_agents,

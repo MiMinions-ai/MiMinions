@@ -8,16 +8,16 @@ from click.testing import CliRunner
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.messages import SystemPromptPart
 
-from miminions.agent import create_minion
-from miminions.cli.chat import chat_command
-from miminions.cli.prompt import ask_prompt
-from miminions.cli.project import select_project
-from miminions.context.context_builder import ContextBuilder
+from miminions.core.agent import create_minion
+from miminions.interface.cli.operations.chat import chat_command
+from miminions.interface.cli.operations.prompt import ask_prompt
+from miminions.interface.cli.management.project import select_project
+from miminions.core.context.context_builder import ContextBuilder
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext, get_handler
-from miminions.execution.models import conversation_key
-from miminions.execution.store import ExecutionStore
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext, get_handler
+from miminions.system.execution.models import conversation_key
+from miminions.system.execution.store import ExecutionStore
 
 
 @pytest.fixture
