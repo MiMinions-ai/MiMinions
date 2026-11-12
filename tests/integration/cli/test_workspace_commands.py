@@ -10,7 +10,7 @@ from miminions.core.workspace import Workspace
 
 
 def _auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_workspace_list_and_show_json_output():
@@ -20,7 +20,7 @@ def test_workspace_list_and_show_json_output():
     manager = MagicMock()
     manager.load_workspaces.return_value = {ws.id: ws}
 
-    with _auth_enabled(), patch("miminions.cli.workspace.get_workspace_manager", return_value=manager):
+    with _auth_enabled(), patch("miminions.interface.cli.management.workspace.get_workspace_manager", return_value=manager):
         list_result = runner.invoke(workspace_cli, ["list", "--json"])
         show_result = runner.invoke(workspace_cli, ["show", ws.id[:8], "--json"])
 

@@ -18,7 +18,7 @@ def _entry(content="First"):
 
 
 def test_knowledge_storage_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.knowledge.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.knowledge.get_config_dir", lambda: tmp_path)
 
     loaded_knowledge = load_knowledge()
     assert loaded_knowledge == {}, f"expect load_knowledge returns empty mapping when knowledge store is absent as {{}}, got {loaded_knowledge}"
@@ -32,9 +32,9 @@ def test_knowledge_storage_round_trip(tmp_path, monkeypatch):
 def test_knowledge_add_list_show_update_and_versions(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.knowledge.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.knowledge.uuid.uuid4", lambda: "abcd1234-ffff")
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.knowledge.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.knowledge.uuid.uuid4", lambda: "abcd1234-ffff")
 
     added = isolated_cli_runner.invoke(
         knowledge_cli,
@@ -89,8 +89,8 @@ def test_knowledge_add_list_show_update_and_versions(
 def test_knowledge_revert_customize_remove_and_missing_paths(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.knowledge.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.knowledge.get_config_dir", lambda: tmp_path)
     save_knowledge(
         {
             "k1": {

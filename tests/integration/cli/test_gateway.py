@@ -23,7 +23,7 @@ def _workspace(tmp_path: Path, workspace_id: str = "ws1", name: str = "Test WS")
 def _patch_gateway_manager(monkeypatch, workspace):
     manager = DummyManager({workspace.id: workspace})
     monkeypatch.setattr(
-        "miminions.cli.gateway.WorkspaceManager",
+        "miminions.interface.cli.daemon.WorkspaceManager",
         lambda config_dir: manager,
     )
     return manager

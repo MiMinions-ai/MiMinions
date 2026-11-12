@@ -12,7 +12,7 @@ never owns memory distillation (that is `memory`) or prompt assembly
 ## Public surface
 
 ```python
-from miminions.session import JsonlSessionStore, create_session_id
+from miminions.interface.session import JsonlSessionStore, create_session_id
 ```
 
 ## State

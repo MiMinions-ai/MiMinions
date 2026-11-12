@@ -14,7 +14,7 @@ The Agent is designed to:
 - Execute tools via LLM reasoning using the async run() API
 
 Example:
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
 
     # Create agent (uses OpenRouter by default; set OPENROUTER_API_KEY in env)
     agent = create_minion(name="MyAgent", description="My helpful agent")

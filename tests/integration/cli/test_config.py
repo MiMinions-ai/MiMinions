@@ -25,7 +25,7 @@ def test_config_get_returns_existing_default_workspace(temp_config_dir):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.config.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["config", "get", "default_workspace"])
 
@@ -44,7 +44,7 @@ def test_config_set_default_workspace_resolves_name_to_id(temp_config_dir):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.config.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["config", "set", "default_workspace", "project-alpha"])
 
@@ -60,7 +60,7 @@ def test_config_set_default_agent_requires_existing_agent(temp_config_dir):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.config.get_config_dir", return_value=temp_config_dir),
     ):
         ok = runner.invoke(cli, ["config", "set", "default_agent", "researcher"])
         fail = runner.invoke(cli, ["config", "set", "default_agent", "missing"])
@@ -78,7 +78,7 @@ def test_config_rejects_unknown_key(temp_config_dir):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.config.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.config.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["config", "set", "public_access", "true"])
 

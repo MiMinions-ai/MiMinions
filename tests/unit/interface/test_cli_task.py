@@ -4,7 +4,7 @@ from miminions.interface.cli.management.task import load_tasks, save_tasks, task
 
 
 def test_task_storage_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.task.get_config_dir", lambda: tmp_path)
 
     loaded_tasks = load_tasks()
     assert loaded_tasks == {}, f"expect load_tasks returns an empty mapping when no task file exists as {{}}, got {loaded_tasks}"
@@ -15,9 +15,9 @@ def test_task_storage_round_trip(tmp_path, monkeypatch):
 
 
 def test_task_crud_commands_persist_json(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.task.uuid.uuid4", lambda: "12345678-aaaa")
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.task.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.task.uuid.uuid4", lambda: "12345678-aaaa")
     (tmp_path / "agents.json").write_text(
         json.dumps({"agent1": {"name": "Agent One"}}),
         encoding="utf-8",
@@ -72,8 +72,8 @@ def test_task_crud_commands_persist_json(isolated_cli_runner, tmp_path, monkeypa
 
 
 def test_task_duplicate_and_missing_paths(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.task.get_config_dir", lambda: tmp_path)
     save_tasks(
         {
             "task1": {
@@ -87,7 +87,7 @@ def test_task_duplicate_and_missing_paths(isolated_cli_runner, tmp_path, monkeyp
             }
         }
     )
-    monkeypatch.setattr("miminions.cli.task.uuid.uuid4", lambda: "abcdef12-bbbb")
+    monkeypatch.setattr("miminions.interface.cli.management.task.uuid.uuid4", lambda: "abcdef12-bbbb")
 
     duplicated = isolated_cli_runner.invoke(task_cli, ["duplicate", "task1"])
     assert duplicated.exit_code == 0, f"expect cli exit code 0, got {duplicated.exit_code} with output: {duplicated.output}"
@@ -111,7 +111,7 @@ def test_task_duplicate_and_missing_paths(isolated_cli_runner, tmp_path, monkeyp
 
 
 def test_task_add_rejects_invalid_priority(isolated_cli_runner, monkeypatch):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
 
     result = isolated_cli_runner.invoke(
         task_cli,

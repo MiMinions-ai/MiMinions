@@ -28,8 +28,8 @@ def test_require_auth_placeholder_does_not_block():
 
 
 def test_config_defaults_and_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.auth.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
 
     target_config = {}
     current_config = load_config()
@@ -51,8 +51,8 @@ def test_config_defaults_and_round_trip(tmp_path, monkeypatch):
 
 
 def test_auth_config_command_shows_and_validates_settings(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.auth.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
 
     invalid = isolated_cli_runner.invoke(auth_cli, ["config", "--auth-timeout", "4"])
     assert invalid.exit_code == 0, f"expect cli exit code 0, got {invalid.exit_code} with output: {invalid.output}"
@@ -82,13 +82,13 @@ def test_auth_config_command_shows_and_validates_settings(isolated_cli_runner, t
 def test_signin_uses_configured_timeout_and_persists_auth(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.auth.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
     (tmp_path / "config.json").write_text(
         json.dumps({"public_access": False, "auth_timeout": 8}),
         encoding="utf-8",
     )
-    monkeypatch.setattr("miminions.cli.auth.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("miminions.interface.cli.auth.time.sleep", lambda _seconds: None)
 
     result = isolated_cli_runner.invoke(
         auth_cli,
@@ -108,13 +108,13 @@ def test_signin_uses_configured_timeout_and_persists_auth(
 def test_signin_timeout_and_unexpected_error_are_reported(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.auth.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
 
     def raise_timeout(func, timeout_seconds):
         raise AuthTimeoutError("slow")
 
-    monkeypatch.setattr("miminions.cli.auth.with_timeout", raise_timeout)
+    monkeypatch.setattr("miminions.interface.cli.auth.with_timeout", raise_timeout)
     timed_out = isolated_cli_runner.invoke(
         auth_cli,
         ["signin", "--username", "ada", "--password", "secret", "--timeout", "6"],
@@ -126,7 +126,7 @@ def test_signin_timeout_and_unexpected_error_are_reported(
     def raise_error(func, timeout_seconds):
         raise RuntimeError("server down")
 
-    monkeypatch.setattr("miminions.cli.auth.with_timeout", raise_error)
+    monkeypatch.setattr("miminions.interface.cli.auth.with_timeout", raise_error)
     failed = isolated_cli_runner.invoke(
         auth_cli,
         ["signin", "--username", "ada", "--password", "secret"],
@@ -137,8 +137,8 @@ def test_signin_timeout_and_unexpected_error_are_reported(
 
 
 def test_status_includes_auth_and_public_access(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.auth.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.auth.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
     (tmp_path / "auth.json").write_text(
         json.dumps({"username": "ada", "authenticated": True}),
         encoding="utf-8",
@@ -155,7 +155,7 @@ def test_status_includes_auth_and_public_access(isolated_cli_runner, tmp_path, m
 
 
 def test_with_timeout_windows_path_runs_function(monkeypatch):
-    monkeypatch.setattr("miminions.cli.auth.os.name", "nt")
+    monkeypatch.setattr("miminions.interface.cli.auth.os.name", "nt")
 
     result = with_timeout(lambda: "done", 1)
     target_value = "done"

@@ -597,7 +597,7 @@ miminions tool session stop
 | `history show <index>` | `--session-id`, `--json` | Print the full JSON of a recorded `WorkflowRun`. |
 
 !!! note "Tool modules"
-    `tool add` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.tools` (see [Tools](tools.md)) and point `tool add` at the file.
+    `tool add` imports any module-level objects that are `GenericTool` instances. Define your tools with `@tool(...)` or `create_tool(...)` from `miminions.core.tool` (see [Tools](tools.md)) and point `tool add` at the file.
 
 ---
 

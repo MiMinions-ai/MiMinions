@@ -407,7 +407,7 @@ def test_rejected_command_reports_zero_execution_time():
     """Time waiting for a rejected confirmation is not execution time."""
     agent = create_minion("TestAgent")
 
-    with patch("miminions.tools.default.click.confirm", return_value=False):
+    with patch("miminions.core.tool.default.click.confirm", return_value=False):
         result = agent.execute("cli_run_command", command="python --version")
 
     assert result.status == ExecutionStatus.ERROR, f"expect ExecutionStatus.ERROR, got {result.status}"

@@ -13,7 +13,7 @@ def _assert_exit_code(result, expected: int, behavior: str) -> None:
 
 def test_agent_storage_helpers(tmp_path, monkeypatch):
     """Agent persistence helpers should round-trip JSON."""
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
 
     initial_agents = load_agents()
     target_value = {}
@@ -26,7 +26,7 @@ def test_agent_storage_helpers(tmp_path, monkeypatch):
 
 def test_agent_add_list_update_goal_remove(isolated_cli_runner, tmp_path, monkeypatch):
     """Agent CRUD commands should persist the expected CLI agent record changes."""
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
 
     added = isolated_cli_runner.invoke(
         agent_cli,
@@ -59,7 +59,7 @@ def test_agent_add_list_update_goal_remove(isolated_cli_runner, tmp_path, monkey
 
 
 def test_agent_update_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     result = isolated_cli_runner.invoke(
@@ -72,7 +72,7 @@ def test_agent_update_reports_nonexistent_agent(isolated_cli_runner, tmp_path, m
 
 
 def test_agent_remove_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     result = isolated_cli_runner.invoke(
@@ -85,7 +85,7 @@ def test_agent_remove_reports_nonexistent_agent(isolated_cli_runner, tmp_path, m
 
 
 def test_agent_set_goal_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     result = isolated_cli_runner.invoke(
@@ -98,7 +98,7 @@ def test_agent_set_goal_reports_nonexistent_agent(isolated_cli_runner, tmp_path,
 
 
 def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     result = isolated_cli_runner.invoke(
@@ -113,9 +113,9 @@ def test_agent_ask_reports_nonexistent_agent(isolated_cli_runner, tmp_path, monk
 def test_agent_commands_and_runtime_prompt_execution(isolated_cli_runner, tmp_path, monkeypatch):
     """Ask and run dispatch the original prompt/goal without invoking a model locally."""
     from unittest.mock import Mock
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     dispatch = Mock()
-    monkeypatch.setattr("miminions.cli.agent.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.submit_task", dispatch)
     agent = {"name": "Agent", "description": "desc", "goal": "Please add 10 and 5"}
     save_agents({"agent1": agent})
     asked = isolated_cli_runner.invoke(agent_cli, ["ask", "agent1", "--prompt", "echo hello there", "--detach"])
@@ -133,7 +133,7 @@ def test_agent_commands_and_runtime_prompt_execution(isolated_cli_runner, tmp_pa
 def test_agent_run_reports_missing_goal(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc", "goal": None}})
 
     no_goal = isolated_cli_runner.invoke(agent_cli, ["run", "agent1"])

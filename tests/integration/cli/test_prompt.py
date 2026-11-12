@@ -24,15 +24,15 @@ def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | 
         fake.run = AsyncMock(return_value="assistant reply")
 
     monkeypatch.setattr(
-        "miminions.cli.prompt.get_config_dir",
+        "miminions.interface.cli.operations.prompt.get_config_dir",
         lambda: tmp_path / "config",
     )
     monkeypatch.setattr(
-        "miminions.core.workspace.DEFAULT_WORKSPACES_ROOT",
+        "miminions.core.workspace.registry.DEFAULT_WORKSPACES_ROOT",
         tmp_path / "workspaces",
     )
     monkeypatch.setattr(
-        "miminions.agent.create_minion",
+        "miminions.core.agent.create_minion",
         lambda name, description: fake,
     )
 

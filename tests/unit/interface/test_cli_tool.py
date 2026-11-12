@@ -19,7 +19,7 @@ def _tear_down_saved_agents() -> None:
 
 
 def test_tool_group_help_and_nonexistent_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     help_result = isolated_cli_runner.invoke(tool_cli, ["--help"])
@@ -34,8 +34,8 @@ def test_tool_group_help_and_nonexistent_agent(isolated_cli_runner, tmp_path, mo
 
 
 def test_tool_commands_use_configured_default_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
-    monkeypatch.setattr("miminions.cli.config.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.config.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
     (tmp_path / "config.json").write_text(
         '{"default_agent": "agent1"}', encoding="utf-8"
@@ -57,7 +57,7 @@ def test_tool_commands_use_configured_default_agent(isolated_cli_runner, tmp_pat
 
 
 def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     tool_list = isolated_cli_runner.invoke(tool_cli, ["list", "agent1"])
@@ -94,7 +94,7 @@ def test_tool_commands_with_explicit_agent(isolated_cli_runner, tmp_path, monkey
 
 
 def test_tool_execute_rejects_invalid_arguments(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.cli.agent.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.agent.get_config_dir", lambda: tmp_path)
     save_agents({"agent1": {"name": "Agent", "description": "desc"}})
 
     invalid_json = isolated_cli_runner.invoke(

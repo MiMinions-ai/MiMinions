@@ -69,7 +69,7 @@ export MIMINIONS_HOME="/path/to/miminions-home"
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 async def main():
     agent = create_minion("MyAgent")
@@ -103,8 +103,8 @@ agent = create_minion("MyAgent", provider="test")          # offline, no API key
 ### An agent with vector memory
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 with SQLiteMemory("agent.db") as memory:
   agent = create_minion("Assistant", memory=memory)
@@ -121,7 +121,7 @@ chunks and stores `.pdf`/`.txt`/`.md` files. Requires the `[sqlite]` extra.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("MyAgent")
 await agent.connect_mcp_server(

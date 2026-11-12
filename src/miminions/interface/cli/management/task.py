@@ -6,7 +6,7 @@ import click
 import uuid
 from datetime import datetime, timezone
 from miminions.core.paths import get_config_dir
-from ..persistence import load_json, save_json
+from miminions.core.persistence import load_json, save_json
 from miminions.system.execution import ExecutionService
 from miminions.system.execution.models import TERMINAL
 from ..operations.dispatch import follow_task

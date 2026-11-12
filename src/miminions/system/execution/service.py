@@ -27,7 +27,7 @@ def worker_command(home: Path, task_id: str | None = None) -> list[str]:
     if getattr(sys, "frozen", False):
         command = [sys.executable, "_execution-worker"]
     else:
-        command = [sys.executable, "-u", "-m", "miminions.execution.worker"]
+        command = [sys.executable, "-u", "-m", "miminions.system.execution.worker"]
     command += ["--home", str(home)]
     if task_id is not None:
         command += ["--task", task_id]

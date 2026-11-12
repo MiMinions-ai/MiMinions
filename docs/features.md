@@ -27,8 +27,8 @@ Attach a memory backend when you create the agent — `store_knowledge()` writes
 straight into it.
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 with SQLiteMemory("agent.db") as memory:
     agent = create_minion("Assistant", memory=memory)
@@ -71,7 +71,7 @@ tool calls, token usage, and latency.
 - :material-check: Verbose CLI chat with tool, usage, and latency output
 
 ```python
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 
 def show_tool(name, args):
@@ -120,8 +120,8 @@ With memory attached, the built-in `ingest_document` tool chunks the file and
 stores every chunk in vector memory.
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 with SQLiteMemory("docs.db") as memory:
     agent = create_minion("DocAgent", memory=memory)
@@ -166,7 +166,7 @@ Connect to a server, then load its tools into the agent's registry.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("MathAgent")
 
@@ -211,8 +211,8 @@ sessions. Perfect for agents that need to maintain state over time.
 Point `SQLiteMemory` at a file path and the knowledge survives process restarts.
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 with SQLiteMemory("agent_memory.db") as memory:
     agent = create_minion("PersistentAgent", memory=memory)

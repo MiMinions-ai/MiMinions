@@ -11,7 +11,7 @@ from typing import Any
 
 from miminions.core.workspace.layout import WorkspaceLayout
 
-from ...memory.md_store import atomic_write_text
+from miminions.system.file.md_store import atomic_write_text
 
 logger = logging.getLogger(__name__)
 

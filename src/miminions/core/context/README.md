@@ -20,7 +20,7 @@ the agent's system prompt from workspace state and stored memory.
 and runs on every `run()` call. To build a prompt directly:
 
 ```python
-from miminions.context import ContextBuilder
+from miminions.core.context import ContextBuilder
 
 system_prompt = ContextBuilder(global_top_k=5).build(workspace, root_path)
 ```

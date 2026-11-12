@@ -92,7 +92,7 @@ def test_execution_remove_protects_active_tasks(tmp_path):
 def test_acknowledgement_precedes_release_and_detach_does_not_follow(tmp_path, monkeypatch):
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
     release = TaskHandle.release
     calls = []
     echo = click.echo
@@ -107,7 +107,7 @@ def test_acknowledgement_precedes_release_and_detach_does_not_follow(tmp_path, m
         assert service.store.claim() is None
         release(handle)
 
-    monkeypatch.setattr("miminions.cli.dispatch.click.echo", record_echo)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.click.echo", record_echo)
     monkeypatch.setattr(TaskHandle, "release", record_release)
     handle = submit_task("agent_ask", {"prompt": "hello"}, detach=True, home=tmp_path)
     assert calls == ["ack", "release"]
@@ -152,7 +152,7 @@ def test_interruption_only_detaches(tmp_path, monkeypatch, interruption):
 
 def test_source_and_frozen_launch_arguments(tmp_path, monkeypatch):
     from miminions.system.execution.service import worker_command
-    assert "miminions.execution.worker" in worker_command(tmp_path)
+    assert "miminions.system.execution.worker" in worker_command(tmp_path)
     monkeypatch.setattr("sys.frozen", True, raising=False)
     assert worker_command(tmp_path, "exec_test")[1:] == ["_execution-worker", "--home", str(tmp_path), "--task", "exec_test"]
 
@@ -173,7 +173,7 @@ def test_serializable_contracts_round_trip(tmp_path):
 
 def test_task_views_and_execution_record_protection(tmp_path, monkeypatch):
     from miminions.interface.cli.management.task import task_cli, save_tasks
-    monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.management.task.get_config_dir", lambda: tmp_path)
     save_tasks({"todo": {"title": "Work", "description": "Description", "status": "pending"}})
     service = ExecutionService(tmp_path)
     task_id = service.store.enqueue(ExecutionRequest("agent_tool"))
@@ -210,7 +210,7 @@ def test_every_execution_entry_point_uses_shared_dispatch(tmp_path, monkeypatch,
     save_json(tmp_path / "sessions.json", {"session": {"status": "active", "tool_sources": []}})
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
     result = CliRunner().invoke(cli, [*args, "--detach"])
     assert result.exit_code == 0, result.output
     assert result.stdout == ""
@@ -228,7 +228,7 @@ def test_noninteractive_approval_guidance_never_answers(tmp_path, monkeypatch):
     service.store.claim()
     request_id = service.store.request_approval(task_id, "Execute sensitive command?")
     monkeypatch.setattr(service, "follow", lambda *args: iter(service.store.events(task_id)))
-    monkeypatch.setattr("miminions.cli.dispatch.click.confirm", Mock(side_effect=AssertionError("Must not prompt")))
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.click.confirm", Mock(side_effect=AssertionError("Must not prompt")))
 
     @click.command()
     def command():
@@ -258,7 +258,7 @@ def test_startup_retries_when_previous_instance_is_releasing_lock(tmp_path, monk
         service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now())
         return Mock(poll=lambda: None)
 
-    monkeypatch.setattr("miminions.execution.service.subprocess.Popen", launch)
+    monkeypatch.setattr("miminions.system.execution.service.subprocess.Popen", launch)
     service.ensure_instance()
     assert len(attempts) == 2
 
@@ -269,7 +269,7 @@ def test_package_import_defers_model_stack_and_preserves_tool_shortcuts():
     from miminions.system.execution.service import worker_environment
     result = subprocess.run([sys.executable, "-c",
         "import miminions, sys; assert 'pydantic_ai' not in sys.modules; "
-        "assert 'miminions.agent' not in sys.modules; "
+        "assert 'miminions.core.agent' not in sys.modules; "
         "from miminions import GenericTool, tool, create_tool; assert callable(create_tool)"],
         env=worker_environment(), capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
@@ -297,8 +297,8 @@ def test_new_workspace_name_and_id_share_queue_identity_before_context_setup(tmp
     from miminions.core.workspace import WorkspaceManager
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
-    monkeypatch.setattr("miminions.cli.prompt.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.prompt.get_config_dir", lambda: tmp_path)
     runner = CliRunner()
     first = runner.invoke(prompt_cli, ["ask", "hello", "--workspace", "New Workspace", "--session", "shared", "--detach"])
     assert first.exit_code == 0, first.output

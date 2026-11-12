@@ -63,7 +63,7 @@ def write_memory(root_path: str | Path, content: str) -> Path:
 def append_history(root_path: str | Path, line: str) -> Path:
     """Append a single history entry to HISTORY.md.
 
-    No size limit is applied here; use `miminions.memory.budget.enforce_history_budget`
+    No size limit is applied here; use `miminions.core.context.budget.enforce_history_budget`
     to trim the oldest lines to a token budget.
     """
     if line is None:

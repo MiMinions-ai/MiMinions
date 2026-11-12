@@ -1,12 +1,12 @@
 # MiMinions Data
 
-`miminions.data` provides local-first data management.
+`miminions.system` provides local-first data management.
 
 The implementation lives in the [`local/`](local/README.md) subpackage and is
 re-exported here:
 
 ```python
-from miminions.data import LocalDataManager
+from miminions.system import LocalDataManager
 ```
 
 `LocalDataManager` is a content-addressable (SHA-256) file store with automatic

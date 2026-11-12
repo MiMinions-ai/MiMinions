@@ -43,8 +43,8 @@ When the session ends (e.g., typing `exit`), `MemoryDistiller` sends the `.jsonl
 - Global insights → inserted (deduped) into `global_memory.db` (Tier 3)
 
 ```python
-from miminions.memory import MemoryDistiller, create_llm_filter
-from miminions.agent.provider import ModelFactory
+from miminions.core.agent.memory import MemoryDistiller, create_llm_filter
+from miminions.core.agent.provider import ModelFactory
 
 # Build an extraction filter backed by any pydantic_ai model
 llm_filter = create_llm_filter(ModelFactory.create("openrouter"))
@@ -75,7 +75,7 @@ print(result.dropped_reasons)     # human-readable notes on anything skipped
 The two markdown tiers are powered by small, dependency-free helpers in `md_store`. They operate on a workspace root and create `memory/MEMORY.md` and `memory/HISTORY.md` from default templates on first use.
 
 ```python
-from miminions.memory import (
+from miminions.core.agent.memory import (
     append_history,
     read_memory,
     write_memory,
@@ -103,21 +103,21 @@ write_memory(root_path, content)   # replace MEMORY.md wholesale
 For direct vector search, `SQLiteMemory` implements the abstract `BaseMemory` CRUD interface plus several search strategies, backed by [`sqlite-vec`](https://github.com/asg017/sqlite-vec). Embeddings are generated locally with [`fastembed`](https://github.com/qdrant/fastembed) (ONNX runtime — no PyTorch or CUDA required), so you store and query plain text.
 
 !!! warning "Import path and extra"
-    `SQLiteMemory` is **not** re-exported from `miminions.memory`. Import it from the submodule, and install the `sqlite` extra:
+    `SQLiteMemory` is **not** re-exported from `miminions.core.agent.memory`. Import it from the submodule, and install the `sqlite` extra:
 
     ```bash
     pip install miminions[sqlite]
     ```
 
     ```python
-    from miminions.memory.sqlite import SQLiteMemory   # ✅
-    # from miminions.memory import SQLiteMemory         # ✗ not exported
+    from miminions.system.db.sqlite import SQLiteMemory   # ✅
+    # from miminions.core.agent.memory import SQLiteMemory         # ✗ not exported
     ```
 
 ### Quick Start
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
+from miminions.system.db.sqlite import SQLiteMemory
 
 # Persistent on-disk store (creates parent dirs as needed)
 memory = SQLiteMemory("memory.db")
@@ -227,15 +227,15 @@ from miminions.core.paths import get_global_memory_db_path
 path = get_global_memory_db_path()   # creates the config dir if needed
 ```
 
-The function's canonical home is `miminions.core.paths`; it is still re-exported from `miminions.memory.sqlite` for backwards compatibility.
+The function's canonical home is `miminions.core.paths`; it is still re-exported from `miminions.system.db.sqlite` for backwards compatibility.
 
 ## Attaching memory to an agent
 
 A `SQLiteMemory` instance can be attached to a [`Minion`](agent.md) so the agent gets memory CRUD and document-ingestion tools automatically, plus `store_knowledge` / `recall_knowledge` helpers:
 
 ```python
-from miminions.agent import create_minion
-from miminions.memory.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
 
 agent = create_minion("researcher", memory=SQLiteMemory(":memory:"))
 agent.store_knowledge("The release ships on Friday", metadata={"topic": "release"})

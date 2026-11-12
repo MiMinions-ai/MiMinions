@@ -12,7 +12,7 @@ and process supervision; never owns agent reasoning or task modelling.
 ## Public surface
 
 ```python
-from miminions.execution import (
+from miminions.system.execution import (
     ExecutionService, ExecutionRequest, ExecutionTask, TaskEvent, TaskHandle,
 )
 ```
@@ -36,7 +36,7 @@ source of truth for execution state; in-memory handles are views.
 ## Lifecycle
 
 `ExecutionService` enqueues → supervisor/worker
-(`python -m miminions.execution.worker --home <home>`) claims and runs →
+(`python -m miminions.system.execution.worker --home <home>`) claims and runs →
 handlers emit `phase`/approval events via `TaskContext` → terminal status
 is final. Cancellation is cooperative (`cancel_requested`).
 

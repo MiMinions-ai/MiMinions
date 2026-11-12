@@ -1,6 +1,6 @@
 # MiMinions CLI
 
-The `miminions.cli` package is the Click-based command-line interface. The entry
+The `miminions.interface.cli` package is the Click-based command-line interface. The entry
 point is `cli/main.py` (exposed as the `miminions` console command and via
 `python -m miminions`). State persists locally under `~/.miminions/`, and a
 default workspace + agent are bootstrapped on first run.

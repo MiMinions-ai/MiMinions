@@ -21,7 +21,7 @@ from typing import Any, Callable
 from pydantic import ConfigDict, Field, create_model
 
 from miminions.core.tool import ToolSchema, create_tool
-from miminions.workspace_fs.discovery import FunctionMetadata, ProjectContext, scan_project, source_bytes
+from miminions.core.workspace.discovery import FunctionMetadata, ProjectContext, scan_project, source_bytes
 
 _execution_lock = threading.Lock()
 

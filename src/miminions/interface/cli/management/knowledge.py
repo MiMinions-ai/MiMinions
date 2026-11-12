@@ -6,7 +6,7 @@ import click
 import json
 import uuid
 from datetime import datetime, timezone
-from ..persistence import load_json, save_json
+from miminions.core.persistence import load_json, save_json
 from miminions.core.paths import get_config_dir
 # TODO(auth): Re-enable require_auth when knowledge operations become account-backed.
 

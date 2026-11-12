@@ -33,7 +33,7 @@ def test_first_run_creates_defaults(temp_config_dir):
     assert (root / "data").is_dir(), f"expect truthy value, got {(root / 'data').is_dir()}"
 
     agents = json.loads((temp_config_dir / "agents.json").read_text())
-    assert agents["default"]["base_agent"] == "miminions.agent.Minion", f"expect 'miminions.agent.Minion', got {agents['default']['base_agent']}"
+    assert agents["default"]["base_agent"] == "miminions.core.agent.Minion", f"expect 'miminions.core.agent.Minion', got {agents['default']['base_agent']}"
 
     workspaces = json.loads((temp_config_dir / "workspaces.json").read_text())
     assert config["default_workspace"] in workspaces, f"expect contains config['default_workspace'], got {workspaces}"

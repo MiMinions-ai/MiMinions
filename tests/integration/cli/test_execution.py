@@ -11,7 +11,7 @@ from miminions.system.execution.trace import AgentRunRecord, WorkflowRun, Workfl
 
 
 def _auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_execution_interaction_list_json_output():

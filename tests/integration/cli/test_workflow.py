@@ -18,14 +18,14 @@ def _read(path: Path) -> dict:
 
 
 def _patch_auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_workflow_add_rejects_unknown_agents(temp_config_dir):
     runner = CliRunner()
     _write(temp_config_dir / "agents.json", {"a1": {"name": "Agent One"}})
 
-    with _patch_auth_enabled(), patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.workflow.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(
             workflow_cli,
             [
@@ -61,7 +61,7 @@ def test_workflow_update_rejects_unknown_agents(temp_config_dir):
         },
     )
 
-    with _patch_auth_enabled(), patch("miminions.cli.workflow.get_config_dir", return_value=temp_config_dir):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.workflow.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(workflow_cli, ["update", "wf1", "--agents", "missing"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"

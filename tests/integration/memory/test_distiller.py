@@ -34,7 +34,7 @@ class _FakeSQLiteMemory:
 def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
     monkeypatch.setitem(
         sys.modules,
-        "miminions.memory.sqlite",
+        "miminions.system.db.sqlite",
         SimpleNamespace(SQLiteMemory=sqlite_memory_cls),
     )
 

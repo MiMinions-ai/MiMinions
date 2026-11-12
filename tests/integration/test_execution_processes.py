@@ -39,7 +39,7 @@ def service(tmp_path):
 
 def tool_request(tmp_path, body, *, key=None, name="probe"):
     module = tmp_path / (name + ".py")
-    module.write_text("from miminions.tools import create_tool\n" + body +
+    module.write_text("from miminions.core.tool import create_tool\n" + body +
                       f"\nregistered = create_tool({name!r}, 'Process probe', probe)\n", encoding="utf-8")
     return ExecutionRequest("session_tool", {
         "session_id": name, "session": {"tool_sources": [{"type": "module", "path": str(module)}]},
@@ -272,7 +272,7 @@ def test_broken_cli_output_pipe_detaches_with_130_and_task_finishes(service, tmp
 def test_nested_command_helper_uses_task_approval_broker(service, tmp_path):
     args = [sys.executable, "-u", "-c", "print('nested')"]
     command = subprocess.list2cmdline(args) if os.name == "nt" else shlex.join(args)
-    body = ("from miminions.tools.default import cli_run_command\n"
+    body = ("from miminions.core.tool.default import cli_run_command\n"
             f"def probe():\n    return cli_run_command({command!r})\n")
     handle = service.submit(tool_request(tmp_path, body))
     wait_for(lambda: handle.get().status == "waiting_for_input")

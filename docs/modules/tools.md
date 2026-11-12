@@ -1,6 +1,6 @@
 # Tools
 
-The `miminions.tools` module turns ordinary Python functions into agent-callable
+The `miminions.core.tool` module turns ordinary Python functions into agent-callable
 tools. Annotate a function with the `@tool` decorator (or wrap it with
 `create_tool`) and you get a `GenericTool` with an auto-derived JSON schema,
 synchronous and asynchronous execution, and a `to_dict()` representation ready
@@ -17,7 +17,7 @@ tools off any Model Context Protocol server.
 ## Quick Start
 
 ```python
-from miminions.tools import tool
+from miminions.core.tool import tool
 
 @tool(name="calculator", description="Perform basic arithmetic")
 def calculate(operation: str, a: int, b: int) -> int:
@@ -46,7 +46,7 @@ You can build a `GenericTool` two ways — both produce the same object.
 
 === "`@tool` decorator"
     ```python
-    from miminions.tools import tool
+    from miminions.core.tool import tool
 
     @tool(name="greet", description="Greet a user by name")
     def greet(name: str) -> str:
@@ -57,7 +57,7 @@ You can build a `GenericTool` two ways — both produce the same object.
 
 === "`create_tool` factory"
     ```python
-    from miminions.tools import create_tool
+    from miminions.core.tool import create_tool
 
     def greet(name: str) -> str:
         return f"Hello, {name}!"
@@ -124,7 +124,7 @@ registration paths.
 
 === "Plain function"
     ```python
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
 
     def calculate(operation: str, a: int, b: int) -> int:
         if operation == "add":
@@ -137,8 +137,8 @@ registration paths.
 
 === "`GenericTool`"
     ```python
-    from miminions.agent import create_minion
-    from miminions.tools import create_tool
+    from miminions.core.agent import create_minion
+    from miminions.core.tool import create_tool
 
     calc = create_tool("calculator", "Perform arithmetic", calculate)
 
@@ -170,12 +170,12 @@ agent.list_tools()  # ['calculator']
 ## MCP integration
 
 MCP (Model Context Protocol) servers expose tools that a Minion can connect to,
-load, and call. The adapter lives in `miminions.tools.mcp_adapter`. In practice
+load, and call. The adapter lives in `miminions.core.tool.mcp_adapter`. In practice
 you drive it through the agent: connect to a server, then load its tools.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("my_agent")
 
@@ -200,7 +200,7 @@ Under the hood, `MCPToolAdapter` fetches each MCP tool and wraps it as an
 advanced cases:
 
 ```python
-from miminions.tools.mcp_adapter import MCPToolAdapter
+from miminions.core.tool.mcp_adapter import MCPToolAdapter
 ```
 
 !!! warning "MCP tools are async-only"
@@ -213,18 +213,18 @@ from miminions.tools.mcp_adapter import MCPToolAdapter
 ## `ToolSchema`
 
 `GenericTool.schema` returns the public `ToolSchema` **dataclass** from
-`miminions.tools`:
+`miminions.core.tool`:
 
 ```python
-from miminions.tools import ToolSchema  # dataclass
+from miminions.core.tool import ToolSchema  # dataclass
 
 # fields: name, description, parameters (dict), required (list[str])
 ```
 
 !!! note "Two different `ToolSchema` types"
-    The public `ToolSchema` exported from `miminions.tools` is a lightweight
+    The public `ToolSchema` exported from `miminions.core.tool` is a lightweight
     **dataclass**. A separate, internal **pydantic** `ToolSchema` lives in
-    `miminions.tools.schemas` and backs the agent's `ToolDefinition`
+    `miminions.core.tool.schemas` and backs the agent's `ToolDefinition`
     machinery. When you work with the public tools API (this page), you mean
     the dataclass. The pydantic one is an implementation detail of the agent's
     tool registry — you generally won't import it directly.
@@ -233,12 +233,12 @@ from miminions.tools import ToolSchema  # dataclass
 
 | Symbol | Import | Description |
 |--------|--------|-------------|
-| `tool(name=None, description=None)` | `from miminions.tools import tool` | Decorator wrapping a function as a `GenericTool`. Name/description default to the function's `__name__`/`__doc__`. |
-| `create_tool(name, description, func)` | `from miminions.tools import create_tool` | Factory returning a `GenericTool`. |
-| `GenericTool` | `from miminions.tools import GenericTool` | Tool wrapper: `.run(**kwargs)`, async `.arun(**kwargs)`, `.schema`, `.to_dict()`. |
-| `ToolSchema` | `from miminions.tools import ToolSchema` | Public schema **dataclass**: `name`, `description`, `parameters`, `required`. |
-| `MCPToolAdapter` | `from miminions.tools.mcp_adapter import MCPToolAdapter` | Connects to MCP servers and converts their tools to `GenericTool`s. |
-| `MCPTool` | `from miminions.tools.mcp_adapter import MCPTool` | `GenericTool` for an MCP tool — async-only (`run()` raises; use `arun()`). |
+| `tool(name=None, description=None)` | `from miminions.core.tool import tool` | Decorator wrapping a function as a `GenericTool`. Name/description default to the function's `__name__`/`__doc__`. |
+| `create_tool(name, description, func)` | `from miminions.core.tool import create_tool` | Factory returning a `GenericTool`. |
+| `GenericTool` | `from miminions.core.tool import GenericTool` | Tool wrapper: `.run(**kwargs)`, async `.arun(**kwargs)`, `.schema`, `.to_dict()`. |
+| `ToolSchema` | `from miminions.core.tool import ToolSchema` | Public schema **dataclass**: `name`, `description`, `parameters`, `required`. |
+| `MCPToolAdapter` | `from miminions.core.tool.mcp_adapter import MCPToolAdapter` | Connects to MCP servers and converts their tools to `GenericTool`s. |
+| `MCPTool` | `from miminions.core.tool.mcp_adapter import MCPTool` | `GenericTool` for an MCP tool — async-only (`run()` raises; use `arun()`). |
 
 See [Agent](agent.md) for registering and running tools, and
 [Workspaces](workspaces.md) for how an agent's tool boundary fits into its

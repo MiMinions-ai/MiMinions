@@ -28,7 +28,7 @@ def test_export_writes_agents_tasks_knowledge(temp_config_dir, tmp_path):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.transfer.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.cli.transfer.transfer.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["export", "--output", str(out)])
 
@@ -63,7 +63,7 @@ def test_import_merge_adds_records(temp_config_dir, tmp_path):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.transfer.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.cli.transfer.transfer.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["import", "--input", str(backup), "--mode", "merge"])
 
@@ -99,7 +99,7 @@ def test_import_replace_overwrites_records(temp_config_dir, tmp_path):
 
     with (
         patch("miminions.core.paths.get_config_dir", return_value=temp_config_dir),
-        patch("miminions.cli.transfer.get_config_dir", return_value=temp_config_dir),
+        patch("miminions.interface.cli.transfer.transfer.get_config_dir", return_value=temp_config_dir),
     ):
         result = runner.invoke(cli, ["import", "--input", str(backup), "--mode", "replace"])
 

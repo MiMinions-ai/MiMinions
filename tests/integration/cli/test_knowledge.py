@@ -9,7 +9,7 @@ from miminions.interface.cli.management.knowledge import knowledge_cli
 
 
 def _auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_knowledge_list_and_show_json_output():
@@ -34,7 +34,7 @@ def test_knowledge_list_and_show_json_output():
         }
     }
 
-    with _auth_enabled(), patch("miminions.cli.knowledge.load_knowledge", return_value=knowledge):
+    with _auth_enabled(), patch("miminions.interface.cli.management.knowledge.load_knowledge", return_value=knowledge):
         list_result = runner.invoke(knowledge_cli, ["list", "--json"])
         show_result = runner.invoke(knowledge_cli, ["show", "kn01", "--json"])
 

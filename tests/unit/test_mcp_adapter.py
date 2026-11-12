@@ -210,8 +210,8 @@ async def test_connection_contexts_open_and_close_in_their_owner_task():
     )
 
     with (
-        patch('miminions.tools.mcp_adapter.stdio_client', return_value=stdio_context),
-        patch('miminions.tools.mcp_adapter.ClientSession', return_value=session),
+        patch('miminions.core.tool.mcp_adapter.stdio_client', return_value=stdio_context),
+        patch('miminions.core.tool.mcp_adapter.ClientSession', return_value=session),
     ):
         await adapter.connect_to_server("serverA", MagicMock())
         await adapter.close_all_connections()

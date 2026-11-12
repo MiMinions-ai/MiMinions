@@ -29,8 +29,8 @@ def project_cli(tmp_path, monkeypatch):
     monkeypatch.chdir(project)
     monkeypatch.setenv("MIMINIONS_HOME", str(home))
     dispatch = Mock()
-    monkeypatch.setattr("miminions.cli.dispatch.submit_task", dispatch)
-    monkeypatch.setattr("miminions.cli.prompt.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.operations.prompt.submit_task", dispatch)
     return home, project, dispatch
 
 
@@ -92,7 +92,7 @@ def test_explicit_workspace_and_opt_out_preserve_existing_workflow(project_cli, 
     workspace.root_path = str(home / "existing")
     manager.save_workspaces({workspace.id: workspace})
     ensure_workspace(manager, workspace.id, init_files=True)
-    monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {"default_workspace": workspace.id})
+    monkeypatch.setattr("miminions.interface.cli.operations.chat.load_config", lambda: {"default_workspace": workspace.id})
     for args in (["--workspace", workspace.id], ["--no-discovery"]):
         result = CliRunner().invoke(chat_command, args, input="hello\n/quit\n")
         assert result.exit_code == 0, result.output
@@ -129,7 +129,7 @@ async def test_handler_builds_project_tools_context_and_persists_checkpoint(proj
         agent = create_minion(**kwargs, model=TestModel(call_tools=["workspace_search_tools"]))
         agents.append(agent)
         return agent
-    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
     store = ExecutionStore(home)
     key = conversation_key(workspace_id, "project-session")
     task_id = store.enqueue(ExecutionRequest("prompt", {"workspace": workspace_id, "session_id": "project-session",

@@ -1,5 +1,5 @@
 """
-Docstring for src.miminions.task.view
+Docstring for src.miminions.core.task.view
 In this module, it will generate high-level views like current task runtime summary
 and single task detailed view.
 

@@ -2,16 +2,16 @@
 
 This page covers two related runtime layers:
 
-- **Tasks** (`miminions.task`) — bind a [Minion](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
-- **Workflow tracing** (`miminions.execution.trace`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
+- **Tasks** (`miminions.core.task`) — bind a [Minion](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
+- **Workflow tracing** (`miminions.system.execution.trace`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
 
 !!! note "Import from the subpackages"
-    The top-level `import miminions` re-exports nothing. Import tasks from `miminions.task`, and trace models from `miminions.execution.trace`.
+    The top-level `import miminions` re-exports nothing. Import tasks from `miminions.core.task`, and trace models from `miminions.system.execution.trace`.
 
     ```python
-    from miminions.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPriority
-    from miminions.task.model import TaskInput, TaskOutput
-    from miminions.execution.trace import WorkflowTrace, WorkflowRun, ToolCallRecord, AgentRunRecord
+    from miminions.core.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPriority
+    from miminions.core.task.model import TaskInput, TaskOutput
+    from miminions.system.execution.trace import WorkflowTrace, WorkflowRun, ToolCallRecord, AgentRunRecord
     ```
 
 ---
@@ -27,8 +27,8 @@ A **`Task`** is a dataclass describing a unit of work (id, name, description, st
 
 ```python
 import asyncio
-from miminions.agent import create_minion
-from miminions.task import TaskRuntime, AgentTask
+from miminions.core.agent import create_minion
+from miminions.core.task import TaskRuntime, AgentTask
 
 async def main():
     runtime = TaskRuntime()
@@ -134,10 +134,10 @@ runtime.clear_tasks()
 
 ## Part 2 — Workflow tracing
 
-The `miminions.execution.trace` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions tool`](cli.md#tool-sessions-and-history) history log. (Before 2026-10-23 they lived in a `miminions.workflow` module; the persisted format is unchanged.)
+The `miminions.system.execution.trace` models are lightweight, JSON-serializable records that describe **what an agent run did**: each agent turn and each tool call, in order. They are the schema behind the [`miminions tool`](cli.md#tool-sessions-and-history) history log. (Before 2026-10-23 they lived in a `miminions.workflow` module; the persisted format is unchanged.)
 
 ```python
-from miminions.execution.trace import (
+from miminions.system.execution.trace import (
     WorkflowTrace, WorkflowRun, AgentRunRecord, ToolCallRecord,
 )
 ```
@@ -156,7 +156,7 @@ Every record has `to_dict()` / `from_dict()` for round-tripping to JSON.
 ### Building a trace by hand
 
 ```python
-from miminions.execution.trace import WorkflowTrace, WorkflowRun, AgentRunRecord
+from miminions.system.execution.trace import WorkflowTrace, WorkflowRun, AgentRunRecord
 
 trace = WorkflowTrace()
 trace.add_agent_record(AgentRunRecord(prompt="Add 2 and 3", output="5"))

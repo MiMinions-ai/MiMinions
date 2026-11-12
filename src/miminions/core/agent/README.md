@@ -17,7 +17,7 @@ Minion agent powered by `pydantic_ai`, defaulting to OpenRouter.
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 async def main():
     agent = create_minion("MyAgent")
@@ -48,7 +48,7 @@ Direct callers can submit a batch of structured requests. Results are returned
 in request order, and one failure does not cancel the other tools:
 
 ```python
-from miminions.tools.schemas import ToolExecutionRequest
+from miminions.core.tool.schemas import ToolExecutionRequest
 
 results = await agent.execute_many_async([
     ToolExecutionRequest(tool_name="add", arguments={"a": 1, "b": 2}),

@@ -19,10 +19,10 @@ def chat_setup(tmp_path, monkeypatch):
     workspace.root_path = str(tmp_path / "workspace")
     manager.save_workspaces({workspace.id: workspace})
     ensure_workspace(manager, workspace.id, init_files=True)
-    monkeypatch.setattr("miminions.cli.chat.get_config_dir", lambda: home)
-    monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {"default_workspace": workspace.id})
+    monkeypatch.setattr("miminions.interface.cli.operations.chat.get_config_dir", lambda: home)
+    monkeypatch.setattr("miminions.interface.cli.operations.chat.load_config", lambda: {"default_workspace": workspace.id})
     dispatch = Mock()
-    monkeypatch.setattr("miminions.cli.dispatch.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.submit_task", dispatch)
     return workspace, dispatch
 
 
@@ -65,7 +65,7 @@ def test_interrupted_turn_exits_and_queues_finalization(chat_setup):
 
 
 def test_missing_default_workspace(monkeypatch):
-    monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {})
+    monkeypatch.setattr("miminions.interface.cli.operations.chat.load_config", lambda: {})
     result = CliRunner().invoke(chat_command, ["--no-discovery"])
     assert result.exit_code == 1
     assert "no default workspace" in result.output

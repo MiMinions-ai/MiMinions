@@ -12,7 +12,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-DEFAULT_LOGGER = logging.getLogger("miminions.task.examples")
+DEFAULT_LOGGER = logging.getLogger("miminions.core.task.examples")
 DEFAULT_TASK_RUNTIME = TaskRuntime()
 
 def run_single_task():

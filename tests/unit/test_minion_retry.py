@@ -97,7 +97,7 @@ async def test_backoff_delays_double_per_attempt(monkeypatch):
     async def _record_sleep(delay):
         delays.append(delay)
 
-    monkeypatch.setattr("miminions.agent.agent.asyncio.sleep", _record_sleep)
+    monkeypatch.setattr("miminions.core.agent.agent.asyncio.sleep", _record_sleep)
 
     reply = await minion.run("hello")
 
@@ -128,7 +128,7 @@ def test_rebuild_passes_request_timeout(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr("miminions.agent.agent.Agent", _CapturingAgent)
+    monkeypatch.setattr("miminions.core.agent.agent.Agent", _CapturingAgent)
     minion = Minion(name="Timeout", model=TestModel(), request_timeout=12.5)
 
     minion._rebuild_pydantic_ai_agent()
@@ -143,7 +143,7 @@ def test_rebuild_omits_model_settings_without_timeout(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr("miminions.agent.agent.Agent", _CapturingAgent)
+    monkeypatch.setattr("miminions.core.agent.agent.Agent", _CapturingAgent)
     minion = Minion(name="NoTimeout", model=TestModel(), request_timeout=None)
 
     minion._rebuild_pydantic_ai_agent()

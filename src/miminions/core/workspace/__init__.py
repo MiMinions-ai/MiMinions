@@ -6,6 +6,19 @@ from .reader import (
     list_skills,
     read_skill,
 )
+from .registry import (
+    DEFAULT_WORKSPACES_ROOT,
+    WORKSPACE_SCHEMA_VERSION,
+    Node,
+    NodeType,
+    Rule,
+    RulePriority,
+    Workspace,
+    WorkspaceManager,
+    default_workspace_root,
+    ensure_workspace,
+    resolve_workspace,
+)
 
 __all__ = [
     "WorkspaceLayout",
@@ -15,4 +28,15 @@ __all__ = [
     "read_memory_md",
     "list_skills",
     "read_skill",
+    "DEFAULT_WORKSPACES_ROOT",
+    "WORKSPACE_SCHEMA_VERSION",
+    "Node",
+    "NodeType",
+    "Rule",
+    "RulePriority",
+    "Workspace",
+    "WorkspaceManager",
+    "default_workspace_root",
+    "ensure_workspace",
+    "resolve_workspace",
 ]

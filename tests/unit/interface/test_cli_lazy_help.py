@@ -27,7 +27,7 @@ def restore_imported_modules():
 def _fresh_cli():
     """Reload main so LazyGroup caches from prior tests do not leak."""
     for name in list(sys.modules):
-        if name == "miminions.cli.main" or name.startswith("miminions.cli.main."):
+        if name == "miminions.interface.cli.main" or name.startswith("miminions.interface.cli.main."):
             sys.modules.pop(name, None)
     from miminions.interface.cli import main as main_mod
 
@@ -40,19 +40,19 @@ def test_help_skips_bootstrap_and_heavy_imports():
         name
         for name in list(sys.modules)
         if name in {
-            "miminions.cli.main",
-            "miminions.cli.agent",
-            "miminions.cli.chat",
-            "miminions.cli.gateway",
-            "miminions.cli.execution",
-            "miminions.cli.prompt",
-            "miminions.cli.tool",
-            "miminions.core.bootstrap",
+            "miminions.interface.cli.main",
+            "miminions.interface.cli.management.agent",
+            "miminions.interface.cli.operations.chat",
+            "miminions.interface.cli.daemon",
+            "miminions.interface.cli.operations.execution",
+            "miminions.interface.cli.operations.prompt",
+            "miminions.interface.cli.management.tool",
+            "miminions.interface.bootstrap",
         }
-        or name.startswith("miminions.cli.agent.")
-        or name.startswith("miminions.cli.chat.")
-        or name.startswith("miminions.cli.gateway.")
-        or name.startswith("miminions.cli.tool.")
+        or name.startswith("miminions.interface.cli.management.agent.")
+        or name.startswith("miminions.interface.cli.operations.chat.")
+        or name.startswith("miminions.interface.cli.daemon.")
+        or name.startswith("miminions.interface.cli.management.tool.")
     ]
     for name in doomed:
         sys.modules.pop(name, None)
@@ -69,11 +69,11 @@ def test_help_skips_bootstrap_and_heavy_imports():
     # Static short helps (prove we did not import auth_cli docstring path for listing).
     assert "Create and manage agents." in result.output
 
-    assert "miminions.cli.agent" not in sys.modules
-    assert "miminions.cli.chat" not in sys.modules
-    assert "miminions.cli.gateway" not in sys.modules
-    assert "miminions.cli.tool" not in sys.modules
-    assert "miminions.core.bootstrap" not in sys.modules
+    assert "miminions.interface.cli.management.agent" not in sys.modules
+    assert "miminions.interface.cli.operations.chat" not in sys.modules
+    assert "miminions.interface.cli.daemon" not in sys.modules
+    assert "miminions.interface.cli.management.tool" not in sys.modules
+    assert "miminions.interface.bootstrap" not in sys.modules
 
 
 def test_help_completes_quickly_after_import():
@@ -98,6 +98,14 @@ def test_lazy_subcommand_resolves_auth():
         result = runner.invoke(cli, ["auth", "--help"])
     assert result.exit_code == 0
     assert "signin" in result.output or "Authentication" in result.output or "auth" in result.output.lower()
+
+
+def test_all_lazy_commands_resolve():
+    cli, main_mod = _fresh_cli()
+    ctx = cli.make_context("miminions", [], resilient_parsing=True)
+    for name, _, _, _ in main_mod._LAZY_COMMANDS:
+        command = cli.get_command(ctx, name)
+        assert command is not None, f"Could not load {name}"
 
 
 def test_lazy_group_lists_all_commands():

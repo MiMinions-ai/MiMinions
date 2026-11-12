@@ -94,9 +94,9 @@ def _make_workflow_run_dict(session_id: str, tool_name: str = "calculator", stat
 def _patched_config_dir(config_dir):
     with (
         patch("miminions.core.paths.get_config_dir", return_value=config_dir),
-        patch("miminions.cli.execution.get_config_dir", return_value=config_dir),
-        patch("miminions.cli.auth.get_config_dir", return_value=config_dir),
-        patch("miminions.cli.config.get_config_dir", return_value=config_dir),
+        patch("miminions.interface.cli.operations.execution.get_config_dir", return_value=config_dir),
+        patch("miminions.interface.cli.auth.get_config_dir", return_value=config_dir),
+        patch("miminions.interface.config.get_config_dir", return_value=config_dir),
     ):
         yield
 
@@ -191,7 +191,7 @@ class TestToolExecution:
 
         with (
             _patched_config_dir(config_dir),
-            patch("miminions.cli.execution._load_module", return_value=1),
+            patch("miminions.interface.cli.operations.execution._load_module", return_value=1),
         ):
             result = runner.invoke(cli, ["tool", "add", str(module_path)])
 
@@ -228,7 +228,7 @@ class TestToolExecution:
         mock_agent.list_tools.return_value = []
         with (
             _patched_config_dir(config_dir),
-            patch("miminions.cli.execution._build_agent", return_value=mock_agent),
+            patch("miminions.interface.cli.operations.execution._build_agent", return_value=mock_agent),
         ):
             result = runner.invoke(cli, ["tool", "session", "execute", "nonexistent_tool"])
             assert result.exit_code == 1, f"expect cli execution run nonexistent_tool to exit with 0, got {result.exit_code} with output: {result.output}"
@@ -238,7 +238,7 @@ class TestToolExecution:
         config_dir, _ = active_session
         with (
             _patched_config_dir(config_dir),
-            patch("miminions.cli.execution._build_agent", return_value=mock_agent),
+            patch("miminions.interface.cli.operations.execution._build_agent", return_value=mock_agent),
         ):
             result = runner.invoke(cli, ["tool", "session", "execute", "calculator", "--input", "a=1"])
             assert result.exit_code == 0, f"expect cli execution run calculator to exit with 0, got {result.exit_code} with output: {result.output}"
@@ -249,7 +249,7 @@ class TestToolExecution:
         config_dir, session_id = active_session
         with (
             _patched_config_dir(config_dir),
-            patch("miminions.cli.execution._build_agent", return_value=mock_agent),
+            patch("miminions.interface.cli.operations.execution._build_agent", return_value=mock_agent),
         ):
             runner.invoke(cli, ["tool", "session", "execute", "calculator", "--input", "a=1"])
             interactions_file = config_dir / "interactions.json"

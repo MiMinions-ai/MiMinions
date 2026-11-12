@@ -1,12 +1,12 @@
 # Data Management
 
-The `miminions.data` module provides **`LocalDataManager`** — a pure-Python, content-addressable store for files and raw content. It hashes every blob with SHA-256, deduplicates identical content automatically, tracks rich metadata in a JSON master index, and records every operation in an append-only transaction log for a full audit trail.
+The `miminions.system` module provides **`LocalDataManager`** — a pure-Python, content-addressable store for files and raw content. It hashes every blob with SHA-256, deduplicates identical content automatically, tracks rich metadata in a JSON master index, and records every operation in an append-only transaction log for a full audit trail.
 
 !!! note "Import from the subpackage"
-    `LocalDataManager` is exported from `miminions.data` (and also from `miminions.data.local`). The top-level `import miminions` does not re-export it.
+    `LocalDataManager` is exported from `miminions.system` (and also from `miminions.system.file`). The top-level `import miminions` does not re-export it.
 
     ```python
-    from miminions.data import LocalDataManager
+    from miminions.system import LocalDataManager
     ```
 
 This is a **library API**, not a CLI — there are no `miminions data ...` commands. It has no third-party dependencies.
@@ -38,7 +38,7 @@ A `LocalDataManager` is composed of four cooperating parts, all rooted under a s
 ## Quick Start
 
 ```python
-from miminions.data import LocalDataManager
+from miminions.system import LocalDataManager
 
 # Defaults: base_dir=~/.miminions, author=current OS user
 dm = LocalDataManager(base_dir="./.data", author="asher")
@@ -167,10 +167,10 @@ LocalDataManager(base_dir: str | Path | None = None, author: str | None = None)
 
 ### `FileMetadata`
 
-A dataclass describing one stored item, returned by `get_file`, `list_files`, and `search_files`. Import it (and the other building blocks) from `miminions.data.local`:
+A dataclass describing one stored item, returned by `get_file`, `list_files`, and `search_files`. Import it (and the other building blocks) from `miminions.system.file`:
 
 ```python
-from miminions.data.local import FileMetadata, TransactionRecord, TransactionType
+from miminions.system.file import FileMetadata, TransactionRecord, TransactionType
 ```
 
 | Field | Type | Notes |

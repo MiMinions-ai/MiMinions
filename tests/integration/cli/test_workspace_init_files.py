@@ -8,12 +8,12 @@ from miminions.interface.cli.management.workspace import workspace_cli
 def test_workspace_add_with_init_files_creates_root_path_and_files(tmp_path, monkeypatch):
     
     monkeypatch.setattr(
-        "miminions.core.auth.is_authenticated",
+        "miminions.system.auth.auth.is_authenticated",
         lambda: True,
     )
 
     monkeypatch.setattr(
-        "miminions.cli.workspace.get_config_dir",
+        "miminions.interface.cli.management.workspace.get_config_dir",
         lambda: tmp_path,
     )
 
@@ -59,12 +59,12 @@ def test_workspace_add_with_init_files_creates_root_path_and_files(tmp_path, mon
 def test_workspace_init_files_sets_root_path_for_existing_workspace(tmp_path, monkeypatch):
     
     monkeypatch.setattr(
-        "miminions.core.auth.is_authenticated",
+        "miminions.system.auth.auth.is_authenticated",
         lambda: True,
     )   
     
     monkeypatch.setattr(
-        "miminions.cli.workspace.get_config_dir",
+        "miminions.interface.cli.management.workspace.get_config_dir",
         lambda: tmp_path,
     )
 

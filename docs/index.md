@@ -109,7 +109,7 @@ Create your first agent:
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 async def main():
     agent = create_minion("MyAgent")

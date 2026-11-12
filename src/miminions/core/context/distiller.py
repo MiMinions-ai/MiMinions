@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from miminions.core.paths import get_global_memory_db_path
-from miminions.interface.store import JsonlSessionStore
+from miminions.interface.session import JsonlSessionStore
 
 from .budget import CompactionOutcome, MemoryBudgets, check_pressure
 from .compaction import compact_memory
-from ...memory.md_store import append_history, upsert_memory_section
+from miminions.system.file.md_store import append_history, upsert_memory_section
 
 logger = logging.getLogger(__name__)
 

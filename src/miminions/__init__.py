@@ -37,7 +37,7 @@ __all__ = []
 def __getattr__(name: str):
     if name in {"GenericTool", "tool", "create_tool"}:
         from importlib import import_module
-        value = getattr(import_module("miminions.tools"), name)
+        value = getattr(import_module("miminions.core.tool"), name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

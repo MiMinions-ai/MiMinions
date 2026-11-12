@@ -18,14 +18,14 @@ def _read(path: Path) -> dict:
 
 
 def _patch_auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_task_add_rejects_unknown_agent(temp_config_dir):
     runner = CliRunner()
     _write(temp_config_dir / "agents.json", {"known": {"name": "Known"}})
 
-    with _patch_auth_enabled(), patch("miminions.cli.task.get_config_dir", return_value=temp_config_dir):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.task.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(
             task_cli,
             [
@@ -49,7 +49,7 @@ def test_task_add_accepts_existing_agent(temp_config_dir):
     runner = CliRunner()
     _write(temp_config_dir / "agents.json", {"known": {"name": "Known"}})
 
-    with _patch_auth_enabled(), patch("miminions.cli.task.get_config_dir", return_value=temp_config_dir):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.task.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(
             task_cli,
             [
@@ -86,7 +86,7 @@ def test_task_update_rejects_unknown_agent(temp_config_dir):
         },
     )
 
-    with _patch_auth_enabled(), patch("miminions.cli.task.get_config_dir", return_value=temp_config_dir):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.task.get_config_dir", return_value=temp_config_dir):
         result = runner.invoke(task_cli, ["update", "task1", "--agent", "missing"])
 
     assert result.exit_code == 0, f"expect cli exit code 0, got {result.exit_code} with output: {result.output}"
@@ -110,7 +110,7 @@ def test_task_list_and_show_json_output():
         }
     }
 
-    with _patch_auth_enabled(), patch("miminions.cli.task.load_tasks", return_value=tasks):
+    with _patch_auth_enabled(), patch("miminions.interface.cli.management.task.load_tasks", return_value=tasks):
         list_result = runner.invoke(task_cli, ["list", "--json"])
         show_result = runner.invoke(task_cli, ["show", "task01", "--json"])
 

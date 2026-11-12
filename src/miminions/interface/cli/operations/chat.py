@@ -11,7 +11,7 @@ import click
 
 from miminions.core.paths import get_config_dir
 from miminions.interface.config import load_config
-from miminions.interface.store import JsonlSessionStore
+from miminions.interface.session import JsonlSessionStore
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from ..management.project import project_options, select_project
 
@@ -115,7 +115,7 @@ def chat_command(workspace_ref: str | None, session_id: str | None, verbose: boo
 async def _chat_loop(workspace_ref: str, session_id: str | None, verbose: bool = False,
                      *, no_discovery: bool = False) -> None:
     """Interactive terminal frontend; the execution instance owns every turn."""
-    from ..dispatch import submit_task
+    from miminions.interface.cli.operations.dispatch import submit_task
     from miminions.system.execution.models import conversation_key
     manager = WorkspaceManager(get_config_dir())
     try:

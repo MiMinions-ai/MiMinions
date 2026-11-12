@@ -28,8 +28,8 @@ def test_parse_json_or_shorthand():
 def test_workspace_add_list_show_and_duplicate_name(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
 
     added = isolated_cli_runner.invoke(
         workspace_cli, ["add", "--name", "Main", "--description", "Primary"]
@@ -55,8 +55,8 @@ def test_workspace_add_list_show_and_duplicate_name(
 def test_workspace_add_sample_and_init_files_with_custom_root(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
     root = tmp_path / "workspace-root"
 
     result = isolated_cli_runner.invoke(
@@ -89,8 +89,8 @@ def test_workspace_add_sample_and_init_files_with_custom_root(
 def test_workspace_update_set_state_remove_and_missing_paths(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
     first = Workspace(id="ws1", name="One")
     second = Workspace(id="ws2", name="Two")
     WorkspaceManager(tmp_path).save_workspaces({first.id: first, second.id: second})
@@ -138,8 +138,8 @@ def test_workspace_update_set_state_remove_and_missing_paths(
 
 
 def test_workspace_rule_commands(isolated_cli_runner, tmp_path, monkeypatch):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
     workspace = Workspace(id="ws1", name="Rules")
     _save_workspace(tmp_path, workspace)
 
@@ -194,8 +194,8 @@ def test_workspace_rule_commands(isolated_cli_runner, tmp_path, monkeypatch):
 def test_workspace_show_renders_nodes_rules_inherited_rules_and_state(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
     workspace = Workspace(id="ws1", name="Detailed", state={"mode": "ready"})
     workspace.add_rule(Rule(id="r1", name="Local", priority=RulePriority.CRITICAL))
     workspace.inherited_rules["ir1"] = Rule(
@@ -218,8 +218,8 @@ def test_workspace_show_renders_nodes_rules_inherited_rules_and_state(
 def test_workspace_init_files_existing_workspace_custom_path(
     isolated_cli_runner, tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("miminions.core.auth.is_authenticated", lambda: True)
-    monkeypatch.setattr("miminions.cli.workspace.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.system.auth.auth.is_authenticated", lambda: True)
+    monkeypatch.setattr("miminions.interface.cli.management.workspace.get_config_dir", lambda: tmp_path)
     _save_workspace(tmp_path, Workspace(id="ws1", name="Files"))
     root = tmp_path / "files-root"
 

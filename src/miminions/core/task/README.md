@@ -12,7 +12,7 @@ never owns persistence or process supervision.
 ## Public surface
 
 ```python
-from miminions.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPriority
+from miminions.core.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPriority
 # DEFAULT_RUNTIME is a shared process-wide runtime instance.
 ```
 

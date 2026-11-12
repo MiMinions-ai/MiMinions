@@ -1,18 +1,22 @@
-# Workspace FS (On-Disk Workspace Layout)
+# Workspace Models and On-Disk Layout
 
-> Contract: [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md).
-> This module defines the Level-3 (workspace) contract. `core.workspace` owns the node/rule graph; this module owns the files.
+> Contract: [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md).
+> This package owns the node/rule graph, workspace registry, and Level-3 filesystem layout.
 
 ## Purpose
 
-Define and scaffold the standard workspace directory layout, and read it
-back for prompt assembly. Owns paths and bootstrap file contents; never
-owns workspace graph semantics (`core`) or memory meaning (`memory`).
+Manage workspace models and their JSON registry, scaffold the standard workspace
+directory layout, and read it back for prompt assembly. Domain models and
+resolvers live in `registry.py`; layout, bootstrap, discovery, and readers remain
+separate modules. Memory interpretation belongs to the memory/context APIs.
 
 ## Public surface
 
 ```python
-from miminions.workspace_fs import (
+from miminions.core.workspace import (
+    Workspace, WorkspaceManager, Node, NodeType, Rule, RulePriority,
+    WORKSPACE_SCHEMA_VERSION, DEFAULT_WORKSPACES_ROOT,
+    default_workspace_root, ensure_workspace, resolve_workspace,
     WorkspaceLayout, BOOTSTRAP_PROMPT_FILES, init_workspace,
     read_prompt_files, read_memory_md, list_skills, read_skill,
 )

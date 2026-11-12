@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timezone
 from enum import Enum
 
-from ..persistence import load_json, save_json
+from miminions.core.persistence import load_json, save_json
 from ...config import load_config
 # TODO(auth): Re-enable require_auth for account-backed advanced features.
 from miminions.core.paths import get_config_dir
@@ -351,7 +351,7 @@ def add_agent(name, description, type):
         "name": name,
         "description": description,
         "type": type,
-        "base_agent": "miminions.agent.Minion",
+        "base_agent": "miminions.core.agent.Minion",
         "mode": "cli_extension",
         "status": "inactive",
         "goal": None,
@@ -412,7 +412,7 @@ def show_agent(agent_ref, as_json):
         "type": agent.get("type", "unknown"),
         "status": agent.get("status", "inactive"),
         "goal": agent.get("goal"),
-        "base_agent": agent.get("base_agent", "miminions.agent.Minion"),
+        "base_agent": agent.get("base_agent", "miminions.core.agent.Minion"),
         "mode": agent.get("mode", "cli_extension"),
         "created_at": agent.get("created_at", ""),
     }
@@ -427,7 +427,7 @@ def show_agent(agent_ref, as_json):
     click.echo(f"Type: {agent.get('type', 'unknown')}")
     click.echo(f"Status: {agent.get('status', 'inactive')}")
     click.echo(f"Goal: {agent.get('goal')}")
-    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.agent.Minion')}")
+    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.core.agent.Minion')}")
     click.echo(f"Mode: {agent.get('mode', 'cli_extension')}")
     click.echo(f"Created: {agent.get('created_at', '')}")
 

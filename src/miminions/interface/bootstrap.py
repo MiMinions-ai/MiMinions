@@ -54,7 +54,7 @@ def _ensure_default_agent(config_dir: Path) -> str:
         "name": "default",
         "description": "Default MiMinions agent created on first run.",
         "type": "assistant",
-        "base_agent": "miminions.agent.Minion",
+        "base_agent": "miminions.core.agent.Minion",
         "mode": "cli_extension",
         "status": "inactive",
         "goal": None,

@@ -131,7 +131,7 @@ async def _prompt(context: TaskContext):
 
 
 async def _agent(context: TaskContext):
-    from miminions.interface.cli.agent import _build_cli_extension_agent
+    from miminions.interface.cli.management.agent import _build_cli_extension_agent
     from mcp import StdioServerParameters
     params = context.params
     context.phase("Building saved-agent runtime...")
@@ -227,7 +227,7 @@ async def _tool_test(context: TaskContext):
 
 
 async def _distill(context: TaskContext):
-    from miminions.interface.cli.chat import _run_session_distillation
+    from miminions.interface.cli.operations.chat import _run_session_distillation
     from miminions.core.workspace import WorkspaceManager, ensure_workspace
     from miminions.core.agent import create_minion
     context.phase("Distilling session memory...")

@@ -49,8 +49,8 @@ Evidence on `development` today:
 
 | Level | Unit | Contract home | Example |
 |---|---|---|---|
-| L0 | Repo | This doc + `pyproject.toml` + CI | `miminions` 0.4.1, entry `miminions = miminions.cli.main:main` |
-| L1 | Package | `STRUCTURE.md` import surface | `from miminions.agent import create_minion` |
+| L0 | Repo | This doc + `pyproject.toml` + CI | `miminions` 0.4.1, entry `miminions = miminions.interface.cli.main:main` |
+| L1 | Package | `STRUCTURE.md` import surface | `from miminions.core.agent import create_minion` |
 | L2 | Module | `src/miminions/<module>/README.md` | `memory`, `context`, `execution` |
 | L3 | Workspace | `prompt/ memory/ skills/ sessions/ data/` (`WorkspaceLayout`) | Bootstrap files `AGENTS.md USER.md TOOLS.md IDENTITY.md` |
 | L4 | Session | `sessions/*.jsonl` → distiller | One chat, distilled on exit |
@@ -93,19 +93,22 @@ Rule: a PR leaves its decision in the owning module's contract/doc, not
 only in the PR thread. The next developer/agent enters through the
 contract, not through archaeology.
 
-## Contract registry (L2 modules, `development` @ `f9e466b`)
+## Contract registry (current package layout)
 
 Public surface is the module `__init__.py` `__all__` unless noted. Full
 contracts live in each module `README.md`; this table is the index.
 
 | Module | Public surface (stable) | State owner | Lifecycle / promotion |
 |---|---|---|---|
+| `daemon` | Gateway bus, channels, sessions, cron and orchestration | Gateway session and service state | Start/stop services and channels |
+| `interface` | `JsonlSessionStore`, `create_session_id`; CLI via `interface.cli` | Session transcripts and CLI configuration | Bootstrap, dispatch, append and resume |
+| `system` | `LocalDataManager`; auth, database, execution and file APIs via subpackages | Local persistent stores and execution state | Storage and durable execution adapters |
 | `agent` | `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy) | In-memory agent; attached `BaseMemory` | `set_context()` rebuilds prompt via `ContextBuilder` each run |
 | `cli` | `cli` (13 lazy groups + standalone `init`, see `cli/main.py`) | `~/.miminions/` (`MIMINIONS_HOME`) | Bootstrap on first real subcommand; help stays lazy/cheap |
 | `context` | `ContextBuilder` | None (pure assembly) | Reads L3 prompt/memory/skills + Tier 3 → system prompt string |
 | `core` | Gateway symbols only; workspace/auth via submodules | Workspace JSON (`WorkspaceManager`, schema v1) | `ensure_default_setup()` idempotent first run |
 | `data` | `LocalDataManager` | Content-addressed files + master index + txn log | SHA-256 dedupe; append-only audit log |
-| `execution` | `ExecutionService`, `ExecutionRequest/Task/Event/Handle` | Durable store under config home | Persistent worker (`-m miminions.execution.worker`); terminal = completed/failed/cancelled |
+| `execution` | `ExecutionService`, `ExecutionRequest/Task/Event/Handle` | Durable store under config home | Persistent worker (`-m miminions.system.execution.worker`); terminal = completed/failed/cancelled |
 | `memory` | `MemoryDistiller`, `create_llm_filter`, `compact_memory`, budgets, md_store helpers | Tier 1/2 Markdown (truth) + Tier 3 SQLite (index) | Post-chat distill → upsert → dedupe/compaction under budget |
 | `session` | `JsonlSessionStore`, `create_session_id` | `sessions/*.jsonl` transcripts | Append during chat; history trimmed at turn boundaries |
 | `task` | `TaskRuntime`, `Task`, `AgentTask`, `TaskStatus`, `TaskPriority` | In-memory runtime (`DEFAULT_RUNTIME`) | Async add/run/update; distinct from durable `execution` |

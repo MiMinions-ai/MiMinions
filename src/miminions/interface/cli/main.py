@@ -16,19 +16,19 @@ from miminions import __version__
 
 # (cli name, module, attribute, short help for root --help without importing)
 _LAZY_COMMANDS: tuple[tuple[str, str, str, str], ...] = (
-    ("auth", "miminions.cli.auth", "auth_cli", "Authentication and configuration."),
-    ("agent", "miminions.cli.agent", "agent_cli", "Create and manage agents."),
-    ("tool", "miminions.cli.tool", "tool_cli", "Discover and execute agent tools."),
-    ("task", "miminions.cli.task", "task_cli", "Manage tasks."),
-    ("instance", "miminions.cli.instance", "instance_cli", "Manage the local execution instance."),
-    ("knowledge", "miminions.cli.knowledge", "knowledge_cli", "Manage knowledge entries."),
-    ("workspace", "miminions.cli.workspace", "workspace_cli", "Manage workspaces."),
-    ("chat", "miminions.cli.chat", "chat_cli", "Interactive chat sessions."),
-    ("gateway", "miminions.cli.gateway", "gateway_cli", "Gateway runtime and channels."),
-    ("prompt", "miminions.cli.prompt", "prompt_cli", "One-shot prompts."),
-    ("config", "miminions.cli.config", "config_cli", "Get or set CLI configuration."),
-    ("export", "miminions.cli.transfer", "export_data", "Export agents, tasks, and knowledge."),
-    ("import", "miminions.cli.transfer", "import_data", "Import agents, tasks, and knowledge."),
+    ("auth", "miminions.interface.cli.auth", "auth_cli", "Authentication and configuration."),
+    ("agent", "miminions.interface.cli.management.agent", "agent_cli", "Create and manage agents."),
+    ("tool", "miminions.interface.cli.management.tool", "tool_cli", "Discover and execute agent tools."),
+    ("task", "miminions.interface.cli.management.task", "task_cli", "Manage tasks."),
+    ("instance", "miminions.interface.cli.management.instance", "instance_cli", "Manage the local execution instance."),
+    ("knowledge", "miminions.interface.cli.management.knowledge", "knowledge_cli", "Manage knowledge entries."),
+    ("workspace", "miminions.interface.cli.management.workspace", "workspace_cli", "Manage workspaces."),
+    ("chat", "miminions.interface.cli.operations.chat", "chat_cli", "Interactive chat sessions."),
+    ("gateway", "miminions.interface.cli.daemon", "gateway_cli", "Gateway runtime and channels."),
+    ("prompt", "miminions.interface.cli.operations.prompt", "prompt_cli", "One-shot prompts."),
+    ("config", "miminions.interface.config", "config_cli", "Get or set CLI configuration."),
+    ("export", "miminions.interface.cli.transfer.transfer", "export_data", "Export agents, tasks, and knowledge."),
+    ("import", "miminions.interface.cli.transfer.transfer", "import_data", "Import agents, tasks, and knowledge."),
 )
 
 

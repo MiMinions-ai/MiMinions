@@ -1,6 +1,6 @@
 # Gateway — Persistent Server Runtime
 
-The `gateway` module provides the core runtime infrastructure for running
+The `miminions.daemon` package provides the core runtime infrastructure for running
 MiMinions as a persistent, event-driven server. It is modelled after the
 [nanobot](https://github.com/HKUDS/nanobot) architecture for channel
 abstraction and message routing.
@@ -12,7 +12,7 @@ abstraction and message routing.
 ## Module Layout
 
 ```
-core/gateway/
+daemon/
 ├── __init__.py        # Public API re-exports
 ├── events.py          # InboundMessage / OutboundMessage DTOs
 ├── bus.py             # In-process async message bus with pub/sub
@@ -33,7 +33,7 @@ An in-process async message bus built on `asyncio.Queue`.
 - **Topic pub/sub** — `subscribe()` / `emit()` for event-driven workflows.
 
 ```python
-from miminions.core.gateway import MessageBus
+from miminions.daemon import MessageBus
 
 bus = MessageBus()
 bus.subscribe("inbound", my_handler)
@@ -51,7 +51,7 @@ Discord, WebSocket, HTTP SSE, etc.) subclasses `BaseChannel` and implements
 to the correct channel by name.
 
 ```python
-from miminions.core.gateway import BaseChannel, OutboundMessage
+from miminions.daemon import BaseChannel, OutboundMessage
 
 class MyChannel(BaseChannel):
     name = "my_channel"
@@ -76,7 +76,7 @@ message carries its channel source, sender, and other DTO attributes.
 - JSONL persistence (metadata header + one JSON object per message).
 
 ```python
-from miminions.core.gateway import SessionManager
+from miminions.daemon import SessionManager
 
 sessions = SessionManager(storage_path="/tmp/sessions")
 session = sessions.get_or_create("telegram:12345")
@@ -95,7 +95,7 @@ Persistent scheduled task execution with three schedule kinds:
 | `cron`  | `expr`     | Full cron expression (requires `croniter`) |
 
 ```python
-from miminions.core.gateway import CronService, CronSchedule
+from miminions.daemon import CronService, CronSchedule
 
 cron = CronService(store_path=Path("cron/jobs.json"), on_job=my_handler)
 await cron.start()
@@ -120,7 +120,7 @@ Abstract base for phased startup and graceful shutdown:
 Shutdown runs in **reverse order** (CHANNELS → SERVICES → BUS).
 
 ```python
-from miminions.core.gateway import GatewayOrchestrator, Phase, Lifecycle
+from miminions.daemon import GatewayOrchestrator, Phase, Lifecycle
 
 class MyGateway(GatewayOrchestrator):
     async def configure(self) -> None:
@@ -139,6 +139,21 @@ await gateway.shutdown()
 | Package    | Required | Notes                                   |
 |------------|----------|-----------------------------------------|
 | `croniter` | Optional | Required for `cron`-kind schedules only |
+
+## Contract
+
+> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md).
+> Contract version: 1.
+
+- **Purpose:** gateway message routing, channel coordination and persistent scheduling.
+- **Public surface:** `InboundMessage`, `OutboundMessage`, `MessageBus`,
+  `BaseChannel`, `ChannelManager`, `Session`, `SessionManager`, `SessionMessage`,
+  `CronJob`, `CronJobState`, `CronPayload`, `CronSchedule`, `CronService`, `CronStore`,
+  `GatewayOrchestrator`, `Lifecycle`, `Phase`, `ChannelManagerLifecycle`,
+  `CronLifecycle`, and `LocalGatewayRuntime`.
+- **State:** gateway session JSONL and cron job JSON under the workspace.
+- **Lifecycle:** start services and channels in phase order; stop in reverse order.
+- **Gate:** gateway unit/integration tests and `scripts/check_structure.py`.
 
 ## Gateway CLI
 

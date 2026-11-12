@@ -45,8 +45,8 @@ def _workspace(root: Path, workspace_id="abcdef12", name="Gateway WS"):
 
 def _patch_workspace_manager(monkeypatch, workspaces):
     manager = DummyManager(workspaces)
-    monkeypatch.setattr("miminions.cli.gateway.WorkspaceManager", lambda config_dir: manager)
-    monkeypatch.setattr("miminions.cli.gateway.get_config_dir", lambda: Path("unused"))
+    monkeypatch.setattr("miminions.interface.cli.daemon.WorkspaceManager", lambda config_dir: manager)
+    monkeypatch.setattr("miminions.interface.cli.daemon.get_config_dir", lambda: Path("unused"))
     return manager
 
 
@@ -349,7 +349,7 @@ def test_gateway_cron_expression_dependency_and_value_error(
         def add_job(self, **kwargs):
             raise ValueError("bad cron")
 
-    monkeypatch.setattr("miminions.cli.gateway._build_cron_service", lambda workspace: BrokenCron())
+    monkeypatch.setattr("miminions.interface.cli.daemon._build_cron_service", lambda workspace: BrokenCron())
     bad_value = isolated_cli_runner.invoke(
         gateway_cli,
         [
@@ -500,8 +500,8 @@ def test_gateway_start_starts_and_stops_runtime(tmp_path, monkeypatch, isolated_
     async def fake_sleep(_seconds):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr("miminions.cli.gateway.LocalGatewayRuntime", FakeRuntime)
-    monkeypatch.setattr("miminions.cli.gateway.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("miminions.interface.cli.daemon.LocalGatewayRuntime", FakeRuntime)
+    monkeypatch.setattr("miminions.interface.cli.daemon.asyncio.sleep", fake_sleep)
 
     result = isolated_cli_runner.invoke(
         gateway_cli,

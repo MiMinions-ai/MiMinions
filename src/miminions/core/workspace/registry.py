@@ -1,5 +1,5 @@
 """
-Core workspace module for MiMinions.
+Workspace domain models and registry for MiMinions.
 
 Provides workspace management with inherited rule sets, network of nodes,
 and structured logic based on internal state.

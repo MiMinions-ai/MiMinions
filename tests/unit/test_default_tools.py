@@ -16,7 +16,7 @@ from miminions.core.tool.default import (
 
 def test_cli_run_command_success():
     """A successful command returns its output and zero exit code."""
-    with patch("miminions.tools.default.click.confirm", return_value=True):
+    with patch("miminions.core.tool.default.click.confirm", return_value=True):
         result = cli_run_command(subprocess.list2cmdline([sys.executable, "--version"]))
 
     assert result["returncode"] == 0, f"expect cli_run_command returncode 0 for successful command, got {result['returncode']}"
@@ -26,7 +26,7 @@ def test_cli_run_command_success():
 
 def test_cli_run_command_nonzero_exit():
     """A failed command returns its nonzero exit code and stderr."""
-    with patch("miminions.tools.default.click.confirm", return_value=True):
+    with patch("miminions.core.tool.default.click.confirm", return_value=True):
         result = cli_run_command(
             subprocess.list2cmdline([sys.executable, "--definitely-not-a-python-option"])
         )
@@ -44,8 +44,8 @@ def test_cli_run_command_rejects_empty_command():
 def test_cli_run_command_timeout():
     """A subprocess timeout is exposed as a clear timeout error."""
     with (
-        patch("miminions.tools.default.subprocess.run") as mock_run,
-        patch("miminions.tools.default.click.confirm", return_value=True),
+        patch("miminions.core.tool.default.subprocess.run") as mock_run,
+        patch("miminions.core.tool.default.click.confirm", return_value=True),
     ):
         mock_run.side_effect = subprocess.TimeoutExpired(["python"], timeout=1)
 
@@ -58,8 +58,8 @@ def test_cli_run_command_rejects_denied_permission():
     command = subprocess.list2cmdline([sys.executable, "--version"])
 
     with (
-        patch("miminions.tools.default.click.confirm", return_value=False) as confirm,
-        patch("miminions.tools.default.subprocess.run") as mock_run,
+        patch("miminions.core.tool.default.click.confirm", return_value=False) as confirm,
+        patch("miminions.core.tool.default.subprocess.run") as mock_run,
         pytest.raises(PermissionError, match="not approved"),
     ):
         cli_run_command(command)
@@ -71,8 +71,8 @@ def test_cli_run_command_rejects_denied_permission():
 def test_cli_run_command_rejects_unavailable_confirmation():
     """An aborted confirmation fails closed without creating a subprocess."""
     with (
-        patch("miminions.tools.default.click.confirm", side_effect=EOFError),
-        patch("miminions.tools.default.subprocess.run") as mock_run,
+        patch("miminions.core.tool.default.click.confirm", side_effect=EOFError),
+        patch("miminions.core.tool.default.subprocess.run") as mock_run,
         pytest.raises(PermissionError, match="not approved"),
     ):
         cli_run_command(subprocess.list2cmdline([sys.executable, "--version"]))
@@ -86,7 +86,7 @@ def test_allow_prefix_bypasses_confirmation():
     args = [sys.executable, "--version"]
     policy = CommandPermissionPolicy(allow_prefixes=[args])
 
-    with patch("miminions.tools.default.click.confirm") as confirm:
+    with patch("miminions.core.tool.default.click.confirm") as confirm:
         result = cli_run_command(command, policy=policy)
 
     assert result["returncode"] == 0, f"expect allowed-prefix command executes successfully with returncode 0, got {result['returncode']}"
@@ -100,8 +100,8 @@ def test_deny_prefix_blocks_without_confirmation_or_subprocess():
     policy = CommandPermissionPolicy(deny_prefixes=[args[:1]])
 
     with (
-        patch("miminions.tools.default.click.confirm") as confirm,
-        patch("miminions.tools.default.subprocess.run") as mock_run,
+        patch("miminions.core.tool.default.click.confirm") as confirm,
+        patch("miminions.core.tool.default.subprocess.run") as mock_run,
         pytest.raises(PermissionError, match="not approved"),
     ):
         cli_run_command(command, policy=policy)
@@ -115,7 +115,7 @@ def test_unmatched_command_uses_default_ask():
     command = subprocess.list2cmdline([sys.executable, "--version"])
     policy = CommandPermissionPolicy(allow_prefixes=[("another-command",)])
 
-    with patch("miminions.tools.default.click.confirm", return_value=True) as confirm:
+    with patch("miminions.core.tool.default.click.confirm", return_value=True) as confirm:
         cli_run_command(command, policy=policy)
 
     confirm.assert_called_once_with(f"Execute command: {command}", default=False)
@@ -157,8 +157,8 @@ def test_explicit_default_decisions(decision, should_run):
     policy = CommandPermissionPolicy(default=decision)
 
     with (
-        patch("miminions.tools.default.click.confirm") as confirm,
-        patch("miminions.tools.default.subprocess.run") as mock_run,
+        patch("miminions.core.tool.default.click.confirm") as confirm,
+        patch("miminions.core.tool.default.subprocess.run") as mock_run,
     ):
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = ""
@@ -197,10 +197,10 @@ def test_command_result_reports_subprocess_only_timing():
     )
 
     with (
-        patch("miminions.tools.default.click.confirm", return_value=True),
-        patch("miminions.tools.default.subprocess.run", return_value=completed),
+        patch("miminions.core.tool.default.click.confirm", return_value=True),
+        patch("miminions.core.tool.default.subprocess.run", return_value=completed),
         patch(
-            "miminions.tools.default.time.perf_counter",
+            "miminions.core.tool.default.time.perf_counter",
             side_effect=[10.0, 10.025],
         ),
     ):

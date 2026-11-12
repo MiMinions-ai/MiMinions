@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .budget import CompactionOutcome, MemoryBudgets, check_pressure, count_tokens, record_state
-from ...memory.md_store import read_memory, write_memory
+from miminions.system.file.md_store import read_memory, write_memory
 
 logger = logging.getLogger(__name__)
 

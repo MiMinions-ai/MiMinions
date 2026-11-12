@@ -17,7 +17,7 @@ A comprehensive local file system data management solution for MiMinions that pr
 Main interface for the data management system.
 
 ```python
-from miminions.data.local import LocalDataManager
+from miminions.system.file import LocalDataManager
 
 # Initialize with default location (~/.miminions)
 manager = LocalDataManager()
@@ -62,7 +62,7 @@ Extensible file type support.
 ### Basic Usage
 
 ```python
-from miminions.data.local import LocalDataManager
+from miminions.system.file import LocalDataManager
 
 # Initialize
 manager = LocalDataManager(author="your_name")
@@ -178,7 +178,7 @@ The system creates the following structure in the `.miminions` directory:
 Add support for new file types by implementing the `FileHandler` interface:
 
 ```python
-from miminions.data.local import FileHandler
+from miminions.system.file import FileHandler
 
 class CustomFileHandler(FileHandler):
     def get_file_type(self) -> str:

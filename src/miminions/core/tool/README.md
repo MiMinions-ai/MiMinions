@@ -11,7 +11,7 @@ from MCP servers.
 ### Create a tool
 
 ```python
-from miminions.tools import tool
+from miminions.core.tool import tool
 
 @tool(name="calculator", description="Simple calculator")
 def calculate(operation: str, a: int, b: int) -> int:
@@ -32,7 +32,7 @@ result = calculate.run(operation="add", a=5, b=3)   # 8
 ### Use a tool with an agent
 
 ```python
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("my_agent")
 
@@ -79,7 +79,7 @@ Load tools from a Model Context Protocol server through the agent:
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("my_agent")
 await agent.connect_mcp_server(
@@ -90,16 +90,16 @@ await agent.load_tools_from_mcp_server("files")
 await agent.cleanup()
 ```
 
-The adapter lives in `miminions.tools.mcp_adapter` (`MCPToolAdapter`, `MCPTool`).
+The adapter lives in `miminions.core.tool.mcp_adapter` (`MCPToolAdapter`, `MCPTool`).
 MCP tools are **async-only** — `MCPTool.run()` raises; use `arun()` or the
 agent's async path. The `mcp` package is a core dependency, so no extra install
 is required.
 
 ## Two `ToolSchema` types
 
-The public `ToolSchema` exported from `miminions.tools` is a lightweight
+The public `ToolSchema` exported from `miminions.core.tool` is a lightweight
 **dataclass** (returned by `GenericTool.schema`). A separate, internal
-**pydantic** `ToolSchema` lives in `miminions.tools.schemas` and backs the
+**pydantic** `ToolSchema` lives in `miminions.core.tool.schemas` and backs the
 agent's `ToolDefinition` registry. When using the public tools API, you mean the
 dataclass.
 

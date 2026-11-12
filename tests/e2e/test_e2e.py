@@ -17,12 +17,12 @@ from miminions.interface.cli.main import cli
 def patch_config_dir(config_dir):
     """Context manager that patches get_config_dir in all CLI modules."""
     modules = [
-        'miminions.cli.auth',
-        'miminions.cli.agent',
-        'miminions.cli.task',
-        # 'miminions.cli.workflow', # TODO: Re-enable once workflow is implemented
-        'miminions.cli.knowledge',
-        'miminions.cli.workspace',
+        'miminions.interface.cli.auth',
+        'miminions.interface.cli.management.agent',
+        'miminions.interface.cli.management.task',
+        # 'miminions.interface.cli.management.workflow', # TODO: Re-enable once workflow is implemented
+        'miminions.interface.cli.management.knowledge',
+        'miminions.interface.cli.management.workspace',
     ]
     stack = ExitStack()
     for mod in modules:

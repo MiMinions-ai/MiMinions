@@ -23,7 +23,7 @@ from ..tool.default import (
     cli_run_command_tool,
 )
 from ..tool.mcp_adapter import MCPToolAdapter
-from ...memory.base_memory import BaseMemory
+from miminions.core.agent.memory.base_memory import BaseMemory
 from ...utils.chunker import TextChunker
 
 from miminions.core.agent.models import AgentConfig, AgentState
@@ -205,7 +205,7 @@ class Minion:
         _workspace = getattr(self, "_workspace", None)
         _root_path = getattr(self, "_root_path", None)
         if _workspace and _root_path:
-            from miminions.context.context_builder import ContextBuilder
+            from miminions.core.context.context_builder import ContextBuilder
 
             _ws = _workspace
             _rp = _root_path

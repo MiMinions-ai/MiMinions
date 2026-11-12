@@ -13,8 +13,8 @@
 
 ```python
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
-from miminions.core.bootstrap import ensure_default_setup
-from miminions.core.auth import require_auth
+from miminions.interface.bootstrap import ensure_default_setup
+from miminions.system.auth.auth import require_auth
 ```
 
 > `core/__init__.py` re-exports the **gateway** symbols only. Import workspace,
