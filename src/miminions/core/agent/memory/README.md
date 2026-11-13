@@ -1,9 +1,25 @@
-# Memory System
+# Agent Memory Contracts and Shared API
 
-How MiMinions stores, evolves, and injects memory across sessions and workspaces.
+`miminions.core.agent.memory` defines backend contracts and result types, and
+provides a shared import surface for the wider memory system. It does not contain
+all memory implementations.
 
 > Full reference: [Memory documentation](https://miminions.ai/modules/memory/),
 > including the `SQLiteMemory` vector store API.
+
+## Implementation ownership
+
+| Responsibility | Implementation |
+|----------------|----------------|
+| Backend interface and memory result types | [base_memory.py](base_memory.py), [types.py](types.py). Import these from their concrete modules. |
+| Distillation, compaction, budgets and LLM extraction | [core.context](../../context/README.md); helpers are re-exported here. |
+| Workspace Markdown reads/writes | [system.file.md_store](../../../system/file/md_store.py); helpers are re-exported here. |
+| Vector-memory database | [system.db.sqlite](../../../system/db/sqlite.py), using the `sqlite` extra. |
+| Raw conversation transcripts | [interface.session](../../../interface/session.py), not this package. |
+
+The separate `knowledge` CLI manages versioned `knowledge.json` records. Its
+name does not make it the owner of these memory backends or the agent's
+`store_knowledge()` / `recall_knowledge()` helpers.
 
 ## Three-Tier Memory
 
@@ -15,11 +31,16 @@ Memory is split into three layers:
 | **2** | `memory/MEMORY.md` | Local | Stable, extracted facts and decisions for the workspace. |
 | **3** | `global_memory.db` | Global | Reusable cross-workspace insights (stored in SQLite). |
 
-**Markdown is the source of truth.** SQLite is just a read-only index for cross-workspace facts.
+Markdown holds workspace summaries and stable facts. Global SQLite holds
+cross-workspace insights and receives writes from distillation and compaction;
+it is not read-only, nor necessarily a complete mirror of Markdown. The
+architecture's Markdown-first policy does not provide automatic conflict
+reconciliation between arbitrary stores.
 
 ## The Memory Lifecycle
 
-The memory system runs in a continuous, automated loop to ensure the agent learns from every interaction without requiring manual context management.
+The CLI can queue post-chat distillation; SDK callers may invoke it explicitly.
+Extraction depends on the configured filter/model and can produce no new facts.
 
 ```text
   [ContextBuilder]                              [Minion Agent]
@@ -34,13 +55,21 @@ The memory system runs in a continuous, automated loop to ensure the agent learn
 ```
 
 ### 1. Pre-Chat (`ContextBuilder`)
-Before the agent even speaks, `ContextBuilder` gathers all stored memory. It reads the local `MEMORY.md` (Tier 2) and queries the global SQLite database (Tier 3) for relevant insights. It injects all of this directly into the LLM's system prompt.
+`ContextBuilder` reads local `MEMORY.md` (Tier 2) and optionally queries a limited
+number of recent global SQLite insights (Tier 3). Section budgets/strategies can
+limit what reaches the prompt; it does not inject every stored memory.
 
 ### 2. Chat (`Minion`)
-The agent reasons and converses with you, fully aware of the facts injected by the context builder. During this time, nothing is written to memory. Instead, the raw conversation is simply appended to a `sessions/*.jsonl` log file.
+The prompt/chat execution handler appends transcript records and saves native
+model-message checkpoints. An attached memory backend also exposes CRUD and
+ingestion tools, so an agent may write memory during a turn.
 
 ### 3. Post-Chat (`MemoryDistiller` & `llm_filter`)
-When the chat session ends (e.g., you type `exit`), the `MemoryDistiller` spins up in the background. It sends the raw `.jsonl` transcript to the LLM via the `llm_filter`, asking it to extract any *new* project facts, global insights, and a brief session summary. The distiller then disperses these extracted facts to their respective MD/SQLite files, ready for the next session.
+When a CLI chat with submitted turns ends (for example via `/exit`), it queues a
+distillation task. `MemoryDistiller` reads and shortens the transcript, invokes
+the configured filter, then appends history, upserts workspace facts and inserts
+global insights. It compacts `MEMORY.md` when over budget; the default distillation
+path does not trim history.
 
 ## Memory vs. History
 
@@ -48,13 +77,13 @@ When the chat session ends (e.g., you type `exit`), the `MemoryDistiller` spins 
 |---|---|---|---|
 | **Contains** | Stable facts and decisions | Chronological session log | Reusable cross-workspace insights |
 | **Scope** | Workspace-local | Workspace-local | Global |
-| **Updated** | Upserted (sections replaced) | Appended (never modified) | Inserted (deduped by SQLite) |
+| **Updated** | Upserted or compacted | Appended; explicit history-budget enforcement can trim oldest lines | Written through the SQLite backend |
 | **Read by agent** | Yes (via ContextBuilder) | No | Yes (via ContextBuilder) |
 
 ## Contract
 
-> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v1.
+> [Recursive, Bounded Evolution](../../../../../docs/architecture/recursive-evolution.md) — Contract v1.
 > **Public surface:** exactly `__init__.__all__`: `append_history`, `delete_memory_section`, `search_memory_sections`, `read_memory`, `upsert_memory_section`, `write_memory`, `DistillationResult`, `MemoryDistiller`, `create_llm_filter`, `CompactionOutcome`, `MemoryBudgets`, `TierStatus`, `check_pressure`, `compact_memory` (`create_llm_compactor` is imported but not exported); `SQLiteMemory` via `miminions.system.db.sqlite` (needs `[sqlite]`).
-> **State:** Tier 1 `HISTORY.md` (append-only) + Tier 2 `MEMORY.md` (upserted) are truth; Tier 3 `global_memory.db` is a derived, deduped index. Markdown outranks SQLite on conflict.
-> **Lifecycle:** post-chat distill → dedupe → compaction under budget → next-session `ContextBuilder` read. Nothing is written during chat except the session transcript.
+> **State:** backend contracts/types live here; the owning context and storage modules manage Tier 1/2 Markdown and Tier 3 SQLite. The stores are distinct, not automatically interchangeable.
+> **Lifecycle:** optional memory tools during a turn; post-chat distillation and budget-driven compaction; later prompt assembly reads the resulting memory.
 > **Gate:** `tests/integration/memory/` + `tests/integration/context/` + `scripts/check_structure.py`.

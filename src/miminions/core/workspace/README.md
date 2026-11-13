@@ -10,6 +10,13 @@ directory layout, and read it back for prompt assembly. Domain models and
 resolvers live in `registry.py`; layout, bootstrap, discovery, and readers remain
 separate modules. Memory interpretation belongs to the memory/context APIs.
 
+A project is a source-code directory; a workspace is the associated MiMinions
+state record and files root. [discovery.py](discovery.py) inspects project source
+without importing it. The CLI's
+[project helper](../../interface/cli/management/project.py) selects projects and
+persists their workspace association. Workspace template bootstrapping here is
+separate from application first-run setup in `interface.bootstrap`.
+
 ## Public surface
 
 ```python
@@ -27,7 +34,9 @@ Layout: `root/{prompt,memory,skills,sessions,data}/`.
 
 ## State
 
-The workspace directory itself. Bootstrap templates scaffold
+`WorkspaceManager` persists graph/rule/state records and the workspace root path
+in `<config_dir>/workspaces.json`. The separate workspace directory holds files.
+Bootstrap templates scaffold
 `prompt/*.md`, `memory/MEMORY.md` (Facts/Decisions/Preferences),
 `memory/HISTORY.md` (append-only), and `skills/core/SKILL.md`. Markdown
 files are the source of truth; readers return `""`/omit missing files

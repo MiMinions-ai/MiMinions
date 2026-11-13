@@ -15,7 +15,8 @@ heads, PR threads, and stale maps. A developer or agent picking up another's
 work must reverse-engineer intent. Unbounded growth + ungated sharing is the
 defect; the fix is structural, not more documentation volume.
 
-Evidence on `development` today:
+Evidence recorded at the original adoption (`f9e466b`, historical rather than
+the current tree):
 
 - `src/miminions/execution/` is tracked and shipped (`ExecutionService`,
   durable local execution) but absent from `STRUCTURE.md`.
@@ -40,10 +41,10 @@ Evidence on `development` today:
 3. **Stable evolution.** A contract change is explicit, versioned, and
    merged together with its contract-doc update and its gate. No silent
    drift: if code and contract disagree, CI fails.
-4. **Markdown is the source of truth.** Indexes (SQLite, `STRUCTURE.md`
-   tree, MkDocs nav) are derived views. This generalises the existing
-   memory rule ("Markdown is the source of truth; SQLite is a read-only
-   index") to the whole repo.
+4. **Markdown-first contracts.** Keep human-readable contracts and workspace
+   memory explicit rather than relying on an index to explain them. This is
+   not a claim that all SQLite databases are read-only or derived: global memory
+   receives writes, and the execution database owns durable task state.
 
 ## Levels
 
@@ -51,19 +52,22 @@ Evidence on `development` today:
 |---|---|---|---|
 | L0 | Repo | This doc + `pyproject.toml` + CI | `miminions` 0.4.1, entry `miminions = miminions.interface.cli.main:main` |
 | L1 | Package | `STRUCTURE.md` import surface | `from miminions.core.agent import create_minion` |
-| L2 | Module | `src/miminions/<module>/README.md` | `memory`, `context`, `execution` |
+| L2 | Module | `src/miminions/<package>/README.md` | `core/context`, `system/execution`, `interface/cli` |
 | L3 | Workspace | `prompt/ memory/ skills/ sessions/ data/` (`WorkspaceLayout`) | Bootstrap files `AGENTS.md USER.md TOOLS.md IDENTITY.md` |
 | L4 | Session | `sessions/*.jsonl` → distiller | One chat, distilled on exit |
 
 ## The five-block contract
 
-Every level, and every L2 module, states exactly these blocks. A missing
-block means the level is not yet contracted — the gate reports it.
+Every level, and every L2 module, should state these five blocks. The current
+structure gate checks top-level package contract markers and exported-name
+mentions, the map/nav, and CLI registrations; it does not prove that every block
+exists or that dependency and state descriptions match runtime behavior.
 
 1. **Purpose** — one paragraph: what this owns, what it never does.
 2. **Public surface** — the only stable API (usually the package
    `__init__.py` `__all__`, a CLI group, or an on-disk layout). Callers
-   import from here; deep imports are unsupported.
+   import from here or from explicitly documented concrete modules. Undocumented
+   implementation helpers are not made public merely by having internal callers.
 3. **State** — what it owns on disk/in memory, and which artefact is the
    source of truth vs a derived index.
 4. **Lifecycle** — how it is created, how it changes, and how change
@@ -73,7 +77,7 @@ block means the level is not yet contracted — the gate reports it.
 
 Header per contract: **Owner** (team/role), **Version** (bump on any
 breaking surface/state change, with a migration note — following the
-existing `WORKSPACE_SCHEMA_VERSION` pattern in `core/workspace.py`).
+existing `WORKSPACE_SCHEMA_VERSION` pattern in `core/workspace/registry.py`).
 
 ## Sharing loop (context + contracts)
 
@@ -95,33 +99,38 @@ contract, not through archaeology.
 
 ## Contract registry (current package layout)
 
-Public surface is the module `__init__.py` `__all__` unless noted. Full
-contracts live in each module `README.md`; this table is the index.
+Paths below are relative to `miminions`; public surface is the package
+`__init__.py` `__all__` unless noted. A re-export is an import convenience, not
+implementation ownership. Package READMEs describe current responsibilities,
+including existing cross-package dependencies.
 
 | Module | Public surface (stable) | State owner | Lifecycle / promotion |
 |---|---|---|---|
 | `daemon` | Gateway bus, channels, sessions, cron and orchestration | Gateway session and service state | Start/stop services and channels |
 | `interface` | `JsonlSessionStore`, `create_session_id`; CLI via `interface.cli` | Session transcripts and CLI configuration | Bootstrap, dispatch, append and resume |
 | `system` | `LocalDataManager`; auth, database, execution and file APIs via subpackages | Local persistent stores and execution state | Storage and durable execution adapters |
-| `agent` | `Minion`, `create_minion`, `AgentConfig`, `AgentState` (lazy) | In-memory agent; attached `BaseMemory` | `set_context()` rebuilds prompt via `ContextBuilder` each run |
-| `cli` | `cli` (13 lazy groups + standalone `init`, see `cli/main.py`) | `~/.miminions/` (`MIMINIONS_HOME`) | Bootstrap on first real subcommand; help stays lazy/cheap |
-| `context` | `ContextBuilder` | None (pure assembly) | Reads L3 prompt/memory/skills + Tier 3 → system prompt string |
-| `core` | Gateway symbols only; workspace/auth via submodules | Workspace JSON (`WorkspaceManager`, schema v1) | `ensure_default_setup()` idempotent first run |
-| `data` | `LocalDataManager` | Content-addressed files + master index + txn log | SHA-256 dedupe; append-only audit log |
-| `execution` | `ExecutionService`, `ExecutionRequest/Task/Event/Handle` | Durable store under config home | Persistent worker (`-m miminions.system.execution.worker`); terminal = completed/failed/cancelled |
-| `memory` | `MemoryDistiller`, `create_llm_filter`, `compact_memory`, budgets, md_store helpers | Tier 1/2 Markdown (truth) + Tier 3 SQLite (index) | Post-chat distill → upsert → dedupe/compaction under budget |
-| `session` | `JsonlSessionStore`, `create_session_id` | `sessions/*.jsonl` transcripts | Append during chat; history trimmed at turn boundaries |
-| `task` | `TaskRuntime`, `Task`, `AgentTask`, `TaskStatus`, `TaskPriority` | In-memory runtime (`DEFAULT_RUNTIME`) | Async add/run/update; distinct from durable `execution` |
-| `tools` | `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass) | None | Function → schema → agent/MCP; pydantic `ToolSchema` in `schemas.py` is internal — do not confuse the two |
+| `core` | Root re-exports gateway symbols; domain APIs via subpackages | Domain runtime state and workspace persistence in submodules | Not an IO-free layer; first-run application setup lives in `interface.bootstrap` |
+| `core.agent` | `Minion`, `create_minion`, `AgentConfig`, `AgentState`, pydantic-ai re-exports | In-memory agent; attached memory backend | `set_context()` attaches workspace data used by the prompt callback |
+| `interface.cli` | `cli` (13 lazy groups + standalone `init`, see `interface/cli/main.py`) | Config-home records and command state | Bootstrap on first real subcommand; help stays lazy/cheap |
+| `core.context` | Root exports `ContextBuilder`; memory helpers also exposed through `core.agent.memory` | Prompt configuration; memory/budget state written through storage APIs | Reads prompt inputs; separately distills and compacts memory |
+| `system.file` | `LocalDataManager`, file/index/log APIs; Markdown helpers via `md_store` | Content-addressed files/index/logs and separate workspace Markdown files | File operations and memory IO; interpretation belongs to `core.context` |
+| `system.db.sqlite` | `SQLiteMemory` via concrete module | Vector-memory database at configured path | Embedding-backed memory CRUD; requires the `sqlite` extra |
+| `system.execution` | `ExecutionService`, `ExecutionRequest`, `ExecutionTask`, `TaskEvent`, `TaskHandle`; trace types via `trace` | Durable tasks, events, approvals and checkpoints | Persistent worker; terminal = completed/failed/cancelled |
+| `core.agent.memory` | Backend contracts/types via concrete modules; re-exported distillation, budget and Markdown APIs | State managed by context and storage implementations | Shared memory import surface, not the home of every implementation |
+| `interface.session` | `JsonlSessionStore`, `create_session_id`, history helpers | `sessions/*.jsonl` transcripts | Append and reconstruct history; execution checkpoints are distinct |
+| `core.task` | `TaskRuntime`, `Task`, `AgentTask`, `TaskStatus`, `TaskPriority` | In-memory runtime (`DEFAULT_RUNTIME`) | Async add/run/update; distinct from durable execution and CLI work items |
+| `core.tool` | `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass) | Tool schemas and project activation/import bookkeeping | Function adapters and MCP; pydantic `ToolSchema` in `schemas.py` is a different internal type |
 | *(removed)* `user` | — | — | Removed 2026-10-23 (OQ-11): zero callers; returns via ADR if account features are scoped |
-| `utils` | `generate_*`, `load_json/save_json`, `append_transcript` | None | Pure helpers; no domain state |
+| `utils` | `generate_*`, `load_json/save_json`, example `append_transcript` helper | No independent store; filesystem helpers use caller paths | Shared helpers, not all pure; transcript helper is re-exported from `interface.session` |
 | *(removed)* `workflow` | — | — | Removed 2026-10-23 (OQ-10): trace types moved to `execution.trace` (schema v2 unchanged); controller had no production callers |
-| `workspace_fs` | `WorkspaceLayout`, `BOOTSTRAP_PROMPT_FILES`, `init_workspace`, readers | On-disk L3 layout | `init_workspace()` scaffolds; readers omit missing files |
+| `core.workspace` | Workspace models/manager/resolvers, `WorkspaceLayout`, bootstrap and readers | Workspace JSON registry, filesystem layout and discovery cache | Resolve/create, scaffold and discover; project source is separate from state |
 
 Invariants that must never regress: `core/__init__` re-exports gateway
-only; the two `ToolSchema` types stay distinct and documented; `task`
-(in-memory) and `execution` (durable) never merge silently; Markdown
-outranks SQLite on conflict.
+only; the two `ToolSchema` types stay distinct and documented; `core.task`
+(in-memory) and `system.execution` (durable) never merge silently. The
+Markdown-first memory policy does not imply an automatic cross-store conflict
+resolver. Empty `core.knowledge`, `interface.gui` and `system.config` packages are
+reserved, not additional implemented services.
 
 ## Gated evolution
 
@@ -150,7 +159,7 @@ repo. The gate fails if `memory/` or `docs/test-quality-control.md`
 reappears here. Public docs answer "what should a user do"; internal
 docs answer "why did we decide it, what is broken, what is next".
 
-## Compatibility
+## Compatibility of the original contract rollout
 
 Stable across this change: Python ≥3.12, `pydantic-ai>=1.0.0,<2.0.0`,
 console entry `miminions`, `~/.miminions/` home (`MIMINIONS_HOME`),
@@ -158,7 +167,7 @@ workspace on-disk layout, and every Public surface row above. Only docs,
 `STRUCTURE.md`, the check script, CI wiring, and missing READMEs are
 added; no runtime API moves.
 
-## Non-goals
+## Original non-goals
 
 No new runtime feature, no module rename, no branch cleanup, no wiki or
 external docs host, no hand-maintained duplicate of this registry (the

@@ -120,9 +120,9 @@ are restored afterward. Newly imported project modules, including namespace
 packages, are removed on success or failure.
 Python runs in the current interpreter with OS permissions, without a sandbox.
 
-> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional explicit schemas; additive, no migration).
+> [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional explicit schemas; additive, no migration).
 > **Public surface:** `GenericTool`, `create_tool`, `tool`, `ToolSchema` (dataclass, in `__init__.py`). Invariant: the pydantic `ToolSchema` in `schemas.py` (backing `ToolDefinition`) is a different, internal type — never conflate them.
-> **State:** none. **Lifecycle:** typed function → auto-derived JSON schema → agent execution or MCP adaptation (`MCPTool` is async-only).
+> **State:** tool/schema objects and project-tool activation/import bookkeeping; persistent execution events and approvals belong to `system.execution`. **Lifecycle:** typed function → auto-derived JSON schema → agent execution or MCP adaptation (`MCPTool` is async-only).
 > **Gate:** tools tests + `scripts/check_structure.py`.
 
 ## License

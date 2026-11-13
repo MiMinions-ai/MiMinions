@@ -1,13 +1,19 @@
 # Execution (Durable Local Execution)
 
-> Contract: [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md).
-> This module is the durable counterpart to the in-memory `task` runtime — never merge the two silently.
+> Contract: [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md).
+> This package is the durable counterpart to [core.task](../../core/task/README.md) — never merge the two silently.
 
 ## Purpose
 
 Run work in a persistent local instance that survives the calling process:
 queued tasks, streamed events, approvals, and checkpoints. Owns durability
-and process supervision; never owns agent reasoning or task modelling.
+and process supervision, execution request/result models, and task orchestration.
+Agent reasoning belongs to `core.agent`; in-process `Task` / `AgentTask` models
+belong to `core.task`. The `daemon` gateway is a separate runtime.
+
+Handlers currently use helpers from `interface.cli` for saved-agent construction,
+project loading, tool-session recording and distillation. This is an existing
+cross-package dependency, not a pure storage-only layer.
 
 ## Public surface
 

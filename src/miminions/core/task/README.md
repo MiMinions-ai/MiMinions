@@ -1,13 +1,17 @@
 # Task (In-Memory Task Runtime)
 
-> Contract: [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md).
-> In-memory only. For durable, cross-process execution use `execution` — the two must never merge silently.
+> Contract: [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md).
+> In-memory only. For durable, cross-process execution use [system.execution](../../system/execution/README.md) — the two must never merge silently.
 
 ## Purpose
 
 Model and run agent tasks inside one process: creation, status tracking,
-filtering, and async execution. Owns the task lifecycle state machine;
+filtering, and async execution. Tracks in-memory task lifecycle status;
 never owns persistence or process supervision.
+
+The CLI also calls saved records in `tasks.json` "work items" and queued
+`ExecutionTask` records "executions". Neither is this package's process-local
+runtime; `miminions task list --kind` distinguishes the two CLI record types.
 
 ## Public surface
 
@@ -16,8 +20,9 @@ from miminions.core.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPr
 # DEFAULT_RUNTIME is a shared process-wide runtime instance.
 ```
 
-`TaskStatus`: pending → initialized → idle → running/in_progress →
-paused/completed/failed/cancelled. `TaskPriority`: low/medium/high/critical.
+`TaskStatus` includes pending, initialized, idle, running/in_progress, paused,
+completed, failed and cancelled; this list is not an enforced transition order.
+`TaskPriority`: low/medium/high/critical.
 
 ## State
 

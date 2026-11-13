@@ -1,6 +1,20 @@
-# MiMinions Local Data Management System
+# MiMinions File Storage
 
 A comprehensive local file system data management solution for MiMinions that provides hash-based storage, master index files, transaction logging, and support for multiple file types.
+
+## Package ownership
+
+`miminions.system.file` contains two separate storage APIs:
+
+- `LocalDataManager` and its index/log/storage helpers implement the
+  content-addressable store documented below.
+- [md_store.py](md_store.py) reads and writes workspace `MEMORY.md` / `HISTORY.md`.
+  It does not store those files through `LocalDataManager`.
+
+Memory extraction and compaction policy belongs to
+[core.context](../../core/context/README.md), vector storage to
+[system.db.sqlite](../db/sqlite.py), and transcripts to
+[interface.session](../../interface/session.py).
 
 ## Features
 
@@ -271,7 +285,7 @@ Run the test suite:
 
 ```bash
 # Integration tests
-python -m pytest tests/integration/test_data_management.py -v
+python -m pytest tests/integration/data/test_management.py -v
 
 # End-to-end tests
 python -m pytest tests/e2e/test_data_management_e2e.py -v

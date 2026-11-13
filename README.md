@@ -191,7 +191,9 @@ See the [CLI reference](https://miminions.ai/modules/cli/) for every subcommand.
 | [Data Management](https://miminions.ai/modules/data/) | `LocalDataManager` |
 | [Gateway Runtime](https://miminions.ai/modules/gateway/) | Channels, bus, cron |
 
-For a map of the source tree and module status, see [STRUCTURE.md](STRUCTURE.md).
+New contributors can start with the [package ownership map](STRUCTURE.md#package-ownership)
+and [shared vocabulary](STRUCTURE.md#vocabulary-for-contributors), followed by
+the source tree and public import examples in [STRUCTURE.md](STRUCTURE.md).
 Runnable examples live in [`examples/`](examples/).
 
 ## Development

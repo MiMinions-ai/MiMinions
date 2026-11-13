@@ -4,6 +4,41 @@ This file is a human-readable map of the current repository. Packaging metadata
 in `pyproject.toml` remains the source of truth for installed entry points and
 dependencies.
 
+## Package ownership
+
+Start with the behavior you want to change, then find its implementation owner.
+An API re-export is a convenient import path, not a transfer of responsibility.
+
+| Package | Start here for | Important boundary |
+|---------|----------------|--------------------|
+| [core/](src/miminions/core/README.md) | Agents, tools, context/memory processing, in-memory tasks and workspace models/layout. | Not IO-free: workspace persistence and context loading live here too. |
+| [interface/](src/miminions/interface/README.md) | CLI commands, first-run setup, configuration and transcript helpers. | Also contains runtime helpers used by execution; not solely terminal presentation. |
+| [system/](src/miminions/system/README.md) | Durable execution, file/database backends and auth compatibility helpers. | Execution orchestration differs from agent reasoning; handlers currently depend on some CLI helpers. |
+| [daemon/](src/miminions/daemon/README.md) | Gateway messages, channels, cron and gateway sessions. | Not the local execution instance managed by `miminions instance`. |
+| [utils/](src/miminions/utils/README.md) | Shared chunking, generation and JSON helpers. | Some helpers do IO; domain behavior belongs with its owning package. |
+
+These are current responsibilities, not a promise of strict dependency layering.
+Empty reserved packages (`core.knowledge`, `interface.gui`, `system.config`) do
+not implement their namesakes. The package READMEs identify the current owners.
+
+## Vocabulary for contributors
+
+| Term | Meaning in this repository |
+|------|----------------------------|
+| **Project / workspace** | A project is the user's source directory. A workspace is a MiMinions record plus its state/files root. Project discovery associates the two without moving MiMinions state into the project. See [workspace](src/miminions/core/workspace/README.md). |
+| **Agent / saved agent** | `Minion` is a live runtime with a model and tools. A saved agent is a configuration record managed by the CLI and used to construct a runtime. See [agent](src/miminions/core/agent/README.md) and [agent commands](src/miminions/interface/cli/management/agent.py). |
+| **Task / execution / instance** | `core.task` runs tasks in one process. The CLI also manages saved work items in `tasks.json`. A durable execution is a queued request tracked by `system.execution`; the instance is its local supervisor/worker runtime. `task list --kind` distinguishes work items from executions. |
+| **Session / transcript / checkpoint** | A session identifies a conversation. Its JSONL transcript holds text and metadata; an execution checkpoint holds native model messages, including tool exchanges, and is preferred for prompt/chat resumption. Gateway sessions use a separate API. See [interface](src/miminions/interface/README.md). |
+| **Memory / knowledge** | Memory APIs store and retrieve facts, summaries and vector entries. The `knowledge` CLI separately manages versioned records in `knowledge.json`; it is not the implementation of agent memory. See [memory](src/miminions/core/agent/memory/README.md) and [knowledge commands](src/miminions/interface/cli/management/knowledge.py). |
+| **Context** | Model-facing prompt material assembled from workspace state, files, memory and optional project metadata. `core.context` also contains memory-processing code; `TaskContext` in execution handlers instead carries task/store access and event/approval helpers. |
+| **Tool / skill** | A tool is an executable callable exposed to an agent. A skill is a Markdown instruction file discovered under a workspace's `skills/` directory; listing it does not execute a function. See [tools](src/miminions/core/tool/README.md) and [workspace](src/miminions/core/workspace/README.md). |
+| **Daemon / gateway** | `daemon` is the package implementing the gateway runtime; `gateway` is the user-facing CLI name. Neither name means the durable execution instance. |
+
+Use these distinctions in names and reviews: specify which task, session,
+context or store you mean instead of assuming the word has only one meaning.
+
+## Repository tree
+
 ```text
 MiMinions/
 |-- README.md                  # Project overview and quick start

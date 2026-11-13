@@ -5,6 +5,10 @@ MiMinions as a persistent, event-driven server. It is modelled after the
 [nanobot](https://github.com/HKUDS/nanobot) architecture for channel
 abstraction and message routing.
 
+The package name is `miminions.daemon`; the CLI command remains `miminions gateway`.
+This runtime is distinct from the durable execution instance managed by
+`miminions instance` in [system.execution](../system/execution/README.md).
+
 > These are extensible building blocks, not a turnkey server: `BaseChannel` and
 > `GatewayOrchestrator` are abstract and no concrete channels ship built-in.
 > Full reference: [Gateway documentation](https://miminions.ai/modules/gateway/).

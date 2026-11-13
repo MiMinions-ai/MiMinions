@@ -1,9 +1,27 @@
-# Context Builder
+# Context Assembly and Memory Processing
 
-The `context` package contains the `ContextBuilder`, which dynamically assembles
-the agent's system prompt from workspace state and stored memory.
+`miminions.core.context` assembles system prompts and implements memory
+distillation, budgeting and compaction. These are related but distinct jobs:
+prompt assembly reads material for a model request; distillation and compaction
+update persistent memory.
 
 > Full reference: [Context Builder documentation](https://miminions.ai/modules/context/).
+
+## Implementation ownership
+
+| Module | Responsibility |
+|--------|----------------|
+| [context_builder.py](context_builder.py) | Load workspace inputs/global insights and render a system-prompt string. |
+| [strategies.py](strategies.py), [dedupe.py](dedupe.py) | Fit prompt sections to budgets and remove duplicated memory text. |
+| [distiller.py](distiller.py), [llm_filter.py](llm_filter.py) | Extract summaries/facts from transcripts and coordinate memory promotion. |
+| [budget.py](budget.py), [compaction.py](compaction.py) | Measure memory pressure, compact facts and record budget outcomes. |
+
+Memory-processing helpers are also re-exported by
+[core.agent.memory](../agent/memory/README.md). Markdown IO is implemented in
+[system.file.md_store](../../system/file/md_store.py), vector storage in
+[system.db.sqlite](../../system/db/sqlite.py), and transcripts in
+[interface.session](../../interface/session.py). Re-exporting a helper does not
+move its implementation into the memory package.
 
 ## Core Responsibilities
 
@@ -16,8 +34,8 @@ the agent's system prompt from workspace state and stored memory.
 
 ## Usage
 
-`ContextBuilder` is wired into the agent via `Minion.set_context(workspace, root_path)`
-and runs on every `run()` call. To build a prompt directly:
+`Minion.set_context(workspace, root_path)` attaches the workspace used by the
+agent's system-prompt callback. To build a prompt directly:
 
 ```python
 from miminions.core.context import ContextBuilder
@@ -35,7 +53,8 @@ Note the call shape: `build()` takes the workspace and root path as arguments.
 
 ## Contract
 
-> [Recursive, Bounded Evolution](../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional project context; additive).
-> **Public surface:** `ContextBuilder` only. **State:** none (pure assembly).
-> **Lifecycle:** reads `prompt/` + `memory/MEMORY.md` + Tier-3 global + `skills/` (with per-section strategies/budgets) → one system-prompt string per run.
+> [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional project context; additive).
+> **Public surface:** the package root exports `ContextBuilder`; memory-processing APIs are also exposed through `core.agent.memory`.
+> **State:** the builder holds strategies/budgets and performs filesystem/database reads; reading Markdown memory can initialize missing files. Distillation/compaction write workspace memory, global SQLite entries and budget state (`memory/BUDGET_STATE.json`). This is not a pure, stateless package.
+> **Lifecycle:** prompt assembly reads `prompt/` + `memory/MEMORY.md` + Tier-3 global + `skills/` and returns a string. Separately, distillation promotes extracted facts and compacts over-budget workspace memory.
 > **Gate:** context tests (`tests/integration/context/`) + `scripts/check_structure.py`.
