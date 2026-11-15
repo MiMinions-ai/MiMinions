@@ -7,8 +7,17 @@ from typing import ClassVar, Self
 
 import pytest
 
-from miminions.core.agent.memory import DistillationResult, MemoryDistiller
+import miminions.core.agent.memory as memory_package
+from miminions.core.context.distiller import DistillationResult, MemoryDistiller
 from miminions.interface.session import append_transcript
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["MemoryDistiller", "create_llm_filter", "MemoryBudgets", "upsert_memory_section"],
+)
+def test_memory_package_does_not_reexport_helpers(name):
+    assert not hasattr(memory_package, name)
 
 
 class _FakeSQLiteMemory:

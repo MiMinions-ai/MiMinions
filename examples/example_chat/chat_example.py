@@ -16,7 +16,8 @@ from pathlib import Path
 from miminions.core.agent import create_minion
 from miminions.core.workspace import Workspace
 from miminions.core.workspace.bootstrap import init_workspace
-from miminions.core.agent.memory import MemoryDistiller, create_llm_filter
+from miminions.core.context.distiller import MemoryDistiller
+from miminions.core.context.llm_filter import create_llm_filter
 from miminions.interface.session import JsonlSessionStore
 
 

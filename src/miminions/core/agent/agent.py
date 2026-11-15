@@ -23,7 +23,7 @@ from ..tool.default import (
     cli_run_command_tool,
 )
 from ..tool.mcp_adapter import MCPToolAdapter
-from miminions.core.agent.memory.base_memory import BaseMemory
+from miminions.core.agent.memory.base import BaseMemory
 from ...utils.chunker import TextChunker
 
 from miminions.core.agent.models import AgentConfig, AgentState

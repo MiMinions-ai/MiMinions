@@ -34,9 +34,9 @@ def _run_session_distillation(
     filter that produces empty results (the pipeline still runs, just
     without extraction).
     """
-    from miminions.core.agent.memory import MemoryDistiller
+    from miminions.core.context.distiller import MemoryDistiller
     if model is not None:
-        from miminions.core.agent.memory import create_llm_compactor, create_llm_filter
+        from miminions.core.context.llm_filter import create_llm_compactor, create_llm_filter
 
         llm_filter = create_llm_filter(model)
         compactor = create_llm_compactor(model)

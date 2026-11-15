@@ -173,7 +173,8 @@ Prefer concrete subpackage imports:
 from miminions.core.agent import create_minion, Minion
 from miminions.core.tool import GenericTool, create_tool, tool, ToolSchema
 from miminions.system.db.sqlite import SQLiteMemory
-from miminions.core.agent.memory import MemoryDistiller, create_llm_filter
+from miminions.core.context.distiller import MemoryDistiller
+from miminions.core.context.llm_filter import create_llm_filter
 from miminions.core.context import ContextBuilder
 from miminions.core.workspace import WorkspaceManager, Workspace, Node, Rule
 from miminions.core.workspace import WorkspaceLayout, init_workspace

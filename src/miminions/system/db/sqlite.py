@@ -14,7 +14,7 @@ import json
 import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from ...core.agent.memory.base_memory import BaseMemory
+from ...core.agent.memory.base import BaseMemory
 from uuid import uuid4
 try:
     from fastembed import TextEmbedding

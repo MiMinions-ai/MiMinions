@@ -16,12 +16,12 @@ update persistent memory.
 | [distiller.py](distiller.py), [llm_filter.py](llm_filter.py) | Extract summaries/facts from transcripts and coordinate memory promotion. |
 | [budget.py](budget.py), [compaction.py](compaction.py) | Measure memory pressure, compact facts and record budget outcomes. |
 
-Memory-processing helpers are also re-exported by
-[core.agent.memory](../agent/memory/README.md). Markdown IO is implemented in
+Import memory-processing helpers from the concrete modules listed above.
+Backend contracts and types live in [core.agent.memory](../agent/memory/README.md).
+Markdown IO is implemented in
 [system.file.md_store](../../system/file/md_store.py), vector storage in
 [system.db.sqlite](../../system/db/sqlite.py), and transcripts in
-[interface.session](../../interface/session.py). Re-exporting a helper does not
-move its implementation into the memory package.
+[interface.session](../../interface/session.py).
 
 ## Core Responsibilities
 
@@ -54,7 +54,7 @@ Note the call shape: `build()` takes the workspace and root path as arguments.
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional project context; additive).
-> **Public surface:** the package root exports `ContextBuilder`; memory-processing APIs are also exposed through `core.agent.memory`.
+> **Public surface:** the package root exports `ContextBuilder`; memory-processing APIs are available from their concrete modules.
 > **State:** the builder holds strategies/budgets and performs filesystem/database reads; reading Markdown memory can initialize missing files. Distillation/compaction write workspace memory, global SQLite entries and budget state (`memory/BUDGET_STATE.json`). This is not a pure, stateless package.
 > **Lifecycle:** prompt assembly reads `prompt/` + `memory/MEMORY.md` + Tier-3 global + `skills/` and returns a string. Separately, distillation promotes extracted facts and compacts over-budget workspace memory.
 > **Gate:** context tests (`tests/integration/context/`) + `scripts/check_structure.py`.

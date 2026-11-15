@@ -146,6 +146,27 @@ async def test_distillation_is_visible_and_cleans_up(conversation, monkeypatch):
     assert agents
 
 
+def test_session_distillation_uses_context_helpers(tmp_path, monkeypatch):
+    from miminions.interface.cli.operations.chat import _run_session_distillation
+
+    distiller = Mock()
+    llm_filter = Mock()
+    compactor = Mock()
+    create_distiller = Mock(return_value=distiller)
+    monkeypatch.setattr("miminions.core.context.distiller.MemoryDistiller", create_distiller)
+    monkeypatch.setattr("miminions.core.context.llm_filter.create_llm_filter", Mock(return_value=llm_filter))
+    monkeypatch.setattr("miminions.core.context.llm_filter.create_llm_compactor", Mock(return_value=compactor))
+    workspace = Mock()
+    model = Mock()
+
+    _run_session_distillation(workspace, tmp_path, "session", model)
+
+    create_distiller.assert_called_once_with(llm_filter=llm_filter, compactor=compactor)
+    distiller.distill_session.assert_called_once_with(
+        workspace=workspace, root_path=str(tmp_path), session_id="session"
+    )
+
+
 async def test_distillation_failure_is_recorded_as_a_task_failure(conversation, monkeypatch):
     store, workspace, _, _ = conversation
     monkeypatch.setattr("miminions.interface.cli.operations.chat._run_session_distillation", Mock(side_effect=RuntimeError("distillation failed")))

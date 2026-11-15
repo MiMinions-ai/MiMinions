@@ -1,8 +1,7 @@
-# Agent Memory Contracts and Shared API
+# Agent Memory Contracts and Types
 
-`miminions.core.agent.memory` defines backend contracts and result types, and
-provides a shared import surface for the wider memory system. It does not contain
-all memory implementations.
+`miminions.core.agent.memory` defines backend contracts and result types.
+Import memory-processing and storage helpers from their owning modules.
 
 > Full reference: [Memory documentation](https://miminions.ai/modules/memory/),
 > including the `SQLiteMemory` vector store API.
@@ -11,9 +10,9 @@ all memory implementations.
 
 | Responsibility | Implementation |
 |----------------|----------------|
-| Backend interface and memory result types | [base_memory.py](base_memory.py), [types.py](types.py). Import these from their concrete modules. |
-| Distillation, compaction, budgets and LLM extraction | [core.context](../../context/README.md); helpers are re-exported here. |
-| Workspace Markdown reads/writes | [system.file.md_store](../../../system/file/md_store.py); helpers are re-exported here. |
+| Backend interface and memory result types | [base.py](base.py), [types.py](types.py). Import these from their concrete modules. |
+| Distillation, compaction, budgets and LLM extraction | [core.context](../../context/README.md), via concrete modules. |
+| Workspace Markdown reads/writes | [system.file.md_store](../../../system/file/md_store.py). |
 | Vector-memory database | [system.db.sqlite](../../../system/db/sqlite.py), using the `sqlite` extra. |
 | Raw conversation transcripts | [interface.session](../../../interface/session.py), not this package. |
 
@@ -83,7 +82,7 @@ path does not trim history.
 ## Contract
 
 > [Recursive, Bounded Evolution](../../../../../docs/architecture/recursive-evolution.md) — Contract v1.
-> **Public surface:** exactly `__init__.__all__`: `append_history`, `delete_memory_section`, `search_memory_sections`, `read_memory`, `upsert_memory_section`, `write_memory`, `DistillationResult`, `MemoryDistiller`, `create_llm_filter`, `CompactionOutcome`, `MemoryBudgets`, `TierStatus`, `check_pressure`, `compact_memory` (`create_llm_compactor` is imported but not exported); `SQLiteMemory` via `miminions.system.db.sqlite` (needs `[sqlite]`).
+> **Public surface:** backend contracts and types via `memory.base` and `memory.types`; memory-processing and Markdown helpers via their owning modules. `SQLiteMemory` is available via `miminions.system.db.sqlite` (needs `[sqlite]`).
 > **State:** backend contracts/types live here; the owning context and storage modules manage Tier 1/2 Markdown and Tier 3 SQLite. The stores are distinct, not automatically interchangeable.
 > **Lifecycle:** optional memory tools during a turn; post-chat distillation and budget-driven compaction; later prompt assembly reads the resulting memory.
 > **Gate:** `tests/integration/memory/` + `tests/integration/context/` + `scripts/check_structure.py`.

@@ -656,7 +656,7 @@ def memory_store(agent_id, text, section, meta):
     else:
         if not section:
             raise click.UsageError("md backend requires --section (it is the memory ID).")
-        from miminions.core.agent.memory import upsert_memory_section
+        from miminions.system.file.md_store import upsert_memory_section
         upsert_memory_section(_md_root(record), section, [text])
         click.echo(f"Stored memory section '{section}'")
 
@@ -676,7 +676,7 @@ def memory_recall(agent_id, query, top_k):
         for item in results:
             click.echo(f"{item.get('id')}: {item.get('text')}")
     else:
-        from miminions.core.agent.memory import search_memory_sections
+        from miminions.system.file.md_store import search_memory_sections
         sections = search_memory_sections(_md_root(record), query)
         if not sections:
             click.echo("No memories found.")
@@ -698,7 +698,7 @@ def memory_update(agent_id, memory_id, text):
             raise click.ClickException(f"Memory '{memory_id}' not found.")
         click.echo(f"Updated memory {memory_id}")
     else:
-        from miminions.core.agent.memory import upsert_memory_section
+        from miminions.system.file.md_store import upsert_memory_section
         upsert_memory_section(_md_root(record), memory_id, [text])
         click.echo(f"Updated memory section '{memory_id}'")
 
@@ -713,7 +713,7 @@ def memory_delete(agent_id, memory_id):
         with _sqlite_memory(record) as memory:
             deleted = memory.delete(memory_id)
     else:
-        from miminions.core.agent.memory import delete_memory_section
+        from miminions.system.file.md_store import delete_memory_section
         deleted = delete_memory_section(_md_root(record), memory_id)
     if not deleted:
         raise click.ClickException(f"Memory '{memory_id}' not found.")
@@ -748,7 +748,7 @@ def ingest_document(agent_id, path, section):
                 memory.create(chunk["text"], chunk.get("metadata"))
         click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}'")
     else:
-        from miminions.core.agent.memory import upsert_memory_section
+        from miminions.system.file.md_store import upsert_memory_section
         title = section or file_path.stem
         upsert_memory_section(_md_root(record), title, [c["text"] for c in chunks])
         click.echo(f"Ingested {len(chunks)} chunk(s) from '{file_path.name}' into section '{title}'")
