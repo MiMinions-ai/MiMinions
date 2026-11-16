@@ -1,4 +1,4 @@
-"""Minion Agent Implementation"""
+"""Agent Implementation"""
 
 import asyncio
 from functools import wraps
@@ -15,7 +15,7 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
 from mcp import StdioServerParameters
 
-from miminions.core.agent.provider import ModelFactory
+from .provider import ModelFactory
 from ..tool import GenericTool
 from ..tool.default import (
     CLI_RUN_COMMAND_DESCRIPTION,
@@ -23,7 +23,7 @@ from ..tool.default import (
     cli_run_command_tool,
 )
 from ..tool.mcp_adapter import MCPToolAdapter
-from miminions.core.agent.memory.base import BaseMemory
+from .memory.base import BaseMemory
 from ...utils.chunker import TextChunker
 
 from miminions.core.agent.models import AgentConfig, AgentState
@@ -31,7 +31,7 @@ from miminions.core.tool.schemas import (
     ParameterType, ToolDefinition, ToolExecutionRequest,
     ToolExecutionResult, ToolParameter, ToolSchema,
 )
-from miminions.core.agent.memory.types import MemoryEntry, MemoryQueryResult
+from .memory.types import MemoryEntry, MemoryQueryResult
 
 logger = logging.getLogger(__name__)
 
