@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.main import cli
+from miminions.interface.cli.main import cli
 
 
 def _workspace_root(config_dir: Path, config: dict) -> Path:

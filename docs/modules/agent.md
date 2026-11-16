@@ -1,12 +1,12 @@
 # Agent
 
-The `miminions.agent` module is the core reasoning engine — a **`Minion`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Minion` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` / `run_stream()` loop.
+The `miminions.core.agent` module is the core reasoning engine — a **`Minion`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Minion` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` / `run_stream()` loop.
 
 !!! note "Import from the subpackage"
-    Always import from `miminions.agent` — the top-level `import miminions` does not re-export these symbols.
+    Always import from `miminions.core.agent` — the top-level `import miminions` does not re-export these symbols.
 
     ```python
-    from miminions.agent import create_minion, Minion
+    from miminions.core.agent import create_minion, Minion
     ```
 
 ## Features
@@ -23,7 +23,7 @@ The `miminions.agent` module is the core reasoning engine — a **`Minion`** is 
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 async def main():
     agent = create_minion("MyAgent")
@@ -49,7 +49,7 @@ asyncio.run(main())
 === "By provider name"
 
     ```python
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
 
     # Default: OpenRouter free model — needs OPENROUTER_API_KEY
     agent = create_minion("MyAgent")
@@ -69,7 +69,7 @@ asyncio.run(main())
 === "By explicit model"
 
     ```python
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
     from pydantic_ai.models.openai import OpenAIModel
 
     # Pass any pydantic-ai model directly; `model` wins over `provider`
@@ -79,7 +79,7 @@ asyncio.run(main())
 === "Offline (test)"
 
     ```python
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
 
     # TestModel runs entirely offline — no API key, no network
     agent = create_minion("MyAgent", provider="test")
@@ -93,8 +93,8 @@ asyncio.run(main())
 A `Minion` can run two flavours of tool. Use `register_tool` for plain functions, or `add_tool` for a [`GenericTool`](tools.md).
 
 ```python
-from miminions.agent import create_minion
-from miminions.tools import tool
+from miminions.core.agent import create_minion
+from miminions.core.tool import tool
 
 agent = create_minion("MyAgent")
 
@@ -123,8 +123,8 @@ Pass `memory=` at construction, or call `set_memory(...)` later. The moment memo
 `memory_store`, `memory_recall`, `memory_update`, `memory_delete`, `memory_get`, `memory_list`, and `ingest_document` (chunked PDF/text ingestion).
 
 ```python
-from miminions.agent import create_minion
-from miminions.memory.sqlite import SQLiteMemory  # requires the [sqlite] extra
+from miminions.core.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory  # requires the [sqlite] extra
 
 memory = SQLiteMemory(db_path=":memory:")
 agent = create_minion("MyAgent", memory=memory)
@@ -136,7 +136,7 @@ print(hits[0]["text"])  # result dicts use the key "meta", not "metadata"
 ```
 
 !!! note
-    `store_knowledge` / `recall_knowledge` raise `ValueError("No memory attached")` if no backend is set. `SQLiteMemory` lives in `miminions.memory.sqlite` (not the package top level) and needs `pip install "miminions[sqlite]"`. See [Memory](memory.md) for the full backend reference.
+    `store_knowledge` / `recall_knowledge` raise `ValueError("No memory attached")` if no backend is set. `SQLiteMemory` lives in `miminions.system.db.sqlite` (not the package top level) and needs `pip install "miminions[sqlite]"`. See [Memory](memory.md) for the full backend reference.
 
 ## Attaching a Workspace
 
@@ -144,7 +144,7 @@ Attach a [workspace](workspaces.md) with `set_context(workspace, root_path)`. `W
 
 ```python
 from pathlib import Path
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 
 config_dir = Path.home() / ".miminions"
@@ -168,7 +168,7 @@ Connect to a [Model Context Protocol](https://modelcontextprotocol.io/) server, 
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("MyAgent")
 
@@ -207,7 +207,7 @@ There are three ways to invoke a tool. Pick by how you want errors and results s
 reply = await agent.run("Multiply 6 by 7")
 
 # Structured result — inspect .status / .error / .result
-from miminions.tools.schemas import ExecutionStatus
+from miminions.core.tool.schemas import ExecutionStatus
 
 res = agent.execute("multiply", {"a": 6, "b": 7})
 print(res.result if res.status == ExecutionStatus.SUCCESS else res.error)
@@ -229,7 +229,7 @@ reply2 = await agent.run("What is my name?", message_history=agent._last_message
 ```
 
 !!! tip "Bounding long histories"
-    For long sessions, `miminions.session.store.trim_message_history(messages, max_messages=40)` caps the history without breaking request/response pairing — it only cuts at a user-prompt turn boundary, so a trimmed history never starts mid-tool-exchange. The CLI chat loop applies this automatically.
+    For long sessions, `miminions.interface.session.trim_message_history(messages, max_messages=40)` caps the history without breaking request/response pairing — it only cuts at a user-prompt turn boundary, so a trimmed history never starts mid-tool-exchange. The CLI chat loop applies this automatically.
 
 ## Streaming Replies
 

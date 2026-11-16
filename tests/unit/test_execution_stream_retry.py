@@ -4,10 +4,10 @@ import pytest
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext, _stream
-from miminions.execution.store import ExecutionStore
+from miminions.core.agent import create_minion
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext, _stream
+from miminions.system.execution.store import ExecutionStore
 
 
 @pytest.mark.parametrize("activity", ["none", "text", "tool"])

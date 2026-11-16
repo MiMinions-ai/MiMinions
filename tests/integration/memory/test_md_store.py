@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from miminions.memory.md_store import (
+from miminions.system.file.md_store import (
     append_history,
     read_memory,
     upsert_memory_section,
     write_memory,
 )
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 def test_read_memory_returns_existing_or_bootstrapped_content(tmp_path: Path):

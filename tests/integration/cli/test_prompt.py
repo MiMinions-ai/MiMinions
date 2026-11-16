@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from click.testing import CliRunner
 
-from miminions.cli.main import cli
+from miminions.interface.cli.main import cli
 from miminions.core.workspace import Workspace, WorkspaceManager
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 class FakeContextBuilder:
@@ -24,15 +24,15 @@ def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | 
         fake.run = AsyncMock(return_value="assistant reply")
 
     monkeypatch.setattr(
-        "miminions.cli.prompt.get_config_dir",
+        "miminions.interface.cli.operations.prompt.get_config_dir",
         lambda: tmp_path / "config",
     )
     monkeypatch.setattr(
-        "miminions.core.workspace.DEFAULT_WORKSPACES_ROOT",
+        "miminions.core.workspace.registry.DEFAULT_WORKSPACES_ROOT",
         tmp_path / "workspaces",
     )
     monkeypatch.setattr(
-        "miminions.agent.create_minion",
+        "miminions.core.agent.create_minion",
         lambda name, description: fake,
     )
 

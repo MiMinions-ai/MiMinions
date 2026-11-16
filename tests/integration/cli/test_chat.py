@@ -6,12 +6,12 @@ import pytest
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext, get_handler
-from miminions.execution.store import ExecutionStore
-from miminions.session.store import JsonlSessionStore
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext, get_handler
+from miminions.system.execution.store import ExecutionStore
+from miminions.interface.session import JsonlSessionStore
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def conversation(tmp_path, monkeypatch):
         agents.append(agent)
         return agent
 
-    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
     return store, workspace, root, agents
 
 
@@ -73,7 +73,7 @@ async def test_checkpoint_preserves_tool_call_and_return_pairs(conversation, mon
         agent.register_tool("add", "Add numbers", add)
         return agent
 
-    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
     context = turn_context(conversation)
     await get_handler("chat_turn")(context)
     history = ModelMessagesTypeAdapter.validate_json(context.store.checkpoint(context.task.request.session_key))
@@ -115,7 +115,7 @@ async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(c
     first.store.finish(first.task.id, "completed")
     checkpoint = first.store.checkpoint(first.task.request.session_key)
     second = turn_context(conversation, "fail")
-    factory = __import__("miminions.agent", fromlist=["create_minion"]).create_minion
+    factory = __import__("miminions.core.agent", fromlist=["create_minion"]).create_minion
 
     def failing_factory(**kwargs):
         agent = factory(**kwargs)
@@ -125,7 +125,7 @@ async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(c
         agent.run_stream = stream
         return agent
 
-    monkeypatch.setattr("miminions.agent.create_minion", failing_factory)
+    monkeypatch.setattr("miminions.core.agent.create_minion", failing_factory)
     with pytest.raises(RuntimeError, match="midstream"):
         await get_handler("chat_turn")(second)
     records = list(JsonlSessionStore(conversation[2]).iter_messages("session"))
@@ -137,7 +137,7 @@ async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(c
 async def test_distillation_is_visible_and_cleans_up(conversation, monkeypatch):
     store, workspace, _, agents = conversation
     distill = Mock()
-    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", distill)
+    monkeypatch.setattr("miminions.interface.cli.operations.chat._run_session_distillation", distill)
     task_id = store.enqueue(ExecutionRequest("session_distill", {"workspace": workspace.id, "session_id": "session"}))
     context = TaskContext(store, store.claim())
     await get_handler("session_distill")(context)
@@ -146,11 +146,32 @@ async def test_distillation_is_visible_and_cleans_up(conversation, monkeypatch):
     assert agents
 
 
+def test_session_distillation_uses_context_helpers(tmp_path, monkeypatch):
+    from miminions.interface.cli.operations.chat import _run_session_distillation
+
+    distiller = Mock()
+    llm_filter = Mock()
+    compactor = Mock()
+    create_distiller = Mock(return_value=distiller)
+    monkeypatch.setattr("miminions.core.context.distiller.MemoryDistiller", create_distiller)
+    monkeypatch.setattr("miminions.core.context.llm_filter.create_llm_filter", Mock(return_value=llm_filter))
+    monkeypatch.setattr("miminions.core.context.llm_filter.create_llm_compactor", Mock(return_value=compactor))
+    workspace = Mock()
+    model = Mock()
+
+    _run_session_distillation(workspace, tmp_path, "session", model)
+
+    create_distiller.assert_called_once_with(llm_filter=llm_filter, compactor=compactor)
+    distiller.distill_session.assert_called_once_with(
+        workspace=workspace, root_path=str(tmp_path), session_id="session"
+    )
+
+
 async def test_distillation_failure_is_recorded_as_a_task_failure(conversation, monkeypatch):
     store, workspace, _, _ = conversation
-    monkeypatch.setattr("miminions.cli.chat._run_session_distillation", Mock(side_effect=RuntimeError("distillation failed")))
+    monkeypatch.setattr("miminions.interface.cli.operations.chat._run_session_distillation", Mock(side_effect=RuntimeError("distillation failed")))
     task_id = store.enqueue(ExecutionRequest("session_distill", {"workspace": workspace.id, "session_id": "session"}))
-    from miminions.execution.worker import _run_task
+    from miminions.system.execution.worker import _run_task
     store.claim()
     await _run_task(store, task_id)
     assert any(e.type == "outcome" and "distillation failed" in e.data.get("error", "") for e in store.events(task_id))

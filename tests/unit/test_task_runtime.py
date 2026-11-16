@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from miminions.task.control import TaskRuntime
-from miminions.task.model import AgentTask, TaskPriority, TaskStatus
+from miminions.core.task.control import TaskRuntime
+from miminions.core.task.model import AgentTask, TaskPriority, TaskStatus
 
 
 class TaskRuntimeTestError(Exception):

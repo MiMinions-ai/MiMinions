@@ -34,7 +34,7 @@ Everything you need to know about MiMinions.
     `provider=` to `create_minion`:
 
     ```python
-    from miminions.agent import create_minion
+    from miminions.core.agent import create_minion
 
     agent = create_minion("assistant", provider="anthropic")
     ```

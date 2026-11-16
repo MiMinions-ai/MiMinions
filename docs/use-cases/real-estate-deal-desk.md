@@ -45,7 +45,7 @@ Seed durable facts into `MEMORY.md` (Tier 2):
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 REHAB = {"cosmetic": 20.0, "medium": 35.0, "heavy": 55.0, "structural": 75.0}
 

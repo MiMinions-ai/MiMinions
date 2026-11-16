@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from miminions.memory import llm_filter as llm_filter_module
-from miminions.memory.llm_filter import create_llm_compactor
+from miminions.core.context import llm_filter as llm_filter_module
+from miminions.core.context.llm_filter import create_llm_compactor
 
 _FACTS = [("Project Facts", "uses pytest"), ("Project Facts", "tests run with pytest")]
 

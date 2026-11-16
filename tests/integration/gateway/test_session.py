@@ -5,7 +5,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from miminions.core.gateway.session import (
+from miminions.daemon.session import (
     Session,
     SessionManager,
     SessionMessage,

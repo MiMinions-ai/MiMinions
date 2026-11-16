@@ -8,10 +8,10 @@ from typing import ClassVar, Self
 
 import pytest
 
-from miminions.memory.budget import MemoryBudgets, load_state
-from miminions.memory.compaction import compact_memory
-from miminions.memory.md_store import read_memory, upsert_memory_section
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.context.budget import MemoryBudgets, load_state
+from miminions.core.context.compaction import compact_memory
+from miminions.system.file.md_store import read_memory, upsert_memory_section
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 class _FakeSQLiteMemory:
@@ -42,7 +42,7 @@ class _FailingSQLiteMemory:
 def _patch_sqlite_memory(monkeypatch, sqlite_memory_cls):
     monkeypatch.setitem(
         sys.modules,
-        "miminions.memory.sqlite",
+        "miminions.system.db.sqlite",
         SimpleNamespace(SQLiteMemory=sqlite_memory_cls),
     )
 

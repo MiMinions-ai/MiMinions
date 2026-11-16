@@ -8,10 +8,10 @@ import sys
 
 import pytest
 
-from miminions.context import ContextBuilder
-from miminions.context.strategies import TruncateLines
-from miminions.memory.md_store import write_memory
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.context import ContextBuilder
+from miminions.core.context.strategies import TruncateLines
+from miminions.system.file.md_store import write_memory
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 @pytest.fixture(autouse=True)

@@ -59,7 +59,7 @@ and `await run(...)`. Tool schemas are inferred from the function signature.
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 
 async def main():
@@ -84,8 +84,8 @@ asyncio.run(main())
 
 !!! tip "Import from subpackages, never the top level"
     `import miminions` exposes nothing — `from miminions import Minion` will fail.
-    Always import from the subpackage, e.g. `from miminions.agent import create_minion`,
-    `from miminions.tools import GenericTool`, `from miminions.data import LocalDataManager`.
+    Always import from the subpackage, e.g. `from miminions.core.agent import create_minion`,
+    `from miminions.core.tool import GenericTool`, `from miminions.system import LocalDataManager`.
 
 ### Choosing a model / provider
 

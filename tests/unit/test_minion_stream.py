@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 
 async def test_stream_yields_deltas_and_updates_history():

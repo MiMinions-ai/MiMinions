@@ -1,11 +1,11 @@
 # Context Builder
 
-The `miminions.context` module assembles an agent's **system prompt** dynamically
+The `miminions.core.context` module assembles an agent's **system prompt** dynamically
 from on-disk workspace state, prompt templates, stored memory, and an optional
 slice of cross-workspace knowledge — composed fresh before every LLM call.
 
 ```python
-from miminions.context import ContextBuilder
+from miminions.core.context import ContextBuilder
 ```
 
 !!! tip "You rarely call this directly"
@@ -16,7 +16,7 @@ from miminions.context import ContextBuilder
 ## Quick Start
 
 ```python
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("MyAgent")
 
@@ -30,7 +30,7 @@ reply = await agent.run("What are the active tasks?")
 Want to see the exact string the LLM receives? Build it yourself:
 
 ```python
-from miminions.context import ContextBuilder
+from miminions.core.context import ContextBuilder
 
 builder = ContextBuilder(global_top_k=5, global_db_path=None)
 system_prompt = builder.build(workspace, root_path="./my_workspace")

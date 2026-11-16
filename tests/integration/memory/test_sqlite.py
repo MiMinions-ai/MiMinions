@@ -16,9 +16,9 @@ pytest.importorskip("sqlite_vec")
 import pytest
 
 from miminions.core.paths import get_global_memory_db_path
-from miminions.agent import create_minion
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.tools.schemas import ExecutionStatus
+from miminions.core.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.tool.schemas import ExecutionStatus
 
 
 def setup_agent():

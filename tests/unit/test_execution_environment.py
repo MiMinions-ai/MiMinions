@@ -7,12 +7,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from miminions.agent.provider import ModelFactory
+from miminions.core.agent.provider import ModelFactory
 from miminions.core.workspace import Workspace, WorkspaceManager
-from miminions.execution import ExecutionRequest
-from miminions.execution.environment import PROVIDER_KEYS, provider_environment, provider_env_path
-from miminions.execution.handlers import TaskContext, get_handler
-from miminions.execution.store import ExecutionStore
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.environment import PROVIDER_KEYS, provider_environment, provider_env_path
+from miminions.system.execution.handlers import TaskContext, get_handler
+from miminions.system.execution.store import ExecutionStore
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ async def test_handler_and_distillation_load_credentials_without_persisting_them
         assert ModelFactory.create("openrouter") is not None
         context.phase("Model configured")
         calls.append(context.task.request.kind)
-    from miminions.execution import handlers
+    from miminions.system.execution import handlers
     for kind in ("chat_turn", "prompt", "session_distill"):
         monkeypatch.setitem(handlers._HANDLERS, kind, handler)
         task_id = store.enqueue(ExecutionRequest(kind, cwd=str(tmp_path)))

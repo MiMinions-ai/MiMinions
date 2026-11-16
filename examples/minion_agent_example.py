@@ -7,7 +7,7 @@ Uses TestModel by default (no LLM required). Pass a real model for LLM support.
 
 import asyncio
 
-from miminions.agent import (
+from miminions.core.agent import (
     create_minion,
     ToolExecutionRequest,
     ExecutionStatus,

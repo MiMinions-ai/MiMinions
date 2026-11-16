@@ -8,16 +8,16 @@ from click.testing import CliRunner
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.messages import SystemPromptPart
 
-from miminions.agent import create_minion
-from miminions.cli.chat import chat_command
-from miminions.cli.prompt import ask_prompt
-from miminions.cli.project import select_project
-from miminions.context.context_builder import ContextBuilder
+from miminions.core.agent import create_minion
+from miminions.interface.cli.operations.chat import chat_command
+from miminions.interface.cli.operations.prompt import ask_prompt
+from miminions.interface.cli.management.project import select_project
+from miminions.core.context.context_builder import ContextBuilder
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
-from miminions.execution import ExecutionRequest
-from miminions.execution.handlers import TaskContext, get_handler
-from miminions.execution.models import conversation_key
-from miminions.execution.store import ExecutionStore
+from miminions.system.execution import ExecutionRequest
+from miminions.system.execution.handlers import TaskContext, get_handler
+from miminions.system.execution.models import conversation_key
+from miminions.system.execution.store import ExecutionStore
 
 
 @pytest.fixture
@@ -29,8 +29,8 @@ def project_cli(tmp_path, monkeypatch):
     monkeypatch.chdir(project)
     monkeypatch.setenv("MIMINIONS_HOME", str(home))
     dispatch = Mock()
-    monkeypatch.setattr("miminions.cli.dispatch.submit_task", dispatch)
-    monkeypatch.setattr("miminions.cli.prompt.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.submit_task", dispatch)
+    monkeypatch.setattr("miminions.interface.cli.operations.prompt.submit_task", dispatch)
     return home, project, dispatch
 
 
@@ -92,7 +92,7 @@ def test_explicit_workspace_and_opt_out_preserve_existing_workflow(project_cli, 
     workspace.root_path = str(home / "existing")
     manager.save_workspaces({workspace.id: workspace})
     ensure_workspace(manager, workspace.id, init_files=True)
-    monkeypatch.setattr("miminions.cli.chat.load_config", lambda: {"default_workspace": workspace.id})
+    monkeypatch.setattr("miminions.interface.cli.operations.chat.load_config", lambda: {"default_workspace": workspace.id})
     for args in (["--workspace", workspace.id], ["--no-discovery"]):
         result = CliRunner().invoke(chat_command, args, input="hello\n/quit\n")
         assert result.exit_code == 0, result.output
@@ -129,7 +129,7 @@ async def test_handler_builds_project_tools_context_and_persists_checkpoint(proj
         agent = create_minion(**kwargs, model=TestModel(call_tools=["workspace_search_tools"]))
         agents.append(agent)
         return agent
-    monkeypatch.setattr("miminions.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
     store = ExecutionStore(home)
     key = conversation_key(workspace_id, "project-session")
     task_id = store.enqueue(ExecutionRequest("prompt", {"workspace": workspace_id, "session_id": "project-session",

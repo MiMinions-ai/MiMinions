@@ -5,13 +5,13 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from miminions.cli.execution import history_list
-from miminions.cli.tool import tool_cli
-from miminions.execution.trace import AgentRunRecord, WorkflowRun, WorkflowTrace
+from miminions.interface.cli.operations.execution import history_list
+from miminions.interface.cli.management.tool import tool_cli
+from miminions.system.execution.trace import AgentRunRecord, WorkflowRun, WorkflowTrace
 
 
 def _auth_enabled():
-    return patch("miminions.core.auth.is_authenticated", return_value=True)
+    return patch("miminions.system.auth.auth.is_authenticated", return_value=True)
 
 
 def test_execution_interaction_list_json_output():

@@ -1,12 +1,12 @@
 # Gateway
 
-The `miminions.core.gateway` package is an **advanced, optional server-runtime layer**: a set of building blocks for wiring chat channels (Telegram, Discord, a WebSocket, your own transport) to an [agent](agent.md) core. It gives you an in-process async message bus, a uniform channel abstraction, session-scoped conversation state, cron scheduling, and phased startup/shutdown orchestration.
+The `miminions.daemon` package is an **advanced, optional server-runtime layer**: a set of building blocks for wiring chat channels (Telegram, Discord, a WebSocket, your own transport) to an [agent](agent.md) core. It gives you an in-process async message bus, a uniform channel abstraction, session-scoped conversation state, cron scheduling, and phased startup/shutdown orchestration.
 
 !!! warning "This is a toolkit, not a turnkey server"
     The gateway ships **building blocks, not a hosted server**. `BaseChannel` and `GatewayOrchestrator` are **abstract** — you subclass them to integrate a real platform. **No concrete channels ship built-in**. The `miminions gateway` CLI manages the local runtime, cron jobs, and gateway sessions for an initialized workspace; it does not provide a turnkey public gateway service. Reach for it when you are assembling a long-running, multi-channel deployment; for scripted or single-shot agent use, the plain [`Minion`](agent.md) API is all you need.
 
 ```python
-from miminions.core.gateway import (
+from miminions.daemon import (
     MessageBus, InboundMessage, OutboundMessage,
     BaseChannel, ChannelManager,
     Session, SessionManager,
@@ -16,7 +16,7 @@ from miminions.core.gateway import (
 ```
 
 !!! note "Import path"
-    These symbols live under `miminions.core.gateway`. They are also re-exported from `miminions.core`, but the gateway path is the explicit one. The top-level `import miminions` exposes nothing.
+    These symbols live under `miminions.daemon`. They are also re-exported from `miminions.core`, but the gateway path is the explicit one. The top-level `import miminions` exposes nothing.
 
 ## Components at a glance
 
@@ -37,7 +37,7 @@ from miminions.core.gateway import (
 
 ```python
 import asyncio
-from miminions.core.gateway import MessageBus, InboundMessage
+from miminions.daemon import MessageBus, InboundMessage
 
 async def main():
     bus = MessageBus()  # default queue maxsize is 1000
@@ -82,7 +82,7 @@ asyncio.run(main())
 `InboundMessage` and `OutboundMessage` are plain dataclasses.
 
 ```python
-from miminions.core.gateway import InboundMessage, OutboundMessage
+from miminions.daemon import InboundMessage, OutboundMessage
 
 incoming = InboundMessage(
     channel="telegram",
@@ -109,7 +109,7 @@ A **channel** adapts a chat platform to the bus. `BaseChannel` is abstract: subc
     `BaseChannel.is_allowed` returns `False` when `allow_from` is empty — **an unconfigured channel rejects everyone**. Set `allow_from` on your config to a list of sender ids, or `["*"]` to allow all. An empty list also logs a startup warning.
 
 ```python
-from miminions.core.gateway import BaseChannel, MessageBus, OutboundMessage
+from miminions.daemon import BaseChannel, MessageBus, OutboundMessage
 
 class EchoChannel(BaseChannel):
     name = "echo"
@@ -136,7 +136,7 @@ channel = EchoChannel(Config(), bus)
 `ChannelManager` tracks channels by `name`, starts them concurrently, and runs a background dispatcher that pulls from the bus's outbound queue and routes each `OutboundMessage` to `channels[msg.channel].send(...)`.
 
 ```python
-from miminions.core.gateway import ChannelManager
+from miminions.daemon import ChannelManager
 
 manager = ChannelManager(bus)
 manager.register(channel)         # keyed by channel.name
@@ -160,7 +160,7 @@ await manager.stop_all()          # cancels the dispatcher, stops every channel
 
 ```python
 from pathlib import Path
-from miminions.core.gateway import SessionManager
+from miminions.daemon import SessionManager
 
 sessions = SessionManager(Path.home() / ".miminions" / "gateway_sessions")
 
@@ -191,7 +191,7 @@ all_sessions = sessions.list_sessions()          # newest-updated first
 
     ```python
     import time
-    from miminions.core.gateway import CronSchedule
+    from miminions.daemon import CronSchedule
 
     in_one_minute = int(time.time() * 1000) + 60_000
     schedule = CronSchedule(kind="at", at_ms=in_one_minute)
@@ -203,7 +203,7 @@ all_sessions = sessions.list_sessions()          # newest-updated first
 === "Recurring (`every`)"
 
     ```python
-    from miminions.core.gateway import CronSchedule
+    from miminions.daemon import CronSchedule
 
     # Every 15 minutes
     schedule = CronSchedule(kind="every", every_ms=15 * 60 * 1000)
@@ -212,7 +212,7 @@ all_sessions = sessions.list_sessions()          # newest-updated first
 === "Cron expression (`cron`)"
 
     ```python
-    from miminions.core.gateway import CronSchedule
+    from miminions.daemon import CronSchedule
 
     # 09:00 daily — requires the optional `croniter` package
     schedule = CronSchedule(kind="cron", expr="0 9 * * *", tz="UTC")
@@ -224,7 +224,7 @@ all_sessions = sessions.list_sessions()          # newest-updated first
 ```python
 import asyncio
 from pathlib import Path
-from miminions.core.gateway import CronService, CronJob, CronSchedule
+from miminions.daemon import CronService, CronJob, CronSchedule
 
 async def on_job(job: CronJob) -> str | None:
     # Called when a job is due — e.g. trigger an agent turn
@@ -264,7 +264,7 @@ asyncio.run(main())
 `GatewayOrchestrator` wires the bus, services, and channels together and starts them in a fixed order — **`BUS → SERVICES → CHANNELS`** — shutting them down in reverse. It is abstract: subclass it, implement `configure()`, and `register(phase, component)` any object that satisfies the `Lifecycle` interface (`async start()` / `async stop()`). If any component fails to start, the orchestrator shuts down everything already started and re-raises.
 
 ```python
-from miminions.core.gateway import GatewayOrchestrator, Lifecycle, Phase
+from miminions.daemon import GatewayOrchestrator, Lifecycle, Phase
 
 class CronLifecycle(Lifecycle):
     def __init__(self, cron):

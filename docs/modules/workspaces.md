@@ -22,7 +22,7 @@ The graph is the structured model you query and reason about; the folder is what
 
 !!! note "Import from the submodules"
     `from miminions import ...` exposes nothing. The graph model lives in
-    `miminions.core.workspace`, and the on-disk helpers in `miminions.workspace_fs`.
+    `miminions.core.workspace`, and the on-disk helpers in `miminions.core.workspace`.
 
 ## Quick Start
 
@@ -220,7 +220,7 @@ template files. It **never overwrites** existing files unless `overwrite=True`, 
 safe to re-run — it only fills in what is missing.
 
 ```python
-from miminions.workspace_fs import init_workspace
+from miminions.core.workspace import init_workspace
 
 result = init_workspace("~/.miminions/workspaces/ws_demo")
 print(result["created"])   # list of files written
@@ -231,7 +231,7 @@ print(result["root"])      # resolved absolute root
 The four bootstrap prompt files are exposed as a constant:
 
 ```python
-from miminions.workspace_fs import BOOTSTRAP_PROMPT_FILES
+from miminions.core.workspace import BOOTSTRAP_PROMPT_FILES
 # ['AGENTS.md', 'USER.md', 'TOOLS.md', 'IDENTITY.md']
 ```
 
@@ -240,7 +240,7 @@ from miminions.workspace_fs import BOOTSTRAP_PROMPT_FILES
 The same package provides readers used by the [Context Builder](context.md):
 
 ```python
-from miminions.workspace_fs import read_prompt_files, list_skills
+from miminions.core.workspace import read_prompt_files, list_skills
 
 prompts = read_prompt_files("~/.miminions/workspaces/ws_demo")
 # {'AGENTS.md': '...', 'USER.md': '...', ...}  — missing files are omitted
@@ -252,7 +252,7 @@ skills = list_skills("~/.miminions/workspaces/ws_demo")
 A `WorkspaceLayout` object computes every path for a given root, if you need it directly:
 
 ```python
-from miminions.workspace_fs import WorkspaceLayout
+from miminions.core.workspace import WorkspaceLayout
 
 layout = WorkspaceLayout.from_root("~/.miminions/workspaces/ws_demo")
 layout.prompt_dir     # .../prompt
@@ -267,7 +267,7 @@ every `run()`, a system-prompt callback invokes `ContextBuilder().build(workspac
 to inject the identity, prompt files, memory, graph summary, and skills index.
 
 ```python
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 from pathlib import Path
 
@@ -289,7 +289,7 @@ single config read.
 
 ```python
 from pathlib import Path
-from miminions.core.bootstrap import ensure_default_setup
+from miminions.interface.bootstrap import ensure_default_setup
 
 config = ensure_default_setup(Path("~/.miminions").expanduser())
 print(config["default_workspace"])  # the default workspace id
@@ -366,7 +366,7 @@ See the [CLI reference](cli.md) for the full command set.
 | `get_network_summary()` | Node/rule/connection counts and state keys |
 | `to_dict()` / `from_dict(data)` | JSON-safe round-trip |
 
-### `miminions.workspace_fs`
+### `miminions.core.workspace`
 
 | Symbol | Description |
 |--------|-------------|

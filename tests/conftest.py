@@ -17,8 +17,8 @@ import pytest
 @pytest.fixture
 def inline_execution(monkeypatch):
     """Exercise real handlers/events with local mocks; process isolation has its own suite."""
-    from miminions.execution import ExecutionService
-    from miminions.execution.worker import _run_task
+    from miminions.system.execution import ExecutionService
+    from miminions.system.execution.worker import _run_task
 
     class InlineExecutionService(ExecutionService):
         def ensure_instance(self, on_start=None):
@@ -50,7 +50,7 @@ def inline_execution(monkeypatch):
             if thread is not None:
                 thread.join()
 
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", InlineExecutionService)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", InlineExecutionService)
     return InlineExecutionService
 
 
@@ -119,17 +119,17 @@ def patched_cli_config_dir(monkeypatch):
     """Patch common CLI config-dir lookup points to one test directory."""
     targets = (
         "miminions.core.paths.get_config_dir",
-        "miminions.cli.auth.get_config_dir",
-        "miminions.cli.config.get_config_dir",
-        "miminions.cli.agent.get_config_dir",
-        "miminions.cli.chat.get_config_dir",
-        "miminions.cli.execution.get_config_dir",
-        "miminions.cli.knowledge.get_config_dir",
-        "miminions.cli.prompt.get_config_dir",
-        "miminions.cli.task.get_config_dir",
-        "miminions.cli.transfer.get_config_dir",
-        "miminions.cli.workflow.get_config_dir",
-        "miminions.cli.workspace.get_config_dir",
+        "miminions.interface.cli.auth.get_config_dir",
+        "miminions.interface.config.get_config_dir",
+        "miminions.interface.cli.management.agent.get_config_dir",
+        "miminions.interface.cli.operations.chat.get_config_dir",
+        "miminions.interface.cli.operations.execution.get_config_dir",
+        "miminions.interface.cli.management.knowledge.get_config_dir",
+        "miminions.interface.cli.operations.prompt.get_config_dir",
+        "miminions.interface.cli.management.task.get_config_dir",
+        "miminions.interface.cli.transfer.transfer.get_config_dir",
+        "miminions.interface.cli.management.workflow.get_config_dir",
+        "miminions.interface.cli.management.workspace.get_config_dir",
     )
 
     @contextmanager

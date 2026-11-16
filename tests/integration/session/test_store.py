@@ -9,12 +9,12 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
-from miminions.session.store import (
+from miminions.interface.session import (
     JsonlSessionStore,
     create_session_id,
     trim_message_history,
 )
-from miminions.workspace_fs.bootstrap import init_workspace
+from miminions.core.workspace.bootstrap import init_workspace
 
 
 def _user(content: str) -> ModelRequest:

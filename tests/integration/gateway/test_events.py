@@ -1,7 +1,7 @@
 """Unit tests for gateway.events module."""
 from datetime import datetime
 
-from miminions.core.gateway.events import InboundMessage, OutboundMessage
+from miminions.daemon.events import InboundMessage, OutboundMessage
 
 
 class TestInboundMessage:

@@ -8,10 +8,10 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from miminions.cli.dispatch import follow_task, submit_task
-from miminions.execution import ExecutionRequest, ExecutionService
-from miminions.execution.models import TaskHandle
-from miminions.execution.store import ExecutionStore
+from miminions.interface.cli.operations.dispatch import follow_task, submit_task
+from miminions.system.execution import ExecutionRequest, ExecutionService
+from miminions.system.execution.models import TaskHandle
+from miminions.system.execution.store import ExecutionStore
 
 
 def test_queue_claims_once_and_serializes_sessions(tmp_path):
@@ -92,7 +92,7 @@ def test_execution_remove_protects_active_tasks(tmp_path):
 def test_acknowledgement_precedes_release_and_detach_does_not_follow(tmp_path, monkeypatch):
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
     release = TaskHandle.release
     calls = []
     echo = click.echo
@@ -107,7 +107,7 @@ def test_acknowledgement_precedes_release_and_detach_does_not_follow(tmp_path, m
         assert service.store.claim() is None
         release(handle)
 
-    monkeypatch.setattr("miminions.cli.dispatch.click.echo", record_echo)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.click.echo", record_echo)
     monkeypatch.setattr(TaskHandle, "release", record_release)
     handle = submit_task("agent_ask", {"prompt": "hello"}, detach=True, home=tmp_path)
     assert calls == ["ack", "release"]
@@ -151,14 +151,14 @@ def test_interruption_only_detaches(tmp_path, monkeypatch, interruption):
 
 
 def test_source_and_frozen_launch_arguments(tmp_path, monkeypatch):
-    from miminions.execution.service import worker_command
-    assert "miminions.execution.worker" in worker_command(tmp_path)
+    from miminions.system.execution.service import worker_command
+    assert "miminions.system.execution.worker" in worker_command(tmp_path)
     monkeypatch.setattr("sys.frozen", True, raising=False)
     assert worker_command(tmp_path, "exec_test")[1:] == ["_execution-worker", "--home", str(tmp_path), "--task", "exec_test"]
 
 
 def test_serializable_contracts_round_trip(tmp_path):
-    from miminions.execution.models import ExecutionTask, TaskEvent
+    from miminions.system.execution.models import ExecutionTask, TaskEvent
     service = ExecutionService(tmp_path)
     request = ExecutionRequest("prompt", {"prompt": "hello"}, str(tmp_path), "session")
     task_id = service.store.enqueue(request)
@@ -172,8 +172,8 @@ def test_serializable_contracts_round_trip(tmp_path):
 
 
 def test_task_views_and_execution_record_protection(tmp_path, monkeypatch):
-    from miminions.cli.task import task_cli, save_tasks
-    monkeypatch.setattr("miminions.cli.task.get_config_dir", lambda: tmp_path)
+    from miminions.interface.cli.management.task import task_cli, save_tasks
+    monkeypatch.setattr("miminions.interface.cli.management.task.get_config_dir", lambda: tmp_path)
     save_tasks({"todo": {"title": "Work", "description": "Description", "status": "pending"}})
     service = ExecutionService(tmp_path)
     task_id = service.store.enqueue(ExecutionRequest("agent_tool"))
@@ -199,8 +199,8 @@ def test_task_views_and_execution_record_protection(tmp_path, monkeypatch):
     (["tool", "test"], "tool_test"),
 ])
 def test_every_execution_entry_point_uses_shared_dispatch(tmp_path, monkeypatch, args, kind):
-    from miminions.cli.main import cli
-    from miminions.core.bootstrap import ensure_default_setup
+    from miminions.interface.cli.main import cli
+    from miminions.interface.bootstrap import ensure_default_setup
     from miminions.core.persistence import load_json, save_json
     monkeypatch.setenv("MIMINIONS_HOME", str(tmp_path))
     ensure_default_setup(tmp_path)
@@ -210,7 +210,7 @@ def test_every_execution_entry_point_uses_shared_dispatch(tmp_path, monkeypatch,
     save_json(tmp_path / "sessions.json", {"session": {"status": "active", "tool_sources": []}})
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
     result = CliRunner().invoke(cli, [*args, "--detach"])
     assert result.exit_code == 0, result.output
     assert result.stdout == ""
@@ -228,7 +228,7 @@ def test_noninteractive_approval_guidance_never_answers(tmp_path, monkeypatch):
     service.store.claim()
     request_id = service.store.request_approval(task_id, "Execute sensitive command?")
     monkeypatch.setattr(service, "follow", lambda *args: iter(service.store.events(task_id)))
-    monkeypatch.setattr("miminions.cli.dispatch.click.confirm", Mock(side_effect=AssertionError("Must not prompt")))
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.click.confirm", Mock(side_effect=AssertionError("Must not prompt")))
 
     @click.command()
     def command():
@@ -247,7 +247,7 @@ def test_noninteractive_approval_guidance_never_answers(tmp_path, monkeypatch):
 
 def test_startup_retries_when_previous_instance_is_releasing_lock(tmp_path, monkeypatch):
     import os
-    from miminions.execution.store import now
+    from miminions.system.execution.store import now
     service = ExecutionService(tmp_path)
     attempts = []
 
@@ -258,7 +258,7 @@ def test_startup_retries_when_previous_instance_is_releasing_lock(tmp_path, monk
         service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now())
         return Mock(poll=lambda: None)
 
-    monkeypatch.setattr("miminions.execution.service.subprocess.Popen", launch)
+    monkeypatch.setattr("miminions.system.execution.service.subprocess.Popen", launch)
     service.ensure_instance()
     assert len(attempts) == 2
 
@@ -266,10 +266,10 @@ def test_startup_retries_when_previous_instance_is_releasing_lock(tmp_path, monk
 def test_package_import_defers_model_stack_and_preserves_tool_shortcuts():
     import subprocess
     import sys
-    from miminions.execution.service import worker_environment
+    from miminions.system.execution.service import worker_environment
     result = subprocess.run([sys.executable, "-c",
         "import miminions, sys; assert 'pydantic_ai' not in sys.modules; "
-        "assert 'miminions.agent' not in sys.modules; "
+        "assert 'miminions.core.agent' not in sys.modules; "
         "from miminions import GenericTool, tool, create_tool; assert callable(create_tool)"],
         env=worker_environment(), capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
@@ -277,7 +277,7 @@ def test_package_import_defers_model_stack_and_preserves_tool_shortcuts():
 
 def test_draining_rejects_submission_but_allows_following_and_cancellation(tmp_path):
     import os
-    from miminions.execution.store import now
+    from miminions.system.execution.store import now
     service = ExecutionService(tmp_path)
     task_id = service.store.enqueue(ExecutionRequest("agent_tool"))
     service.store.claim()
@@ -293,12 +293,12 @@ def test_draining_rejects_submission_but_allows_following_and_cancellation(tmp_p
 
 
 def test_new_workspace_name_and_id_share_queue_identity_before_context_setup(tmp_path, monkeypatch):
-    from miminions.cli.prompt import prompt_cli
+    from miminions.interface.cli.operations.prompt import prompt_cli
     from miminions.core.workspace import WorkspaceManager
     service = ExecutionService(tmp_path)
     monkeypatch.setattr(service, "ensure_instance", lambda on_start=None: None)
-    monkeypatch.setattr("miminions.cli.dispatch.ExecutionService", lambda home: service)
-    monkeypatch.setattr("miminions.cli.prompt.get_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("miminions.interface.cli.operations.dispatch.ExecutionService", lambda home: service)
+    monkeypatch.setattr("miminions.interface.cli.operations.prompt.get_config_dir", lambda: tmp_path)
     runner = CliRunner()
     first = runner.invoke(prompt_cli, ["ask", "hello", "--workspace", "New Workspace", "--session", "shared", "--detach"])
     assert first.exit_code == 0, first.output
@@ -332,7 +332,7 @@ def test_shutdown_race_cannot_accept_unowned_work(tmp_path):
 
 def test_conversation_key_matches_transcript_aliases():
     import os
-    from miminions.execution.models import conversation_key
+    from miminions.system.execution.models import conversation_key
     assert conversation_key("workspace", " session ") == conversation_key("workspace", "session")
     if os.name == "nt":
         assert conversation_key("workspace", "SESSION") == conversation_key("workspace", "session")
@@ -340,8 +340,8 @@ def test_conversation_key_matches_transcript_aliases():
 
 def test_submission_replaces_idle_legacy_instance_with_current_environment(tmp_path, monkeypatch):
     import os
-    from miminions.execution.service import worker_runtime
-    from miminions.execution.store import now
+    from miminions.system.execution.service import worker_runtime
+    from miminions.system.execution.store import now
 
     service = ExecutionService(tmp_path)
     service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now())
@@ -364,7 +364,7 @@ def test_submission_replaces_idle_legacy_instance_with_current_environment(tmp_p
 
 def test_environment_mismatch_does_not_interrupt_accepted_work(tmp_path):
     import os
-    from miminions.execution.store import now
+    from miminions.system.execution.store import now
 
     service = ExecutionService(tmp_path)
     task_id = service.store.enqueue(ExecutionRequest("agent_tool"))
@@ -383,8 +383,8 @@ def test_environment_mismatch_does_not_interrupt_accepted_work(tmp_path):
 
 def test_compatible_environment_can_accept_work_while_busy(tmp_path, monkeypatch):
     import os
-    from miminions.execution.service import worker_runtime
-    from miminions.execution.store import now
+    from miminions.system.execution.service import worker_runtime
+    from miminions.system.execution.store import now
 
     service = ExecutionService(tmp_path)
     service.store.set_instance(running=True, stopping=False, pid=os.getpid(), heartbeat=now(), runtime=worker_runtime())
@@ -397,7 +397,7 @@ def test_compatible_environment_can_accept_work_while_busy(tmp_path, monkeypatch
 
 def test_runtime_change_during_startup_cannot_accept_wrong_environment(tmp_path, monkeypatch):
     import os
-    from miminions.execution.store import now
+    from miminions.system.execution.store import now
 
     service = ExecutionService(tmp_path)
     def start_other_environment(on_start=None):
@@ -412,7 +412,7 @@ def test_runtime_change_during_startup_cannot_accept_wrong_environment(tmp_path,
 def test_runtime_identity_preserves_virtual_environment_paths(tmp_path, monkeypatch):
     import os
     import sys
-    from miminions.execution.service import worker_runtime
+    from miminions.system.execution.service import worker_runtime
 
     python = tmp_path / "project-env" / "bin" / "python"
     monkeypatch.setattr(sys, "executable", str(python))
@@ -423,7 +423,7 @@ def test_runtime_identity_preserves_virtual_environment_paths(tmp_path, monkeypa
 
 def test_frozen_runtime_identity_ignores_temporary_extraction_prefix(tmp_path, monkeypatch):
     import sys
-    from miminions.execution.service import worker_runtime
+    from miminions.system.execution.service import worker_runtime
 
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "miminions.exe"))

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from miminions.workspace_fs import discovery
+from miminions.core.workspace import discovery
 
 
 def write(root, relative, source):
@@ -169,7 +169,7 @@ def test_project_detection_and_context_budget(tmp_path):
     assert discovery.detect_project(tmp_path)
     write(tmp_path, "README.md", "PURPOSE " * 2000)
     context = discovery.scan_project(tmp_path)
-    from miminions.memory.budget import count_tokens
+    from miminions.core.context.budget import count_tokens
     assert count_tokens(context.prompt()) <= 4000
     assert "untrusted reference data" in context.prompt()
 

@@ -54,14 +54,14 @@ def declared_exports(init_text: str) -> list[str]:
 
 def cli_entry_points(cli_main_text: str) -> list[str]:
     """Lazy groups plus standalone add_command registrations (e.g. init)."""
-    lazy = re.findall(r'\(\s*"([a-z]+)"\s*,\s*"miminions\.cli\.', cli_main_text)
+    lazy = lazy_cli_commands(cli_main_text)
     standalone = re.findall(r'add_command\(\w+,\s*name="([a-z]+)"', cli_main_text)
     return sorted(set(lazy) | set(standalone))
 
 
 def lazy_cli_commands(cli_main_text: str) -> list[str]:
-    """Command names from the _LAZY_COMMANDS table in cli/main.py."""
-    return re.findall(r'\(\s*"([a-z]+)"\s*,\s*"miminions\.cli\.', cli_main_text)
+    """Command names from the _LAZY_COMMANDS table in interface/cli/main.py."""
+    return re.findall(r'\(\s*"([a-z]+)"\s*,\s*"miminions\.', cli_main_text)
 
 
 def run_checks(root: Path) -> list[str]:
@@ -103,10 +103,10 @@ def run_checks(root: Path) -> list[str]:
         if not (root / "docs" / ref).is_file():
             failures.append(f"mkdocs nav: docs/{ref} does not exist")
 
-    cli_main = (src_root / "cli" / "main.py").read_text(encoding="utf-8")
+    cli_main = (src_root / "interface" / "cli" / "main.py").read_text(encoding="utf-8")
     for cmd in cli_entry_points(cli_main):
         if cmd not in structure:
-            failures.append(f"cli group '{cmd}': registered in cli/main.py but absent from STRUCTURE.md")
+            failures.append(f"cli group '{cmd}': registered in interface/cli/main.py but absent from STRUCTURE.md")
 
     if (root / "memory").is_dir():
         failures.append("memory/: internal docs belong in the private docs-internal repo, not the public tree")

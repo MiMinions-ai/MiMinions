@@ -1,4 +1,4 @@
-from .gateway import (
+from ..daemon import (
     BaseChannel,
     ChannelManager,
     CronJob,

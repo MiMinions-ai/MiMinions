@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from unittest.mock import MagicMock
 
-from miminions.task import TaskRuntime, AgentTask, TaskStatus
+from miminions.core.task import TaskRuntime, AgentTask, TaskStatus
 
 # Configure logging
 logging.basicConfig(
@@ -12,7 +12,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-DEFAULT_LOGGER = logging.getLogger("miminions.task.examples")
+DEFAULT_LOGGER = logging.getLogger("miminions.core.task.examples")
 DEFAULT_TASK_RUNTIME = TaskRuntime()
 
 def run_single_task():

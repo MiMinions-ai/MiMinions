@@ -69,7 +69,7 @@ export MIMINIONS_HOME="/path/to/miminions-home"
 
 ```python
 import asyncio
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 async def main():
     agent = create_minion("MyAgent")
@@ -103,8 +103,8 @@ agent = create_minion("MyAgent", provider="test")          # offline, no API key
 ### An agent with vector memory
 
 ```python
-from miminions.memory.sqlite import SQLiteMemory
-from miminions.agent import create_minion
+from miminions.system.db.sqlite import SQLiteMemory
+from miminions.core.agent import create_minion
 
 with SQLiteMemory("agent.db") as memory:
   agent = create_minion("Assistant", memory=memory)
@@ -121,7 +121,7 @@ chunks and stores `.pdf`/`.txt`/`.md` files. Requires the `[sqlite]` extra.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.agent import create_minion
+from miminions.core.agent import create_minion
 
 agent = create_minion("MyAgent")
 await agent.connect_mcp_server(
@@ -191,7 +191,9 @@ See the [CLI reference](https://miminions.ai/modules/cli/) for every subcommand.
 | [Data Management](https://miminions.ai/modules/data/) | `LocalDataManager` |
 | [Gateway Runtime](https://miminions.ai/modules/gateway/) | Channels, bus, cron |
 
-For a map of the source tree and module status, see [STRUCTURE.md](STRUCTURE.md).
+New contributors can start with the [package ownership map](STRUCTURE.md#package-ownership)
+and [shared vocabulary](STRUCTURE.md#vocabulary-for-contributors), followed by
+the source tree and public import examples in [STRUCTURE.md](STRUCTURE.md).
 Runnable examples live in [`examples/`](examples/).
 
 ## Development
