@@ -3,6 +3,8 @@
 import json
 import logging
 
+import pytest
+
 from miminions.core.workspace import (
     WORKSPACE_SCHEMA_VERSION,
     Workspace,
@@ -40,17 +42,17 @@ def test_to_dict_stamps_current_schema_version():
     assert workspace.to_dict()["schema_version"] == WORKSPACE_SCHEMA_VERSION, f"expect WORKSPACE_SCHEMA_VERSION, got {workspace.to_dict()['schema_version']}"
 
 
-def test_legacy_record_without_schema_version_loads_silently(tmp_path, caplog):
-    """Records saved before versioning existed are treated as v1 — no warning."""
+def test_record_without_schema_version_is_rejected(tmp_path):
     legacy = {"ws1": {"id": "ws1", "name": "Legacy", "description": ""}}
-    (tmp_path / "workspaces.json").write_text(json.dumps(legacy))
+    path = tmp_path / "workspaces.json"
+    original = json.dumps(legacy)
+    path.write_text(original)
     manager = WorkspaceManager(tmp_path)
 
-    with caplog.at_level(logging.WARNING):
-        result = manager.load_workspaces()
+    with pytest.raises(ValueError, match="unsupported schema_version None"):
+        manager.load_workspaces()
 
-    assert result["ws1"].name == "Legacy", f"expect 'Legacy', got {result['ws1'].name}"
-    assert not caplog.records, f"expect caplog.records empty, got {caplog.records}"
+    assert path.read_text() == original
 
 
 def test_save_stamps_schema_version_and_leaves_no_tmp_file(tmp_path):
@@ -66,31 +68,21 @@ def test_save_stamps_schema_version_and_leaves_no_tmp_file(tmp_path):
     assert not temp_file_exists, f"expect save_workspaces atomic replace removes workspaces.tmp, got {temp_file_exists}"
 
 
-def test_invalid_schema_version_warns_but_does_not_discard_file(tmp_path, caplog):
-    """One tampered record must not take down the other workspaces in the file."""
+@pytest.mark.parametrize("version", [None, "1", True, 1.0, 0, -1, 99])
+def test_unsupported_schema_version_is_rejected_without_changing_store(tmp_path, version):
     records = {
-        "bad": {"schema_version": None, "id": "bad", "name": "Tampered"},
-        "good": {"schema_version": 1, "id": "good", "name": "Fine"},
+        "good": Workspace(id="good", name="Current").to_dict(),
+        "bad": {**Workspace(id="bad", name="Unsupported").to_dict(), "schema_version": version},
     }
-    (tmp_path / "workspaces.json").write_text(json.dumps(records))
+    path = tmp_path / "workspaces.json"
+    original = json.dumps(records)
+    path.write_text(original)
     manager = WorkspaceManager(tmp_path)
 
-    with caplog.at_level(logging.WARNING):
-        result = manager.load_workspaces()
+    with pytest.raises(ValueError, match="unsupported schema_version"):
+        manager.load_workspaces()
 
-    assert result["bad"].name == "Tampered", f"expect 'Tampered', got {result['bad'].name}"
-    assert result["good"].name == "Fine", f"expect 'Fine', got {result['good'].name}"
-    assert any("invalid schema_version" in r.message for r in caplog.records), f"expect at least one item matching 'invalid schema_version' in r.message, got none in {caplog.records}"
+    with pytest.raises(ValueError, match="unsupported schema_version"):
+        Workspace.from_dict(records["bad"])
 
-
-def test_newer_schema_version_warns_but_loads(tmp_path, caplog):
-    """A record from a future format version loads best-effort with a warning."""
-    record = {"ws1": {"schema_version": 99, "id": "ws1", "name": "Future"}}
-    (tmp_path / "workspaces.json").write_text(json.dumps(record))
-    manager = WorkspaceManager(tmp_path)
-
-    with caplog.at_level(logging.WARNING):
-        result = manager.load_workspaces()
-
-    assert result["ws1"].name == "Future", f"expect 'Future', got {result['ws1'].name}"
-    assert any("schema_version" in r.message for r in caplog.records), f"expect at least one item matching 'schema_version' in r.message, got none in {caplog.records}"
+    assert path.read_text() == original

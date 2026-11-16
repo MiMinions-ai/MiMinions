@@ -78,7 +78,7 @@ def _count_nodes_by_type(nodes: Any) -> dict[str, int]:
 
     counts: Counter[str] = Counter()
     for node in items:
-        node_type = _safe_get(node, "type", None) or _safe_get(node, "node_type", None)
+        node_type = _safe_get(node, "type", None)
         if node_type is None:
             node_type = "unknown"
         counts[str(node_type)] += 1
@@ -111,7 +111,6 @@ def _rule_priority(rule: Any) -> tuple[int, str]:
     label = (
         _safe_get(rule, "name", None)
         or _safe_get(rule, "id", None)
-        or _safe_get(rule, "rule_id", None)
         or "unnamed-rule"
     )
     return (-priority_int, str(label))
@@ -122,11 +121,10 @@ def _format_rule_line(rule: Any) -> str:
     label = (
         _safe_get(rule, "name", None)
         or _safe_get(rule, "id", None)
-        or _safe_get(rule, "rule_id", None)
         or "unnamed-rule"
     )
     priority = _safe_get(rule, "priority", 0)
-    rule_type = _safe_get(rule, "type", None) or _safe_get(rule, "rule_type", None)
+    rule_type = _safe_get(rule, "type", None)
 
     parts = [f"- {label}", f"(priority={priority})"]
     if rule_type is not None:

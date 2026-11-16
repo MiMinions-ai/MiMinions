@@ -93,7 +93,6 @@ asyncio.run(main())
     | `INITIALIZED` | Runtime initialized. |
     | `IDLE` | Ready to execute. |
     | `RUNNING` | Currently executing. |
-    | `IN_PROGRESS` | Alias kept for CLI compatibility. |
     | `PAUSED` | Execution paused. |
     | `COMPLETED` | Finished successfully. |
     | `FAILED` | Raised an exception during the run. |

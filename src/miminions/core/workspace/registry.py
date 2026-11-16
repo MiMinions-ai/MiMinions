@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_WORKSPACES_ROOT = get_workspaces_root()
 
-# Version of the persisted workspace record format. Bump on any breaking
-# change to to_dict()'s shape and add a migration step in
-# _migrate_workspace_record().
+# Only this persisted workspace record format is supported.
 WORKSPACE_SCHEMA_VERSION = 1
 
 
@@ -303,6 +301,12 @@ class Workspace:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Workspace':
         """Create workspace from dictionary."""
+        version = data.get('schema_version')
+        if type(version) is not int or version != WORKSPACE_SCHEMA_VERSION:
+            raise ValueError(
+                f"Workspace {data.get('id', '<unknown>')} has unsupported "
+                f"schema_version {version!r}; expected {WORKSPACE_SCHEMA_VERSION}."
+            )
         workspace = cls()
         workspace.id = data.get('id', workspace.id)
         workspace.name = data.get('name', '')
@@ -331,31 +335,6 @@ class Workspace:
         return workspace
 
 
-def _migrate_workspace_record(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize a persisted workspace record to WORKSPACE_SCHEMA_VERSION.
-
-    Records without a version predate versioning and are treated as v1
-    (they get stamped on the next save). Future format changes dispatch on
-    the record's version here, e.g. ``if version == 1: data = _v1_to_v2(data)``.
-    """
-    try:
-        version = int(data.get('schema_version', 1))
-    except (TypeError, ValueError):
-        logger.warning(
-            "Workspace %s has invalid schema_version %r; treating as %d.",
-            data.get('id', '<unknown>'), data.get('schema_version'),
-            WORKSPACE_SCHEMA_VERSION,
-        )
-        version = WORKSPACE_SCHEMA_VERSION
-    if version > WORKSPACE_SCHEMA_VERSION:
-        logger.warning(
-            "Workspace %s has schema_version %d, newer than supported %d; "
-            "loading best-effort.",
-            data.get('id', '<unknown>'), version, WORKSPACE_SCHEMA_VERSION,
-        )
-    return data
-
-
 class WorkspaceManager:
     """Manager for workspace operations and persistence."""
     
@@ -372,15 +351,7 @@ class WorkspaceManager:
         try:
             with open(self.workspaces_file, 'r') as f:
                 data = json.load(f)
-            
-            workspaces = {}
-            for workspace_id, workspace_data in data.items():
-                workspaces[workspace_id] = Workspace.from_dict(
-                    _migrate_workspace_record(workspace_data)
-                )
-
-            return workspaces
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             logger.warning(
                 "Could not read workspaces from %s; treating as empty. "
                 "If the file is corrupt it will be overwritten on the next save; "
@@ -389,6 +360,11 @@ class WorkspaceManager:
                 exc_info=True,
             )
             return {}
+
+        return {
+            workspace_id: Workspace.from_dict(workspace_data)
+            for workspace_id, workspace_data in data.items()
+        }
     
     def save_workspaces(self, workspaces: Dict[str, Workspace]) -> None:
         """Save workspaces to storage."""
@@ -493,9 +469,9 @@ def resolve_workspace(workspaces: Dict[str, Workspace], workspace_ref: str) -> W
     for workspace_id, workspace in workspaces.items():
         if str(workspace_id).startswith(workspace_ref):
             return workspace
-        if str(getattr(workspace, "id", "")) == workspace_ref:
+        if workspace.id == workspace_ref:
             return workspace
-        if str(getattr(workspace, "name", "")) == workspace_ref:
+        if workspace.name == workspace_ref:
             return workspace
 
     return None
@@ -524,7 +500,7 @@ def ensure_workspace(
         workspace = manager.create_workspace(workspace_ref)
         workspaces[workspace.id] = workspace
 
-    root_path = getattr(workspace, "root_path", None)
+    root_path = workspace.root_path
     if root_path:
         root = Path(root_path).expanduser().resolve()
     elif init_files:

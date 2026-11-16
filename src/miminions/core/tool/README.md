@@ -94,6 +94,9 @@ The adapter lives in `miminions.core.tool.mcp_adapter` (`MCPToolAdapter`, `MCPTo
 MCP tools are **async-only** — `MCPTool.run()` raises; use `arun()` or the
 agent's async path. The `mcp` package is a core dependency, so no extra install
 is required.
+`MCPToolAdapter.convert_mcp_tool_to_generic()` accepts the SDK's `mcp.types.Tool`,
+not dictionaries. Tool results use `mcp.types.CallToolResult`; text content is
+unwrapped while non-text content is preserved.
 
 ## Two `ToolSchema` types
 

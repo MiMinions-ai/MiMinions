@@ -20,6 +20,9 @@ Work in progress toward the next release.
 
 ### Changed
 
+- **Breaking:** removed core gateway and pydantic-ai compatibility re-exports, `TaskStatus.IN_PROGRESS`, legacy agent-result handling, optional memory-method fallbacks, and dictionary-based MCP tool conversion. Import gateway APIs from `miminions.daemon` and third-party APIs from `pydantic_ai`; use `TaskStatus.RUNNING` and MCP SDK tool models. The minimum pydantic-ai version is now `1.107.0`.
+- **Breaking:** workspace records must explicitly declare the current integer `schema_version` (`1`). Missing, invalid, and unsupported versions now raise `ValueError` without changing the store; the migration hook and best-effort loading have been removed.
+- **Breaking:** context graph summaries no longer recognize the alternate `node_type`, `rule_id`, and `rule_type` keys; use `type` and `name`/`id`.
 - **Breaking:** consolidated execution sessions under `miminions tool`, renamed direct tool invocation to `tool execute`, renamed the gateway runtime command to `gateway start`, and renamed immediate cron invocation to `gateway cron exec`. The former `execution`, `tool run`, `gateway run`, and `gateway cron run` paths have been removed.
 
 ## [0.4.1] - 2026-08-26

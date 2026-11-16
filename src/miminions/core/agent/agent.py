@@ -43,12 +43,6 @@ def _is_retryable_error(exc: BaseException) -> bool:
     return isinstance(exc, ModelAPIError)  # connection errors / timeouts
 
 
-def _result_usage(result: Any) -> RunUsage:
-    """Return run usage across pydantic-ai's method-to-property transition."""
-    usage = result.usage
-    return usage if isinstance(usage, RunUsage) else usage()
-
-
 def _python_type_to_param_type(py_type: type) -> ParameterType:
     """Map Python type to ParameterType."""
     mapping = {
@@ -461,12 +455,12 @@ class Minion:
     def _memory_get(self, id: str) -> Optional[Dict[str, Any]]:
         if not self._memory:
             raise ValueError("No memory attached")
-        return self._memory.get_by_id(id) if hasattr(self._memory, 'get_by_id') else None
+        return self._memory.get_by_id(id)
 
     def _memory_list(self) -> List[Dict[str, Any]]:
         if not self._memory:
             raise ValueError("No memory attached")
-        return self._memory.list_all() if hasattr(self._memory, 'list_all') else []
+        return self._memory.list_all()
 
     def _ingest_document(self, filepath: str, chunk_size: Optional[int] = None, overlap: Optional[int] = None) -> Dict[str, Any]:
         """Ingest a document (PDF or text) into memory."""
@@ -642,10 +636,10 @@ class Minion:
         self._last_messages = result.all_messages()
         if self._on_turn_end is not None:
             try:
-                self._on_turn_end(_result_usage(result), time.monotonic() - start)
+                self._on_turn_end(result.usage, time.monotonic() - start)
             except Exception:
                 logger.exception("on_turn_end callback failed")
-        return result.output if hasattr(result, "output") else str(result.response)
+        return result.output
 
     async def run_stream(
         self, prompt: str, message_history: Optional[List[Any]] = None
@@ -680,7 +674,7 @@ class Minion:
             self._last_messages = result.all_messages()
             if self._on_turn_end is not None:
                 try:
-                    self._on_turn_end(_result_usage(result), time.monotonic() - start)
+                    self._on_turn_end(result.usage, time.monotonic() - start)
                 except Exception:
                     logger.exception("on_turn_end callback failed")
 

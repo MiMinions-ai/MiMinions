@@ -20,7 +20,7 @@ from miminions.core.task import TaskRuntime, Task, AgentTask, TaskStatus, TaskPr
 # DEFAULT_RUNTIME is a shared process-wide runtime instance.
 ```
 
-`TaskStatus` includes pending, initialized, idle, running/in_progress, paused,
+`TaskStatus` includes pending, initialized, idle, running, paused,
 completed, failed and cancelled; this list is not an enforced transition order.
 `TaskPriority`: low/medium/high/critical.
 
@@ -33,7 +33,7 @@ in `execution`.
 ## Lifecycle
 
 `add_task()` → `update_task()` transitions → cleared via `clear_tasks()`.
-CLI compatibility keeps `in_progress` as an alias of running.
+Use `TaskStatus.RUNNING` for active tasks; `in_progress` is not accepted.
 
 ## Gate
 

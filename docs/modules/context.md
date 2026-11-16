@@ -85,6 +85,8 @@ flowchart LR
 The builder reads everything tolerantly: `workspace_obj` may be a
 [`Workspace`](workspaces.md), a dataclass, a plain object, or a dict — `id`,
 `name`, `root_path`, `nodes`, `rules`, and `state` are all read defensively.
+Graph summaries read node `type` and rule `name`/`id`, `priority`, and optional
+`type`; alternate keys `node_type`, `rule_id`, and `rule_type` are not recognized.
 
 ??? note "The closing instruction line depends on `skills_index_only`"
     `build(..., skills_index_only=True)` (the default) ends with

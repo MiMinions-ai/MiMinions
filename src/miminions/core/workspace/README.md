@@ -36,6 +36,9 @@ Layout: `root/{prompt,memory,skills,sessions,data}/`.
 
 `WorkspaceManager` persists graph/rule/state records and the workspace root path
 in `<config_dir>/workspaces.json`. The separate workspace directory holds files.
+Records must carry the current integer `schema_version` (`1`).
+`Workspace.from_dict()` and registry loading raise `ValueError` for missing or
+unsupported versions without rewriting the store; there is no migration hook.
 Bootstrap templates scaffold
 `prompt/*.md`, `memory/MEMORY.md` (Facts/Decisions/Preferences),
 `memory/HISTORY.md` (append-only), and `skills/core/SKILL.md`. Markdown

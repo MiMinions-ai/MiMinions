@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import CallToolResult, TextContent, Tool as MCPToolDefinition
 
 from . import GenericTool
 
@@ -110,36 +111,29 @@ class MCPToolAdapter:
         for server_name in list(self._connection_tasks):
             await self.disconnect_server(server_name)
 
-    async def get_tools_from_server(self, server_name: str) -> List[Any]:
+    async def get_tools_from_server(self, server_name: str) -> List[MCPToolDefinition]:
         """Fetch tools from a connected MCP server."""
         if server_name not in self.sessions:
             raise ValueError(f"Server '{server_name}' not connected")
 
         session = self.sessions[server_name]
         response = await session.list_tools()
-        return response.tools if response else []
+        return response.tools
 
-    def _extract_result(self, result: Any) -> Any:
+    def _extract_result(self, result: CallToolResult) -> Any:
         """Normalize MCP tool result content."""
-        if result and hasattr(result, "content") and result.content:
-            items = []
-            for item in result.content:
-                items.append(item.text if hasattr(item, "text") else item)
+        if result.content:
+            items = [item.text if isinstance(item, TextContent) else item for item in result.content]
             return items[0] if len(items) == 1 else items
         return result
 
     async def convert_mcp_tool_to_generic(
-        self, mcp_tool: Any, server_name: str
+        self, mcp_tool: MCPToolDefinition, server_name: str
     ) -> GenericTool:
         """Convert a single MCP tool to a GenericTool."""
-        if hasattr(mcp_tool, "name"):
-            tool_name = mcp_tool.name
-            tool_description = getattr(mcp_tool, "description", "")
-            schema = mcp_tool.model_dump() if hasattr(mcp_tool, "model_dump") else {}
-        else:
-            tool_name = mcp_tool.get("name", "unknown")
-            tool_description = mcp_tool.get("description", "")
-            schema = mcp_tool if isinstance(mcp_tool, dict) else {}
+        if not isinstance(mcp_tool, MCPToolDefinition):
+            raise TypeError("mcp_tool must be an mcp.types.Tool")
+        tool_name = mcp_tool.name
 
         async def mcp_tool_wrapper(**kwargs):
             if server_name not in self.sessions:
@@ -161,9 +155,9 @@ class MCPToolAdapter:
 
         return MCPTool(
             name=tool_name,
-            description=tool_description,
+            description=mcp_tool.description or "",
             func=mcp_tool_wrapper,
-            mcp_schema=schema,
+            mcp_schema=mcp_tool.model_dump(),
         )
 
     async def load_all_tools_from_server(self, server_name: str) -> List[GenericTool]:

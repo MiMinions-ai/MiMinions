@@ -9,6 +9,10 @@ The `miminions.core.agent` module is the core reasoning engine — a **`Minion`*
     from miminions.core.agent import create_minion, Minion
     ```
 
+Import third-party agent types, tools, and run contexts directly from
+`pydantic_ai`, not from `miminions.core.agent`. MiMinions requires
+`pydantic-ai>=1.107.0,<2.0.0`; older result APIs are not supported.
+
 ## Features
 
 - **Async execution** — owns its full `async run()` reasoning loop, with a streaming `run_stream()` variant

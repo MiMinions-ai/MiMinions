@@ -11,6 +11,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from mcp.types import CallToolResult, ImageContent, TextContent, Tool
 
 from miminions.core.tool.mcp_adapter import MCPTool, MCPToolAdapter
 
@@ -22,28 +23,22 @@ from miminions.core.tool.mcp_adapter import MCPTool, MCPToolAdapter
 def make_mock_result():
     """Factory fixture — call with a list of strings to get a mock MCP result."""
     def _make(texts):
-        result = MagicMock()
-        result.content = [MagicMock(text=t) for t in texts]
-        return result
+        return CallToolResult(content=[TextContent(type="text", text=t) for t in texts])
     return _make
 
 
 @pytest.fixture
 def mock_mcp_tool():
-    """Mimics a tool object returned by MCP list_tools()."""
-    tool = MagicMock()
-    tool.name = "my_tool"
-    tool.description = "does stuff"
-    tool.model_dump.return_value = {
-        "name": "my_tool",
-        "description": "does stuff",
-        "inputSchema": {
+    """A tool object returned by MCP list_tools()."""
+    return Tool(
+        name="my_tool",
+        description="does stuff",
+        inputSchema={
             "type": "object",
             "properties": {"query": {"type": "string"}},
             "required": ["query"],
         },
-    }
-    return tool
+    )
 
 
 # -----------------------------
@@ -62,6 +57,23 @@ def test_extract_result_multiple_text_items_returns_list(make_mock_result):
     items = ["a", "b", "c"]
     out = adapter._extract_result(make_mock_result(items))
     assert out == items, f"expect the adapter._extract_result to return {items}, got {out}"
+
+
+def test_extract_result_preserves_non_text_and_empty_content():
+    adapter = MCPToolAdapter()
+    image = ImageContent(type="image", data="aGVsbG8=", mimeType="image/png")
+    mixed = CallToolResult(content=[TextContent(type="text", text="image"), image])
+    empty = CallToolResult(content=[])
+
+    assert adapter._extract_result(mixed) == ["image", image]
+    assert adapter._extract_result(empty) is empty
+
+
+async def test_convert_mcp_tool_rejects_dictionary():
+    adapter = MCPToolAdapter()
+
+    with pytest.raises(TypeError, match="mcp.types.Tool"):
+        await adapter.convert_mcp_tool_to_generic({"name": "old_tool"}, "serverA")
 
 
 def test_mcp_tool_to_dict_prefers_input_schema_when_present():
@@ -124,14 +136,7 @@ async def test_convert_mcp_tool_to_generic_error_returns_ok_false_and_error_info
     session.call_tool = AsyncMock(side_effect=RuntimeError("boom"))
     adapter.sessions["serverA"] = session
 
-    mcp_tool = MagicMock()
-    mcp_tool.name = "explode"
-    mcp_tool.description = "fails"
-    mcp_tool.model_dump.return_value = {
-        "name": "explode",
-        "description": "fails",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    }
+    mcp_tool = Tool(name="explode", description="fails", inputSchema={"type": "object"})
 
     tool = await adapter.convert_mcp_tool_to_generic(mcp_tool, "serverA")
 
@@ -145,23 +150,8 @@ async def test_convert_mcp_tool_to_generic_error_returns_ok_false_and_error_info
 async def test_load_all_tools_from_server_converts_all_tools():
     adapter = MCPToolAdapter()
 
-    t1 = MagicMock()
-    t1.name = "t1"
-    t1.description = "one"
-    t1.model_dump.return_value = {
-        "name": "t1",
-        "description": "one",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    }
-
-    t2 = MagicMock()
-    t2.name = "t2"
-    t2.description = "two"
-    t2.model_dump.return_value = {
-        "name": "t2",
-        "description": "two",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
-    }
+    t1 = Tool(name="t1", description="one", inputSchema={"type": "object"})
+    t2 = Tool(name="t2", description="two", inputSchema={"type": "object"})
 
     # Fake list_tools response object
     session = MagicMock()

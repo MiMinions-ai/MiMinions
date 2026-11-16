@@ -64,7 +64,7 @@ def _run_agent_sync(model: Any, instructions: str, prompt: str) -> str:
 
     async def _run() -> str:
         result = await agent.run(prompt)
-        return result.output if hasattr(result, "output") else str(result.response)
+        return result.output
 
     try:
         asyncio.get_running_loop()

@@ -20,7 +20,6 @@ class TaskStatus(Enum):
     INITIALIZED = "initialized"  # Task initialized and ready
     IDLE = "idle"  # Task ready to execute
     RUNNING = "running"  # Task currently executing
-    IN_PROGRESS = "in_progress"  # Task in progress (alias for CLI compatibility)
     PAUSED = "paused"  # Task execution paused
     COMPLETED = "completed"  # Task completed successfully
     FAILED = "failed"  # Task failed with error

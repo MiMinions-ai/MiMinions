@@ -2,6 +2,8 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+import pytest
+
 from miminions.core.task.model import (
     AgentTask,
     Task,
@@ -21,7 +23,6 @@ class TestTaskStatus:
         assert TaskStatus.INITIALIZED.value == "initialized", f"expect 'initialized', got {TaskStatus.INITIALIZED.value}"
         assert TaskStatus.IDLE.value == "idle", f"expect 'idle', got {TaskStatus.IDLE.value}"
         assert TaskStatus.RUNNING.value == "running", f"expect 'running', got {TaskStatus.RUNNING.value}"
-        assert TaskStatus.IN_PROGRESS.value == "in_progress", f"expect 'in_progress', got {TaskStatus.IN_PROGRESS.value}"
         assert TaskStatus.PAUSED.value == "paused", f"expect 'paused', got {TaskStatus.PAUSED.value}"
         assert TaskStatus.COMPLETED.value == "completed", f"expect 'completed', got {TaskStatus.COMPLETED.value}"
         assert TaskStatus.FAILED.value == "failed", f"expect 'failed', got {TaskStatus.FAILED.value}"
@@ -29,7 +30,11 @@ class TestTaskStatus:
 
     def test_task_status_count(self):
         """Test total number of status values."""
-        assert len(TaskStatus) == 9, f"expect 9, got {len(TaskStatus)}"
+        assert len(TaskStatus) == 8, f"expect 8, got {len(TaskStatus)}"
+
+    def test_removed_in_progress_status_is_rejected(self):
+        with pytest.raises(ValueError, match="in_progress"):
+            TaskStatus("in_progress")
 
     def test_task_status_comparison(self):
         """Test TaskStatus enum comparison."""
@@ -46,7 +51,7 @@ class TestTaskStatus:
     def test_task_status_iteration(self):
         """Test iterating through TaskStatus."""
         statuses = list(TaskStatus)
-        assert len(statuses) == 9, f"expect 9, got {len(statuses)}"
+        assert len(statuses) == 8, f"expect 8, got {len(statuses)}"
         assert TaskStatus.PENDING in statuses, f"expect contains TaskStatus.PENDING, got {statuses}"
         assert TaskStatus.COMPLETED in statuses, f"expect contains TaskStatus.COMPLETED, got {statuses}"
 

@@ -95,6 +95,27 @@ def test_context_builder_handles_empty_workspace_sections(tmp_path: Path):
     assert "- No state keys found." in context, f"expect contains '- No state keys found.', got {context}"
 
 
+def test_context_builder_uses_canonical_graph_fields(tmp_path: Path):
+    workspace = {
+        "id": "graph",
+        "nodes": [{"type": "agent"}, {"node_type": "old-node-type"}],
+        "rules": [
+            {"id": "current-rule", "priority": 2, "type": "policy"},
+            {"rule_id": "old-rule-id", "priority": 1, "rule_type": "old-rule-type"},
+        ],
+    }
+
+    context = ContextBuilder(global_top_k=0).build(workspace, tmp_path)
+
+    assert "- agent: 1" in context
+    assert "- unknown: 1" in context
+    assert "- current-rule (priority=2) [type=policy]" in context
+    assert "- unnamed-rule (priority=1)" in context
+    assert "old-node-type" not in context
+    assert "old-rule-id" not in context
+    assert "old-rule-type" not in context
+
+
 def test_context_builder_injects_global_knowledge_when_available(tmp_path: Path, monkeypatch):
     """Global Knowledge section appears when SQLite returns insights."""
     init_workspace(tmp_path)

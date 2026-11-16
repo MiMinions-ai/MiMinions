@@ -47,10 +47,6 @@ __all__ = [
     "create_minion",
     "AgentConfig",
     "AgentState",
-    # pydantic_ai re-exports
-    "PydanticAIAgent",
-    "Tool",
-    "RunContext",
 ]
 
 
@@ -66,15 +62,5 @@ def __getattr__(name: str):
         if name == "Minion":
             return Minion
         return create_minion
-
-    if name in {"PydanticAIAgent", "Tool", "RunContext"}:
-        from pydantic_ai import Agent as PydanticAIAgent, Tool, RunContext
-
-        exports = {
-            "PydanticAIAgent": PydanticAIAgent,
-            "Tool": Tool,
-            "RunContext": RunContext,
-        }
-        return exports[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

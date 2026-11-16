@@ -37,11 +37,8 @@ from miminions.core.task import TaskRuntime
 from miminions.core.tool import GenericTool
 ```
 
-The package root currently re-exports gateway symbols only: `BaseChannel`,
-`ChannelManager`, `CronJob`, `CronSchedule`, `CronService`, `GatewayOrchestrator`,
-`InboundMessage`, `Lifecycle`, `MessageBus`, `OutboundMessage`, `Phase`,
-`Session`, and `SessionManager`. Their implementation owner is still `daemon`;
-the re-export does not move gateway responsibilities into `core`.
+The package root does not re-export runtime APIs. Import gateway APIs directly
+from `miminions.daemon`.
 
 ## State
 

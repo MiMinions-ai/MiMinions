@@ -71,15 +71,13 @@ print(same_ws.get_network_summary())
 into place), so an interrupted save can't corrupt the store. Each persisted
 record is stamped with a `schema_version` field (currently `1`):
 
-- Records **without** a version predate versioning and are treated as v1 — they
-  get stamped on the next save.
-- Records with a **newer** version than the running code supports are loaded
-  best-effort with a logged warning.
-- Future breaking changes to the record shape will dispatch on this version in
-  a migration step at load time.
+Only records with an integer `schema_version` equal to `1` are accepted.
+Missing, invalid, older, or newer versions raise `ValueError` from both
+`Workspace.from_dict()` and `load_workspaces()`, leaving the stored file
+unchanged. There is no automatic migration or best-effort loading.
 
-If `workspaces.json` is missing or unreadable, `load_workspaces()` logs a
-warning and returns `{}` rather than raising.
+If `workspaces.json` is missing, `load_workspaces()` returns `{}` silently.
+Unreadable or corrupt JSON files produce a warning and return `{}`.
 
 ## The Graph Model
 
