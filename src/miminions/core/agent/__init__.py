@@ -1,14 +1,10 @@
 """
 Minion Agent Module
 
-This module provides an LLM-powered agent implementation built on top of
-pydantic_ai with strong typing, validation, and structured schemas for tools,
+This module provides an LLM-powered agent implementation with strong typing, validation, and structured schemas for tools,
 inputs, and outputs.
 
 The Agent is designed to:
-- Use pydantic_ai for LLM-backed agent infrastructure
-- Default to OpenRouter (openai/gpt-oss-20b:free) — set OPENROUTER_API_KEY
-- Use Pydantic models for all inputs, outputs, and tool schemas
 - Support flexible tool registration from Python functions
 - Support memory integration (SQLite)
 - Execute tools via LLM reasoning using the async run() API
@@ -24,14 +20,6 @@ Example:
 
     agent.register_tool("add", "Add two numbers", add)
 
-    # LLM-powered execution — the model decides when to call tools
-    import asyncio
-    reply = asyncio.run(agent.run("What is 3 + 7?"))
-    print(reply)  # "The answer is 10."
-
-    # To use a different model:
-    from pydantic_ai.models.openai import OpenAIChatModel
-    agent = create_minion(name="MyAgent", model=OpenAIChatModel("gpt-4o"))
 """
 
 from __future__ import annotations

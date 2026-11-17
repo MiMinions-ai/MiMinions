@@ -3,7 +3,6 @@ from typing import Optional
 
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.test import TestModel
 
@@ -39,8 +38,7 @@ class ModelFactory:
             return AnthropicModel(model_name)
             
         elif provider_name == "gemini":
-            model_name = model_name or "gemini-1.5-flash"
-            return GeminiModel(model_name)
+            raise ValueError("Gemini provider is not supported.")
             
         elif provider_name == "test":
             return TestModel()
