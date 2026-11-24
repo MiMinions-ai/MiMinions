@@ -25,9 +25,12 @@ from miminions.system.execution.trace import AgentRunRecord, WorkflowRun, ToolCa
 
 # ── File helpers ──────────────────────────────────────────────────────────────
 
-def create_minion(*args, **kwargs):
-    from miminions.core.agent import create_minion as factory
+def create_agent(*args, **kwargs):
+    from miminions.core.agent import create_agent as factory
     return factory(*args, **kwargs)
+
+
+create_minion = create_agent
 
 
 def _sessions_file() -> Path:
@@ -53,15 +56,15 @@ def _active_session() -> tuple[Optional[str], Optional[dict]]:
 # ── Agent builder ─────────────────────────────────────────────────────────────
 
 def _build_agent(session_id: str, session: dict):
-    """Reconstruct the session Minion using create_minion and replay tool_sources."""
-    agent = create_minion(name=f"session-{session_id}")
+    """Reconstruct the session Agent using create_agent and replay tool_sources."""
+    agent = create_agent(name=f"session-{session_id}")
     for src in session.get("tool_sources", []):
         if src["type"] == "module":
             _load_module(agent, src["path"])
     return agent
 
 def _load_module(agent, path: str) -> int:
-    """Load GenericTool instances from a .py file into the Minion via add_tool()."""
+    """Load GenericTool instances from a .py file into the Agent via add_tool()."""
     import importlib.util
     from miminions.core.tool import GenericTool
     spec = importlib.util.spec_from_file_location("_dyn_module", path)
@@ -256,7 +259,7 @@ def add_tool(path):
         click.echo(f"Tool source already registered: {resolved}")
         return
 
-    agent = create_minion(name="probe")
+    agent = create_agent(name="probe")
     count = _load_module(agent, resolved)
     sources.append({"type": "module", "path": resolved})
     _save(_sessions_file(), sessions)

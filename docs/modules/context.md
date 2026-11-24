@@ -9,16 +9,16 @@ from miminions.core.context import ContextBuilder
 ```
 
 !!! tip "You rarely call this directly"
-    `ContextBuilder` is wired into [`Minion`](agent.md) via `set_context()`. Once
+    `ContextBuilder` is wired into [`Agent`](agent.md) via `set_context()`. Once
     a workspace is attached, the builder runs automatically on every `run()`.
     Direct use is mainly for inspecting or testing the generated prompt.
 
 ## Quick Start
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("MyAgent")
+agent = create_agent("MyAgent")
 
 # Attach workspace context. A @agent.system_prompt callback now calls
 # ContextBuilder().build(workspace, root_path) on every run().
@@ -54,7 +54,7 @@ print(system_prompt)
 ## How It Fits In
 
 `set_context(workspace, root_path)` stores the workspace object and root path on
-the [`Minion`](agent.md). On the next `run()`, the agent rebuilds its underlying
+the [`Agent`](agent.md). On the next `run()`, the agent rebuilds its underlying
 pydantic_ai agent and registers a `@agent.system_prompt` callback that returns
 `ContextBuilder().build(workspace, root_path)`. The composed context is therefore
 recomputed on **every** call, so the agent always sees the latest workspace

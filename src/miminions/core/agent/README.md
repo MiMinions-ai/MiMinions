@@ -1,6 +1,6 @@
 # MiMinions Agent
 
-Minion agent powered by `pydantic_ai`, defaulting to OpenRouter.
+Agent powered by `pydantic_ai`, defaulting to OpenRouter.
 Requires `pydantic-ai>=1.107.0,<2.0.0` and uses the `output` and `usage` result properties.
 
 This package owns the live reasoning runtime, model/provider selection and tool
@@ -24,10 +24,10 @@ durable queuing and supervision live in
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 async def main():
-    agent = create_minion("MyAgent")
+    agent = create_agent("MyAgent")
     
     # Attach workspace for Context Injection
     # agent.set_context(workspace, root_path)
@@ -77,7 +77,7 @@ GenericTool adapters preserve the wrapped callable's signature and complete sche
 project capabilities while keeping the state workspace distinct from project files.
 
 > [Recursive, Bounded Evolution](../../../../docs/architecture/recursive-evolution.md) — Contract v2 (optional visibility/project context; additive, no migration).
-> **Public surface:** `Minion`, `create_minion`, `AgentConfig`, `AgentState` (runtime imports are lazy via `__init__`). Import pydantic-ai APIs directly from `pydantic_ai`.
+> **Public surface:** `Agent`, `create_agent`, `AgentConfig`, `AgentState` (runtime imports are lazy via `__init__`). Import pydantic-ai APIs directly from `pydantic_ai`. `Minion` and `create_minion` remain backward-compatible aliases.
 > **State:** in-memory agent + attached `BaseMemory`; workspace injected via `set_context()`.
 > **Lifecycle:** `ContextBuilder` rebuilds the system prompt on every run; tools/MCP registered explicitly.
 > **Gate:** agent tests + `scripts/check_structure.py`. Bump version on any surface change.

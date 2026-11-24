@@ -12,7 +12,7 @@ tools off any Model Context Protocol server.
 - **Single definition** — write a plain function, get a typed tool.
 - **Automatic schema** — JSON-schema parameters inferred from your type annotations.
 - **`@tool` decorator** — clean, declarative syntax.
-- **MCP adapter** — load tools from any MCP server and register them on a [Minion](agent.md).
+- **MCP adapter** — load tools from any MCP server and register them on a [Agent](agent.md).
 
 ## Quick Start
 
@@ -119,30 +119,30 @@ types. Anything that isn't one of the four scalar types below maps to
 
 ## Using tools with an agent
 
-Tools become useful once they are attached to a [Minion](agent.md). There are two
+Tools become useful once they are attached to a [Agent](agent.md). There are two
 registration paths.
 
 === "Plain function"
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
 
     def calculate(operation: str, a: int, b: int) -> int:
         if operation == "add":
             return a + b
         return a * b
 
-    agent = create_minion("my_agent")
+    agent = create_agent("my_agent")
     agent.register_tool("calculator", "Perform arithmetic", calculate)
     ```
 
 === "`GenericTool`"
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
     from miminions.core.tool import create_tool
 
     calc = create_tool("calculator", "Perform arithmetic", calculate)
 
-    agent = create_minion("my_agent")
+    agent = create_agent("my_agent")
     agent.add_tool(calc)
     ```
 
@@ -169,15 +169,15 @@ agent.list_tools()  # ['calculator']
 
 ## MCP integration
 
-MCP (Model Context Protocol) servers expose tools that a Minion can connect to,
+MCP (Model Context Protocol) servers expose tools that a Agent can connect to,
 load, and call. The adapter lives in `miminions.core.tool.mcp_adapter`. In practice
 you drive it through the agent: connect to a server, then load its tools.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("my_agent")
+agent = create_agent("my_agent")
 
 # 1. Connect to an MCP server (here, a stdio server launched as a subprocess)
 await agent.connect_mcp_server(

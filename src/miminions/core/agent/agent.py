@@ -8,7 +8,7 @@ import time
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 from pathlib import Path
 
-from pydantic_ai import Agent, ModelRetry, Tool
+from pydantic_ai import Agent as PydanticAgent, ModelRetry, Tool
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import FunctionToolCallEvent
 from pydantic_ai.settings import ModelSettings
@@ -87,19 +87,19 @@ class RegisteredTool:
         return await result if inspect.isawaitable(result) else result
 
 
-class Minion:
+class Agent:
     """
-    Minion — an LLM-powered agent built on top of pydantic_ai.
+    Agent — an LLM-powered agent built on top of pydantic_ai.
 
-    Minion owns the full agent lifecycle: model config, tool registry, and the
-    async reasoning loop.  Callers interact only with Minion — the underlying
+    Agent owns the full agent lifecycle: model config, tool registry, and the
+    async reasoning loop.  Callers interact only with Agent — the underlying
     pydantic_ai Agent is a private implementation detail.
 
     Typical usage::
 
-        minion = create_minion(name="MyAgent", description="...")
-        minion.register_tool("do_thing", "Does a thing", do_thing)
-        reply = await minion.run("Please do the thing")
+        agent = create_agent(name="MyAgent", description="...")
+        agent.register_tool("do_thing", "Does a thing", do_thing)
+        reply = await agent.run("Please do the thing")
     """
 
     def __init__(
@@ -141,7 +141,7 @@ class Minion:
         else:
             self._model = ModelFactory.create(provider)
 
-        self._pydantic_ai_agent: Optional[Agent] = None
+        self._pydantic_ai_agent: Optional[PydanticAgent] = None
         self._pydantic_ai_tools: List[Tool] = []
         self._last_messages: List[Any] = []
 
@@ -183,7 +183,7 @@ class Minion:
         """
         # request_timeout bounds each HTTP request to the provider, not the
         # whole turn — a multi-tool turn may take several requests.
-        agent = Agent(
+        agent = PydanticAgent(
             model=self._model,
             tools=self._pydantic_ai_tools,
             instructions=self.config.description or f"Agent: {self.config.name}",
@@ -597,7 +597,7 @@ class Minion:
         Args:
             prompt: The user message to send.
             message_history: Prior pydantic_ai ModelMessage objects for
-                             multi-turn context. Pass ``minion._last_messages``
+                             multi-turn context. Pass ``agent._last_messages``
                              from the previous call to maintain conversation.
 
         Returns:
@@ -702,13 +702,13 @@ class Minion:
     def __str__(self) -> str:
         mem = "with memory" if self._memory else "no memory"
         model_name = getattr(self._model, 'model_name', 'test') if self._model else 'none'
-        return f"Minion({self.name}, tools={len(self._tools)}, model={model_name}, {mem})"
+        return f"Agent({self.name}, tools={len(self._tools)}, model={model_name}, {mem})"
 
     def __repr__(self) -> str:
         return self.__str__()
 
 
-def create_minion(
+def create_agent(
     name: str,
     description: str = "",
     memory: Optional[BaseMemory] = None,
@@ -719,9 +719,9 @@ def create_minion(
     retry_base_delay: float = 1.0,
     on_tool_call: Optional[Callable[[str, Dict[str, Any]], None]] = None,
     on_turn_end: Optional[Callable[[RunUsage, float], None]] = None,
-) -> Minion:
+) -> Agent:
     """
-    Create a new Minion instance.
+    Create a new Agent instance.
 
     Args:
         name: Agent name
@@ -741,9 +741,9 @@ def create_minion(
                      after each successful turn.
 
     Returns:
-        Minion instance ready for tool registration and execution
+        Agent instance ready for tool registration and execution
     """
-    return Minion(
+    return Agent(
         name=name,
         description=description,
         memory=memory,
@@ -755,3 +755,8 @@ def create_minion(
         on_tool_call=on_tool_call,
         on_turn_end=on_turn_end,
     )
+
+
+# Backward-compatible aliases. New code should use Agent and create_agent.
+Minion = Agent
+create_minion = create_agent

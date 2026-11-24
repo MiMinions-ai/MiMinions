@@ -1,7 +1,7 @@
 # MiMinions Generic Tool Module
 
 Turn ordinary Python functions into agent-callable tools with an auto-derived
-JSON schema. Tools work with the `Minion` agent and can also wrap tools loaded
+JSON schema. Tools work with the `Agent` and can also wrap tools loaded
 from MCP servers.
 
 > Full reference: [Tools documentation](https://miminions.ai/modules/tools/).
@@ -32,9 +32,9 @@ result = calculate.run(operation="add", a=5, b=3)   # 8
 ### Use a tool with an agent
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("my_agent")
+agent = create_agent("my_agent")
 
 # A plain function — schema inferred from the signature:
 agent.register_tool("calculator", "Perform arithmetic", calculate.func)
@@ -79,9 +79,9 @@ Load tools from a Model Context Protocol server through the agent:
 
 ```python
 from mcp import StdioServerParameters
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("my_agent")
+agent = create_agent("my_agent")
 await agent.connect_mcp_server(
     "files", StdioServerParameters(command="python", args=["mcp_server.py"])
 )
@@ -110,7 +110,7 @@ dataclass.
 
 Workspace tools live in the internal `workspace.py` adapter. It builds lazy
 callables from AST metadata, validates inputs before approval, and registers via
-`create_tool` / `Minion.add_tool`. Metadata search activates at most 32 recent
+`create_tool` / `Agent.add_tool`. Metadata search activates at most 32 recent
 tools; it never imports code or grants permission. Each invocation uses the
 execution service's approval broker, then checks the source digest before import.
 Source changes require a new turn and approval. Sync/async calls share a process

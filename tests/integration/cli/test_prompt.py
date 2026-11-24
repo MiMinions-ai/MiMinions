@@ -32,7 +32,7 @@ def _patch_prompt_runtime(monkeypatch, tmp_path: Path, fake_minion: MagicMock | 
         tmp_path / "workspaces",
     )
     monkeypatch.setattr(
-        "miminions.core.agent.create_minion",
+        "miminions.core.agent.create_agent",
         lambda name, description: fake,
     )
 

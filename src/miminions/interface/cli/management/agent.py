@@ -16,10 +16,13 @@ from miminions.core.paths import get_config_dir
 from ..operations.dispatch import attachment_options, submit_task, validate_attachment
 
 
-def create_minion(*args, **kwargs):
+def create_agent(*args, **kwargs):
     """Load the model runtime only for operations that use it."""
-    from miminions.core.agent import create_minion as factory
+    from miminions.core.agent import create_agent as factory
     return factory(*args, **kwargs)
+
+
+create_minion = create_agent
 
 
 class AgentAction(str, Enum):
@@ -81,15 +84,15 @@ def save_agents(agents):
 
 
 def _build_cli_extension_agent(agent_data):
-    """Create a CLI extension Minion from persisted CLI agent settings."""
+    """Create a CLI extension Agent from persisted CLI agent settings."""
     name = agent_data.get("name", "Unnamed Agent")
     base_description = agent_data.get("description", "")
     cli_description = (
-        "CLI extension of the core Minion runtime. "
+        "CLI extension of the core Agent runtime. "
         "Inherit default runtime behavior first; CLI-specific behavior is additive."
     )
     description = f"{base_description}\n\n{cli_description}" if base_description else cli_description
-    runtime_agent = create_minion(name=name, description=description)
+    runtime_agent = create_agent(name=name, description=description)
     _register_default_cli_tools(runtime_agent)
     return runtime_agent
 
@@ -139,7 +142,7 @@ async def _execute_agent_action(runtime_agent, operation, **params):
     if action is AgentAction.RUN:
         state = runtime_agent.get_state()
         click.echo(
-            "Initialized core Minion runtime "
+            "Initialized core Agent runtime "
             f"(tools={state.tool_count}, has_memory={state.has_memory}, "
             f"servers={len(state.connected_servers)})"
         )
@@ -351,7 +354,7 @@ def add_agent(name, description, type):
         "name": name,
         "description": description,
         "type": type,
-        "base_agent": "miminions.core.agent.Minion",
+        "base_agent": "miminions.core.agent.Agent",
         "mode": "cli_extension",
         "status": "inactive",
         "goal": None,
@@ -412,7 +415,7 @@ def show_agent(agent_ref, as_json):
         "type": agent.get("type", "unknown"),
         "status": agent.get("status", "inactive"),
         "goal": agent.get("goal"),
-        "base_agent": agent.get("base_agent", "miminions.core.agent.Minion"),
+        "base_agent": agent.get("base_agent", "miminions.core.agent.Agent"),
         "mode": agent.get("mode", "cli_extension"),
         "created_at": agent.get("created_at", ""),
     }
@@ -427,7 +430,7 @@ def show_agent(agent_ref, as_json):
     click.echo(f"Type: {agent.get('type', 'unknown')}")
     click.echo(f"Status: {agent.get('status', 'inactive')}")
     click.echo(f"Goal: {agent.get('goal')}")
-    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.core.agent.Minion')}")
+    click.echo(f"Base Agent: {agent.get('base_agent', 'miminions.core.agent.Agent')}")
     click.echo(f"Mode: {agent.get('mode', 'cli_extension')}")
     click.echo(f"Created: {agent.get('created_at', '')}")
 

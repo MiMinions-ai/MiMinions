@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.execution import ExecutionRequest
 from miminions.system.execution.handlers import TaskContext, _stream
 from miminions.system.execution.store import ExecutionStore
@@ -15,7 +15,7 @@ async def test_retry_only_before_output_and_tool_activity(tmp_path, activity):
     store = ExecutionStore(tmp_path)
     task_id = store.enqueue(ExecutionRequest("prompt"))
     context = TaskContext(store, store.claim())
-    agent = context.wire(create_minion("Test", model=TestModel(), retry_base_delay=0))
+    agent = context.wire(create_agent("Test", model=TestModel(), retry_base_delay=0))
     attempts = []
 
     async def stream(*args, **kwargs):

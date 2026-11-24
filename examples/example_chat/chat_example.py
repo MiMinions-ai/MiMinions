@@ -13,7 +13,7 @@ import logging
 import os
 from pathlib import Path
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.workspace import Workspace
 from miminions.core.workspace.bootstrap import init_workspace
 from miminions.core.context.distiller import MemoryDistiller
@@ -62,8 +62,8 @@ async def _chat_loop(session_id: str | None) -> None:
     if not session_id:
         session_id = store.create_session_id()
         
-    # 3. Create the Minion and set context
-    minion = create_minion(
+    # 3. Create the Agent and set context
+    minion = create_agent(
         name="MiMinionsDemo",
         description="A test agent for verifying the full LLM and memory stack.",
     )

@@ -51,7 +51,7 @@ the current tree):
 | Level | Unit | Contract home | Example |
 |---|---|---|---|
 | L0 | Repo | This doc + `pyproject.toml` + CI | `miminions` 0.4.1, entry `miminions = miminions.interface.cli.main:main` |
-| L1 | Package | `STRUCTURE.md` import surface | `from miminions.core.agent import create_minion` |
+| L1 | Package | `STRUCTURE.md` import surface | `from miminions.core.agent import create_agent` |
 | L2 | Module | `src/miminions/<package>/README.md` | `core/context`, `system/execution`, `interface/cli` |
 | L3 | Workspace | `prompt/ memory/ skills/ sessions/ data/` (`WorkspaceLayout`) | Bootstrap files `AGENTS.md USER.md TOOLS.md IDENTITY.md` |
 | L4 | Session | `sessions/*.jsonl` → distiller | One chat, distilled on exit |
@@ -110,7 +110,7 @@ including existing cross-package dependencies.
 | `interface` | `JsonlSessionStore`, `create_session_id`; CLI via `interface.cli` | Session transcripts and CLI configuration | Bootstrap, dispatch, append and resume |
 | `system` | `LocalDataManager`; auth, database, execution and file APIs via subpackages | Local persistent stores and execution state | Storage and durable execution adapters |
 | `core` | Domain APIs via subpackages; gateway APIs via `daemon` | Domain runtime state and workspace persistence in submodules | Not an IO-free layer; first-run application setup lives in `interface.bootstrap` |
-| `core.agent` | `Minion`, `create_minion`, `AgentConfig`, `AgentState` | In-memory agent; attached memory backend | `set_context()` attaches workspace data used by the prompt callback |
+| `core.agent` | `Agent`, `create_agent`, `AgentConfig`, `AgentState` | In-memory agent; attached memory backend | `set_context()` attaches workspace data used by the prompt callback |
 | `interface.cli` | `cli` (13 lazy groups + standalone `init`, see `interface/cli/main.py`) | Config-home records and command state | Bootstrap on first real subcommand; help stays lazy/cheap |
 | `core.context` | Root exports `ContextBuilder`; memory helpers via concrete modules | Prompt configuration; memory/budget state written through storage APIs | Reads prompt inputs; separately distills and compacts memory |
 | `system.file` | `LocalDataManager`, file/index/log APIs; Markdown helpers via `md_store` | Content-addressed files/index/logs and separate workspace Markdown files | File operations and memory IO; interpretation belongs to `core.context` |

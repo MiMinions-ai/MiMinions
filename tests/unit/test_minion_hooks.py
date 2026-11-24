@@ -1,8 +1,8 @@
-"""Unit tests for Minion observability hooks (on_tool_call / on_turn_end)."""
+"""Unit tests for Agent observability hooks (on_tool_call / on_turn_end)."""
 
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 
 def _echo(text: str) -> str:
@@ -12,9 +12,9 @@ def _echo(text: str) -> str:
 
 def _make_minion(**kwargs):
     # call_tools must stay restricted to the harmless echo tool: TestModel
-    # invokes every listed tool, and Minion always registers cli_run_command,
+    # invokes every listed tool, and Agent always registers cli_run_command,
     # which executes a real shell command.
-    minion = create_minion(name="Hooks", model=TestModel(call_tools=["echo"]), **kwargs)
+    minion = create_agent(name="Hooks", model=TestModel(call_tools=["echo"]), **kwargs)
     minion.register_tool("echo", "Echo text back", _echo)
     return minion
 

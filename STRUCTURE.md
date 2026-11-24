@@ -26,7 +26,7 @@ not implement their namesakes. The package READMEs identify the current owners.
 | Term | Meaning in this repository |
 |------|----------------------------|
 | **Project / workspace** | A project is the user's source directory. A workspace is a MiMinions record plus its state/files root. Project discovery associates the two without moving MiMinions state into the project. See [workspace](src/miminions/core/workspace/README.md). |
-| **Agent / saved agent** | `Minion` is a live runtime with a model and tools. A saved agent is a configuration record managed by the CLI and used to construct a runtime. See [agent](src/miminions/core/agent/README.md) and [agent commands](src/miminions/interface/cli/management/agent.py). |
+| **Agent / saved agent** | `Agent` is a live runtime with a model and tools. A saved agent is a configuration record managed by the CLI and used to construct a runtime. See [agent](src/miminions/core/agent/README.md) and [agent commands](src/miminions/interface/cli/management/agent.py). |
 | **Task / execution / instance** | `core.task` runs tasks in one process. The CLI also manages saved work items in `tasks.json`. A durable execution is a queued request tracked by `system.execution`; the instance is its local supervisor/worker runtime. `task list --kind` distinguishes work items from executions. |
 | **Session / transcript / checkpoint** | A session identifies a conversation. Its JSONL transcript holds text and metadata; an execution checkpoint holds native model messages, including tool exchanges, and is preferred for prompt/chat resumption. Gateway sessions use a separate API. See [interface](src/miminions/interface/README.md). |
 | **Memory / knowledge** | Memory APIs store and retrieve facts, summaries and vector entries. The `knowledge` CLI separately manages versioned records in `knowledge.json`; it is not the implementation of agent memory. See [memory](src/miminions/core/agent/memory/README.md) and [knowledge commands](src/miminions/interface/cli/management/knowledge.py). |
@@ -97,7 +97,7 @@ MiMinions/
 |       |-- __main__.py        # `python -m miminions`
 |       |
 |       |-- core/              # Domain/runtime primitives
-|       |   |-- agent/         # Minion, models, providers
+|       |   |-- agent/         # Agent, models, providers
 |       |   |   `-- memory/    # BaseMemory, memory types and public memory helpers
 |       |   |-- context/       # Prompt assembly, budgets, compaction, distillation
 |       |   |-- knowledge/     # Reserved package
@@ -170,7 +170,7 @@ command group.
 Prefer concrete subpackage imports:
 
 ```python
-from miminions.core.agent import create_minion, Minion
+from miminions.core.agent import create_agent, Agent
 from miminions.core.tool import GenericTool, create_tool, tool, ToolSchema
 from miminions.system.db.sqlite import SQLiteMemory
 from miminions.core.context.distiller import MemoryDistiller
@@ -196,7 +196,7 @@ inside that package, avoiding a same-name `workspace.py`/`workspace/` collision.
 
 ## Notes
 
-- `store_knowledge()` and `recall_knowledge()` are real `Minion` helpers backed
+- `store_knowledge()` and `recall_knowledge()` are real `Agent` helpers backed
   by the attached memory backend.
 - `SQLiteMemory` requires the `sqlite` extra and lives at
   `miminions.system.db.sqlite`.

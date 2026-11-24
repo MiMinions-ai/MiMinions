@@ -8,7 +8,7 @@ a generic tool system, three-tier memory, and local-first workspaces.
 
 ## Features
 
-- **Minion agent** — an async, LLM-powered agent on `pydantic-ai`, defaulting to
+- **Agent agent** — an async, LLM-powered agent on `pydantic-ai`, defaulting to
   [OpenRouter](https://openrouter.ai/) (with OpenAI, Anthropic, Gemini, and an
   offline test model also selectable), with streaming replies, retries,
   request timeouts, and observability hooks.
@@ -71,10 +71,10 @@ Use `mm` as the short CLI alias. The full `miminions` command remains fully supp
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 async def main():
-    agent = create_minion("MyAgent")
+    agent = create_agent("MyAgent")
 
     def add(a: int, b: int) -> int:
         return a + b
@@ -98,18 +98,18 @@ async for delta in agent.run_stream("Draft a short project update"):
 Want a different model? Pass a `provider` (or a `pydantic-ai` model directly):
 
 ```python
-agent = create_minion("MyAgent", provider="anthropic")   # or "openai", "gemini"
-agent = create_minion("MyAgent", provider="test")          # offline, no API key
+agent = create_agent("MyAgent", provider="anthropic")   # or "openai", "gemini"
+agent = create_agent("MyAgent", provider="test")          # offline, no API key
 ```
 
 ### An agent with vector memory
 
 ```python
 from miminions.system.db.sqlite import SQLiteMemory
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 with SQLiteMemory("agent.db") as memory:
-  agent = create_minion("Assistant", memory=memory)
+  agent = create_agent("Assistant", memory=memory)
 
   # store_knowledge / recall_knowledge require an attached memory backend.
   agent.store_knowledge("Python is a high-level language", metadata={"topic": "python"})
@@ -123,9 +123,9 @@ chunks and stores `.pdf`/`.txt`/`.md` files. Requires the `[sqlite]` extra.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("MyAgent")
+agent = create_agent("MyAgent")
 await agent.connect_mcp_server(
     "math", StdioServerParameters(command="python", args=["math_server.py"])
 )
@@ -184,7 +184,7 @@ See the [CLI reference](https://miminions.ai/modules/cli/) for every subcommand.
 | Topic | |
 |-------|--|
 | [Getting Started](https://miminions.ai/getting-started/) | Install, first agent, and the CLI |
-| [Agent](https://miminions.ai/modules/agent/) | The `Minion` API |
+| [Agent](https://miminions.ai/modules/agent/) | The `Agent` API |
 | [Memory](https://miminions.ai/modules/memory/) | Three-tier and vector memory |
 | [Context Builder](https://miminions.ai/modules/context/) | System-prompt assembly |
 | [Tools](https://miminions.ai/modules/tools/) | `@tool`, `GenericTool`, MCP |

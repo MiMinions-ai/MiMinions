@@ -1,4 +1,4 @@
-"""Document ingestion tests for Minion Agent."""
+"""Document ingestion tests for Agent Agent."""
 
 from pathlib import Path
 
@@ -6,14 +6,14 @@ import pytest
 
 pytest.importorskip("sqlite_vec")
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.db.sqlite import SQLiteMemory
 from miminions.core.tool.schemas import ExecutionStatus
 
 
 async def test_ingest_text(tmp_path):
     print("test_ingest_text")
-    agent = create_minion("ChunkAgent", memory=SQLiteMemory(db_path=":memory:"))
+    agent = create_agent("ChunkAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     test_file = tmp_path / "test_chunked.txt"
     test_file.write_text("""Machine learning is a subset of artificial intelligence.
@@ -43,7 +43,7 @@ async def test_ingest_pdf():
 
     assert pdf_path.exists(), f"expect PDF fixture at {pdf_path}, got missing"
     
-    agent = create_minion("PDFAgent", memory=SQLiteMemory(db_path=":memory:"))
+    agent = create_agent("PDFAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     try:
         result = agent.execute("ingest_document", filepath=str(pdf_path))
@@ -58,7 +58,7 @@ async def test_ingest_pdf():
 
 async def test_ingest_error():
     print("test_ingest_error")
-    agent = create_minion("ErrorAgent", memory=SQLiteMemory(db_path=":memory:"))
+    agent = create_agent("ErrorAgent", memory=SQLiteMemory(db_path=":memory:"))
     
     result = agent.execute("ingest_document", filepath="nonexistent.pdf")
     

@@ -7,7 +7,7 @@ It is based on a live South Florida zero-capital wholesaling / bird-dog desk tha
 ## What you will build
 
 1. A workspace with `memory/HISTORY.md` + `memory/MEMORY.md`
-2. A `Minion` that calls a typed underwrite tool
+2. A `Agent` that calls a typed underwrite tool
 3. Session distillation that promotes stable facts (formulas, buy boxes) into `MEMORY.md`
 
 ## Prerequisites
@@ -45,7 +45,7 @@ Seed durable facts into `MEMORY.md` (Tier 2):
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 REHAB = {"cosmetic": 20.0, "medium": 35.0, "heavy": 55.0, "structural": 75.0}
 
@@ -72,7 +72,7 @@ def underwrite_wholesale(
     }
 
 async def main():
-    agent = create_minion("DealDesk", provider="test")  # swap to openrouter/openai later
+    agent = create_agent("DealDesk", provider="test")  # swap to openrouter/openai later
     agent.register_tool(
         "underwrite_wholesale",
         "Compute wholesale MAO from ARV, sqft, condition, fee",
@@ -106,7 +106,7 @@ When adapting this to a real desk:
 ## Related modules
 
 - [Memory](../modules/memory.md) — tiers + distiller
-- [Agent](../modules/agent.md) — `create_minion` + tools
+- [Agent](../modules/agent.md) — `create_agent` + tools
 - [Workspaces](../modules/workspaces.md) — on-disk layout
 - [CLI & Chat](../modules/cli.md) — `miminions chat start`
 

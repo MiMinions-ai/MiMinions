@@ -197,7 +197,7 @@ Each audit-log entry. `transaction_type` is a `TransactionType` enum: `READ`, `W
 <div class="grid cards" markdown>
 
 - :material-database: **[Memory](memory.md)** — vector and markdown memory for an agent
-- :material-robot: **[Agent](agent.md)** — the `Minion` agent and its tools
+- :material-robot: **[Agent](agent.md)** — the `Agent` agent and its tools
 - :material-graph: **[Workspaces](workspaces.md)** — the on-disk workspace layout under `~/.miminions`
 
 </div>

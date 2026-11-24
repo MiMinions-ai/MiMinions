@@ -2,7 +2,7 @@
 
 This page covers two related runtime layers:
 
-- **Tasks** (`miminions.core.task`) — bind a [Minion](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
+- **Tasks** (`miminions.core.task`) — bind a [Agent](agent.md) to a unit of work and run many of them **concurrently** with `asyncio.TaskGroup`.
 - **Workflow tracing** (`miminions.system.execution.trace`) — small, serializable records that capture what an agent did (its turns and tool calls), persisted by the [`miminions tool`](cli.md#tool-sessions-and-history) CLI.
 
 !!! note "Import from the subpackages"
@@ -27,22 +27,22 @@ A **`Task`** is a dataclass describing a unit of work (id, name, description, st
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.task import TaskRuntime, AgentTask
 
 async def main():
     runtime = TaskRuntime()
 
     # Bind agents to tasks. Each AgentTask.agent must expose an async run().
-    # create_minion(...) returns a Minion, which does.
+    # create_agent(...) returns a Agent, which does.
     runtime.add_task(AgentTask(
         name="haiku",
-        agent=create_minion("Poet", provider="test"),
+        agent=create_agent("Poet", provider="test"),
         args=["Write a haiku about minions."],
     ))
     runtime.add_task(AgentTask(
         name="summary",
-        agent=create_minion("Summarizer", provider="test"),
+        agent=create_agent("Summarizer", provider="test"),
         args=["Summarize what an agentic framework is."],
     ))
 
@@ -113,7 +113,7 @@ asyncio.run(main())
 
 ```python
 runtime = TaskRuntime()
-task = AgentTask(name="job", agent=create_minion("A", provider="test"), args=["hi"])
+task = AgentTask(name="job", agent=create_agent("A", provider="test"), args=["hi"])
 runtime.add_task(task)
 
 runtime.get_tasks()                          # -> {task.id: AgentTask, ...}
@@ -221,7 +221,7 @@ So the trace models on this page are real and in use — just consumed via `tool
 
 <div class="grid cards" markdown>
 
-- :material-robot: **[Agent](agent.md)** — the `Minion` each `AgentTask` binds to
+- :material-robot: **[Agent](agent.md)** — the `Agent` each `AgentTask` binds to
 - :material-console: **[CLI & Chat](cli.md)** — the `tool` session commands that persist `WorkflowRun`s
 - :material-graph: **[Workspaces](workspaces.md)** — nodes, rules, and on-disk layout
 

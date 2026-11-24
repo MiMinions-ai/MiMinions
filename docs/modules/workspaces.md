@@ -1,6 +1,6 @@
 # Workspaces
 
-A **workspace** is the named container that gives a [Minion](agent.md) its identity, its
+A **workspace** is the named container that gives a [Agent](agent.md) its identity, its
 memory, and its boundaries. Every workspace has two halves:
 
 <div class="grid cards" markdown>
@@ -260,19 +260,19 @@ layout.sessions_dir   # .../sessions
 
 ## Wiring a Workspace into an Agent
 
-Attach a resolved workspace and its on-disk root to a Minion with `set_context()`. On
+Attach a resolved workspace and its on-disk root to a Agent with `set_context()`. On
 every `run()`, a system-prompt callback invokes `ContextBuilder().build(workspace, root)`
 to inject the identity, prompt files, memory, graph summary, and skills index.
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 from pathlib import Path
 
 manager = WorkspaceManager(Path("~/.miminions").expanduser())
 ws = resolve_workspace(manager.load_workspaces(), "research")
 
-agent = create_minion("Assistant")
+agent = create_agent("Assistant")
 agent.set_context(ws, root_path=ws.root_path)
 # agent.run(...) now builds its system prompt from this workspace.
 ```

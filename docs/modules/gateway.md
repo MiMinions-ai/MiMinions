@@ -3,7 +3,7 @@
 The `miminions.daemon` package is an **advanced, optional server-runtime layer**: a set of building blocks for wiring chat channels (Telegram, Discord, a WebSocket, your own transport) to an [agent](agent.md) core. It gives you an in-process async message bus, a uniform channel abstraction, session-scoped conversation state, cron scheduling, and phased startup/shutdown orchestration.
 
 !!! warning "This is a toolkit, not a turnkey server"
-    The gateway ships **building blocks, not a hosted server**. `BaseChannel` and `GatewayOrchestrator` are **abstract** — you subclass them to integrate a real platform. **No concrete channels ship built-in**. The `miminions gateway` CLI manages the local runtime, cron jobs, and gateway sessions for an initialized workspace; it does not provide a turnkey public gateway service. Reach for it when you are assembling a long-running, multi-channel deployment; for scripted or single-shot agent use, the plain [`Minion`](agent.md) API is all you need.
+    The gateway ships **building blocks, not a hosted server**. `BaseChannel` and `GatewayOrchestrator` are **abstract** — you subclass them to integrate a real platform. **No concrete channels ship built-in**. The `miminions gateway` CLI manages the local runtime, cron jobs, and gateway sessions for an initialized workspace; it does not provide a turnkey public gateway service. Reach for it when you are assembling a long-running, multi-channel deployment; for scripted or single-shot agent use, the plain [`Agent`](agent.md) API is all you need.
 
 ```python
 from miminions.daemon import (
@@ -310,7 +310,7 @@ The framework supplies every piece above except the concrete channel transports 
 
 <div class="grid cards" markdown>
 
-- :material-robot: **[Agent](agent.md)** — the `Minion` core the gateway drives
+- :material-robot: **[Agent](agent.md)** — the `Agent` core the gateway drives
 - :material-database: **[Memory](memory.md)** — vector and markdown memory backends
 - :material-file-tree: **[Context Builder](context.md)** — what gets injected into the system prompt
 - :material-wrench: **[Tools](tools.md)** — `@tool`, `create_tool`, and `GenericTool`

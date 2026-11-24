@@ -35,19 +35,19 @@ class TaskContext:
                 return response
             time.sleep(0.1)
 
-    def wire(self, minion):
-        minion._on_tool_call = lambda name, args: self.emit("tool_call", name=name, arguments=args)
-        minion._on_turn_end = lambda usage, latency: self.emit(
+    def wire(self, agent):
+        agent._on_tool_call = lambda name, args: self.emit("tool_call", name=name, arguments=args)
+        agent._on_turn_end = lambda usage, latency: self.emit(
             "turn_end", input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,
             tool_calls=usage.tool_calls, latency=latency)
-        return minion
+        return agent
 
-async def _stream(context, minion, prompt, history=None):
+async def _stream(context, agent, prompt, history=None):
     """Retry only before any output or tool activity; never repeat side effects."""
     from miminions.core.agent.agent import _is_retryable_error
     output = []
     attempt = 0
-    original_hook = minion._on_tool_call
+    original_hook = agent._on_tool_call
     tool_called = False
 
     def tool_hook(name, args):
@@ -56,18 +56,18 @@ async def _stream(context, minion, prompt, history=None):
         if original_hook:
             original_hook(name, args)
 
-    minion._on_tool_call = tool_hook
+    agent._on_tool_call = tool_hook
     while True:
         try:
-            async for delta in minion.run_stream(prompt, message_history=history):
+            async for delta in agent.run_stream(prompt, message_history=history):
                 output.append(delta)
                 context.emit("text_delta", text=delta)
             context.emit("stdout", text="\n")
             return "".join(output)
         except Exception as exc:
-            if output or tool_called or attempt >= minion._max_retries or not _is_retryable_error(exc):
+            if output or tool_called or attempt >= agent._max_retries or not _is_retryable_error(exc):
                 raise
-            delay = minion._retry_base_delay * (2 ** attempt)
+            delay = agent._retry_base_delay * (2 ** attempt)
             attempt += 1
             context.emit("retry", message=f"Provider request failed; retrying in {delay:.1f}s (attempt {attempt}).")
             await asyncio.sleep(delay)
@@ -80,7 +80,7 @@ def _append_once(store, session_id, role, content, task_id, **meta):
 
 
 async def _prompt(context: TaskContext):
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
     from miminions.core.workspace import WorkspaceManager, ensure_workspace
     from miminions.interface.session import JsonlSessionStore, trim_message_history
     from pydantic_ai.messages import ModelMessagesTypeAdapter
@@ -99,10 +99,10 @@ async def _prompt(context: TaskContext):
     history = trim_message_history(history)
     meta = {"source": "cli-chat" if is_chat else "cli-prompt", "workspace_id": workspace.id}
     _append_once(store, session_id, "user", params["prompt"], context.task.id, **meta)
-    minion = None
+    agent = None
     reply = ""
     try:
-        minion = context.wire(create_minion(name="MiMinions", description=f"MiMinions agent for workspace '{workspace.name}'."))
+        agent = context.wire(create_agent(name="MiMinions", description=f"MiMinions agent for workspace '{workspace.name}'."))
         project = None
         if not params.get("no_discovery", False) and workspace.state.get("project_root"):
             from miminions.interface.cli.management.project import load_project_context
@@ -110,14 +110,14 @@ async def _prompt(context: TaskContext):
             context.phase("Discovering project capabilities without importing code...")
             project = await asyncio.to_thread(load_project_context, workspace, root)
             project_tools = WorkspaceTools(project, context.approval, root / "discovery.json")
-            project_tools.register(minion)
+            project_tools.register(agent)
         if project is None:
-            minion.set_context(workspace, root)
+            agent.set_context(workspace, root)
         else:
-            minion.set_context(workspace, root, project_context=project)
+            agent.set_context(workspace, root, project_context=project)
         context.phase("Requesting model response...")
-        reply = await _stream(context, minion, params["prompt"], history)
-        context.store.save_checkpoint(session_key, ModelMessagesTypeAdapter.dump_json(minion._last_messages).decode("utf-8"))
+        reply = await _stream(context, agent, params["prompt"], history)
+        context.store.save_checkpoint(session_key, ModelMessagesTypeAdapter.dump_json(agent._last_messages).decode("utf-8"))
         return reply
     except BaseException as exc:
         partial = "".join(e.data["text"] for e in context.store.events(context.task.id) if e.type == "text_delta")
@@ -126,8 +126,8 @@ async def _prompt(context: TaskContext):
         raise
     finally:
         _append_once(store, session_id, "assistant", reply, context.task.id, **meta)
-        if minion is not None:
-            await minion.cleanup(rebuild=False)
+        if agent is not None:
+            await agent.cleanup(rebuild=False)
 
 
 async def _agent(context: TaskContext):
@@ -135,24 +135,24 @@ async def _agent(context: TaskContext):
     from mcp import StdioServerParameters
     params = context.params
     context.phase("Building saved-agent runtime...")
-    minion = context.wire(_build_cli_extension_agent(params["agent"]))
+    agent = context.wire(_build_cli_extension_agent(params["agent"]))
     try:
         for name, config in params["agent"].get("mcp_servers", {}).items():
             context.phase(f"Connecting MCP server '{name}'...")
-            await minion.connect_mcp_server(name, StdioServerParameters(command=config["command"], args=list(config.get("args", []))))
-            await minion.load_tools_from_mcp_server(name)
+            await agent.connect_mcp_server(name, StdioServerParameters(command=config["command"], args=list(config.get("args", []))))
+            await agent.load_tools_from_mcp_server(name)
         if context.task.request.kind == "agent_tool":
             context.emit("tool_call", name=params["tool_name"], arguments=params["arguments"])
-            result = await minion.execute_async(params["tool_name"], arguments=params["arguments"])
+            result = await agent.execute_async(params["tool_name"], arguments=params["arguments"])
             if result.error:
                 raise RuntimeError(result.error)
             context.emit("stdout", text=f"Tool: {result.tool_name}\nStatus: {result.status.value}\nResult: {result.result}\n"
                          f"Execution time (ms): {result.execution_time_ms:.2f}\n")
             return result.result
         context.phase("Requesting model response...")
-        return await _stream(context, minion, params["prompt"])
+        return await _stream(context, agent, params["prompt"])
     finally:
-        await minion.cleanup(rebuild=False)
+        await agent.cleanup(rebuild=False)
 
 
 async def _session_tool(context: TaskContext):
@@ -229,10 +229,10 @@ async def _tool_test(context: TaskContext):
 async def _distill(context: TaskContext):
     from miminions.interface.cli.operations.chat import _run_session_distillation
     from miminions.core.workspace import WorkspaceManager, ensure_workspace
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
     context.phase("Distilling session memory...")
     workspace, root = ensure_workspace(WorkspaceManager(context.store.home), context.params["workspace"])
-    agent = context.wire(create_minion(name="Session distiller"))
+    agent = context.wire(create_agent(name="Session distiller"))
     try:
         await asyncio.to_thread(_run_session_distillation, workspace, root, context.params["session_id"], agent._model)
     finally:

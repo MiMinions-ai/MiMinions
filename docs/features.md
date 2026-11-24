@@ -28,10 +28,10 @@ straight into it.
 
 ```python
 from miminions.system.db.sqlite import SQLiteMemory
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 with SQLiteMemory("agent.db") as memory:
-    agent = create_minion("Assistant", memory=memory)
+    agent = create_agent("Assistant", memory=memory)
 
     agent.store_knowledge(
         "Python is a high-level programming language",
@@ -71,7 +71,7 @@ tool calls, token usage, and latency.
 - :material-check: Verbose CLI chat with tool, usage, and latency output
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 
 def show_tool(name, args):
@@ -82,7 +82,7 @@ def show_usage(usage, latency):
     print(f"[turn] {usage.input_tokens} in / {usage.output_tokens} out, {latency:.1f}s")
 
 
-agent = create_minion(
+agent = create_agent(
     "Reporter",
     request_timeout=30.0,
     max_retries=3,
@@ -121,10 +121,10 @@ stores every chunk in vector memory.
 
 ```python
 from miminions.system.db.sqlite import SQLiteMemory
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 with SQLiteMemory("docs.db") as memory:
-    agent = create_minion("DocAgent", memory=memory)
+    agent = create_agent("DocAgent", memory=memory)
 
     result = agent.execute_tool("ingest_document", filepath="resume.pdf")
     print(result["chunks_stored"])
@@ -166,9 +166,9 @@ Connect to a server, then load its tools into the agent's registry.
 
 ```python
 from mcp import StdioServerParameters
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("MathAgent")
+agent = create_agent("MathAgent")
 
 await agent.connect_mcp_server(
     "math",
@@ -212,10 +212,10 @@ Point `SQLiteMemory` at a file path and the knowledge survives process restarts.
 
 ```python
 from miminions.system.db.sqlite import SQLiteMemory
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 with SQLiteMemory("agent_memory.db") as memory:
-    agent = create_minion("PersistentAgent", memory=memory)
+    agent = create_agent("PersistentAgent", memory=memory)
 
     agent.store_knowledge("User prefers concise answers", metadata={"type": "pref"})
 

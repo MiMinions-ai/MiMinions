@@ -31,12 +31,12 @@ Everything you need to know about MiMinions.
     MiMinions selects models through a `ModelFactory`. The default provider is
     **OpenRouter** (free `openai/gpt-oss-20b:free` model), and you can switch to
     **OpenAI**, **Anthropic**, **Gemini**, or an offline **test** model by passing
-    `provider=` to `create_minion`:
+    `provider=` to `create_agent`:
 
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
 
-    agent = create_minion("assistant", provider="anthropic")
+    agent = create_agent("assistant", provider="anthropic")
     ```
 
     Each real provider needs its API key in the environment

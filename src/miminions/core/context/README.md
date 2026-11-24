@@ -34,7 +34,7 @@ Markdown IO is implemented in
 
 ## Usage
 
-`Minion.set_context(workspace, root_path)` attaches the workspace used by the
+`Agent.set_context(workspace, root_path)` attaches the workspace used by the
 agent's system-prompt callback. To build a prompt directly:
 
 ```python

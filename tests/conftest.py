@@ -87,7 +87,7 @@ def _dummy_openrouter_key(monkeypatch):
 
     The default agent provider ("openrouter") now fails fast when
     OPENROUTER_API_KEY is unset, so non-LLM tests that merely construct a
-    Minion would break in CI (bare `pytest`, no secret). Inject a dummy key
+    Agent would break in CI (bare `pytest`, no secret). Inject a dummy key
     when no real one is present; tests that assert the fail-fast behavior
     delete it again via their own monkeypatch.
     """

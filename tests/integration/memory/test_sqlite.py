@@ -16,14 +16,14 @@ pytest.importorskip("sqlite_vec")
 import pytest
 
 from miminions.core.paths import get_global_memory_db_path
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.db.sqlite import SQLiteMemory
 from miminions.core.tool.schemas import ExecutionStatus
 
 
 def setup_agent():
     memory = SQLiteMemory(db_path=":memory:")
-    agent = create_minion("TestAgent", memory=memory)
+    agent = create_agent("TestAgent", memory=memory)
     return agent, memory
 
 

@@ -1,6 +1,6 @@
 # MiMinions Examples
 
-Working examples for the Minion agent and supporting modules.
+Working examples for the Agent agent and supporting modules.
 
 ## Examples
 

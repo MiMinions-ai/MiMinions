@@ -1,4 +1,4 @@
-"""Interactive async chat CLI — user messages go to the Minion, replies come back."""
+"""Interactive async chat CLI — user messages go to the Agent, replies come back."""
 
 from __future__ import annotations
 

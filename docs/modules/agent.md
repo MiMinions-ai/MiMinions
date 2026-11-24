@@ -1,12 +1,12 @@
 # Agent
 
-The `miminions.core.agent` module is the core reasoning engine — a **`Minion`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Minion` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` / `run_stream()` loop.
+The `miminions.core.agent` module is the core reasoning engine — a **`Agent`** is an async LLM agent built on [pydantic-ai](https://ai.pydantic.dev/) and, by default, [OpenRouter](https://openrouter.ai/). A `Agent` owns the full agent lifecycle: model selection, a tool registry (plain Python functions, `GenericTool` objects, and MCP-server tools), optional [memory](memory.md), optional [workspace context](context.md) injection, and the async `run()` / `run_stream()` loop.
 
 !!! note "Import from the subpackage"
     Always import from `miminions.core.agent` — the top-level `import miminions` does not re-export these symbols.
 
     ```python
-    from miminions.core.agent import create_minion, Minion
+    from miminions.core.agent import create_agent, Agent
     ```
 
 Import third-party agent types, tools, and run contexts directly from
@@ -27,10 +27,10 @@ Import third-party agent types, tools, and run contexts directly from
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 async def main():
-    agent = create_minion("MyAgent")
+    agent = create_agent("MyAgent")
 
     def add(a: int, b: int) -> int:
         return a + b
@@ -44,22 +44,22 @@ asyncio.run(main())
 ```
 
 !!! warning "Set `OPENROUTER_API_KEY`"
-    The default provider is OpenRouter, and the key is validated **at construction time**: `create_minion(...)` raises `ValueError` if `OPENROUTER_API_KEY` is not set. Other providers (`openai`, `anthropic`, `gemini`) construct fine without a key and fail at call time instead. For offline runs (tests, examples), use `provider="test"` (see below).
+    The default provider is OpenRouter, and the key is validated **at construction time**: `create_agent(...)` raises `ValueError` if `OPENROUTER_API_KEY` is not set. Other providers (`openai`, `anthropic`, `gemini`) construct fine without a key and fail at call time instead. For offline runs (tests, examples), use `provider="test"` (see below).
 
 ## Model & Provider Selection
 
-`create_minion` defaults to OpenRouter's free `openai/gpt-oss-20b:free` model. Switch providers with `provider=`, or pass a fully-built pydantic-ai model with `model=`.
+`create_agent` defaults to OpenRouter's free `openai/gpt-oss-20b:free` model. Switch providers with `provider=`, or pass a fully-built pydantic-ai model with `model=`.
 
 === "By provider name"
 
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
 
     # Default: OpenRouter free model — needs OPENROUTER_API_KEY
-    agent = create_minion("MyAgent")
+    agent = create_agent("MyAgent")
 
     # Anthropic, OpenAI, or Gemini (each needs its own API key in the env)
-    agent = create_minion("MyAgent", provider="anthropic")
+    agent = create_agent("MyAgent", provider="anthropic")
     ```
 
     | `provider` | Default model | Required env var |
@@ -73,20 +73,20 @@ asyncio.run(main())
 === "By explicit model"
 
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
     from pydantic_ai.models.openai import OpenAIModel
 
     # Pass any pydantic-ai model directly; `model` wins over `provider`
-    agent = create_minion("MyAgent", model=OpenAIModel("gpt-4o"))
+    agent = create_agent("MyAgent", model=OpenAIModel("gpt-4o"))
     ```
 
 === "Offline (test)"
 
     ```python
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
 
     # TestModel runs entirely offline — no API key, no network
-    agent = create_minion("MyAgent", provider="test")
+    agent = create_agent("MyAgent", provider="test")
     ```
 
 !!! tip "Switching models later"
@@ -94,13 +94,13 @@ asyncio.run(main())
 
 ## Registering Tools
 
-A `Minion` can run two flavours of tool. Use `register_tool` for plain functions, or `add_tool` for a [`GenericTool`](tools.md).
+A `Agent` can run two flavours of tool. Use `register_tool` for plain functions, or `add_tool` for a [`GenericTool`](tools.md).
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.tool import tool
 
-agent = create_minion("MyAgent")
+agent = create_agent("MyAgent")
 
 # 1. Plain function — schema inferred from the signature
 def multiply(a: int, b: int) -> int:
@@ -127,11 +127,11 @@ Pass `memory=` at construction, or call `set_memory(...)` later. The moment memo
 `memory_store`, `memory_recall`, `memory_update`, `memory_delete`, `memory_get`, `memory_list`, and `ingest_document` (chunked PDF/text ingestion).
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.db.sqlite import SQLiteMemory  # requires the [sqlite] extra
 
 memory = SQLiteMemory(db_path=":memory:")
-agent = create_minion("MyAgent", memory=memory)
+agent = create_agent("MyAgent", memory=memory)
 
 # Direct (non-LLM) helpers — both require memory to be attached
 entry_id = agent.store_knowledge("MiMinions runs on pydantic-ai.")
@@ -148,7 +148,7 @@ Attach a [workspace](workspaces.md) with `set_context(workspace, root_path)`. `W
 
 ```python
 from pathlib import Path
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
 
 config_dir = Path.home() / ".miminions"
@@ -157,7 +157,7 @@ mgr = WorkspaceManager(config_dir)
 # resolve by exact id, id prefix, or exact name
 ws = resolve_workspace(mgr.load_workspaces(), "default")
 
-agent = create_minion("MyAgent")
+agent = create_agent("MyAgent")
 agent.set_context(ws, root_path=config_dir / "workspaces" / f"ws_{ws.id}")
 ```
 
@@ -172,9 +172,9 @@ Connect to a [Model Context Protocol](https://modelcontextprotocol.io/) server, 
 
 ```python
 from mcp import StdioServerParameters
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
-agent = create_minion("MyAgent")
+agent = create_agent("MyAgent")
 
 await agent.connect_mcp_server(
     "filesystem",
@@ -249,7 +249,7 @@ async for delta in agent.run_stream("Tell me a story."):
 
 ## Timeouts, Retries & Hooks
 
-`create_minion` (and `Minion`) accept resilience and observability options:
+`create_agent` (and `Agent`) accept resilience and observability options:
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
@@ -268,7 +268,7 @@ def show_tool(name, args):
 def show_usage(usage, latency):
     print(f"[turn] {usage.input_tokens} in / {usage.output_tokens} out, {latency:.1f}s")
 
-agent = create_minion(
+agent = create_agent(
     "MyAgent",
     request_timeout=30.0,
     max_retries=3,
@@ -279,10 +279,10 @@ agent = create_minion(
 
 ## API Reference
 
-### `create_minion`
+### `create_agent`
 
 ```python
-create_minion(
+create_agent(
     name: str,
     description: str = "",
     memory: BaseMemory | None = None,
@@ -293,12 +293,12 @@ create_minion(
     retry_base_delay: float = 1.0,
     on_tool_call: Callable[[str, dict], None] | None = None,
     on_turn_end: Callable[[RunUsage, float], None] | None = None,
-) -> Minion
+) -> Agent
 ```
 
-Factory that builds a configured `Minion`. When `model` is `None`, `provider` drives model selection (default OpenRouter free model). See [Timeouts, Retries & Hooks](#timeouts-retries-hooks) for the resilience and callback parameters. This is the primary entry point.
+Factory that builds a configured `Agent`. When `model` is `None`, `provider` drives model selection (default OpenRouter free model). See [Timeouts, Retries & Hooks](#timeouts-retries-hooks) for the resilience and callback parameters. This is the primary entry point.
 
-### `Minion` methods
+### `Agent` methods
 
 | Method | Description |
 |--------|-------------|

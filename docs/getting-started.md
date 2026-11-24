@@ -54,16 +54,16 @@ This guide walks you from a clean environment to a working agent, then through t
 
 ## Your First Agent
 
-Create a [`Minion`](modules/agent.md), register a plain Python function as a tool,
+Create a [`Agent`](modules/agent.md), register a plain Python function as a tool,
 and `await run(...)`. Tool schemas are inferred from the function signature.
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 
 async def main():
-    agent = create_minion("MyAgent", description="A small demo agent")
+    agent = create_agent("MyAgent", description="A small demo agent")
 
     def calculator(operation: str, a: int, b: int) -> int:
         """Perform a basic arithmetic operation."""
@@ -83,13 +83,13 @@ asyncio.run(main())
 ```
 
 !!! tip "Import from subpackages, never the top level"
-    `import miminions` exposes nothing — `from miminions import Minion` will fail.
-    Always import from the subpackage, e.g. `from miminions.core.agent import create_minion`,
+    `import miminions` exposes nothing — `from miminions import Agent` will fail.
+    Always import from the subpackage, e.g. `from miminions.core.agent import create_agent`,
     `from miminions.core.tool import GenericTool`, `from miminions.system import LocalDataManager`.
 
 ### Choosing a model / provider
 
-`create_minion(provider=...)` selects an LLM backend through the internal
+`create_agent(provider=...)` selects an LLM backend through the internal
 `ModelFactory`. Supported provider strings:
 
 | Provider      | Default model                  | Key / notes                          |
@@ -102,19 +102,19 @@ asyncio.run(main())
 
 ```python
 # Pick a provider by name:
-agent = create_minion("MyAgent", provider="anthropic")
+agent = create_agent("MyAgent", provider="anthropic")
 
 # Offline / no network — ideal for unit tests:
-agent = create_minion("MyAgent", provider="test")
+agent = create_agent("MyAgent", provider="test")
 
 # Or pass a fully constructed pydantic_ai model directly:
 from pydantic_ai.models.openai import OpenAIModel
-agent = create_minion("MyAgent", model=OpenAIModel("gpt-4o"))
+agent = create_agent("MyAgent", model=OpenAIModel("gpt-4o"))
 ```
 
 !!! warning "When missing keys surface"
     With the default `openrouter` provider, a missing `OPENROUTER_API_KEY` fails
-    **fast**: `create_minion(...)` raises `ValueError` at construction. The other
+    **fast**: `create_agent(...)` raises `ValueError` at construction. The other
     real providers build fine without a key and instead raise an auth/network
     error at `await agent.run(...)` time. Use `provider="test"` to exercise your
     tools and wiring without any credentials.

@@ -1,6 +1,6 @@
 # CLI & Chat
 
-The `miminions` console command is the primary surface for the framework: it manages agents, tasks, knowledge, workspaces, and execution sessions, and it hosts the interactive **chat** and one-shot **prompt** runtimes that drive a live [Minion](agent.md).
+The `miminions` console command is the primary surface for the framework: it manages agents, tasks, knowledge, workspaces, and execution sessions, and it hosts the interactive **chat** and one-shot **prompt** runtimes that drive a live [Agent](agent.md).
 
 ```bash
 # Installed as a console script…
@@ -188,7 +188,7 @@ items and excludes execution history.
 
 ## `chat`
 
-An interactive, async conversation with a live Minion bound to a workspace.
+An interactive, async conversation with a live Agent bound to a workspace.
 
 ```bash
 # Start a chat in the default workspace
@@ -239,7 +239,7 @@ Session ended.
 
 ## `prompt`
 
-A one-shot prompt to the Minion runtime — no interactive loop. The prompt text is a positional argument.
+A one-shot prompt to the Agent runtime — no interactive loop. The prompt text is a positional argument.
 
 ```bash
 # Ask once in the default workspace
@@ -350,7 +350,7 @@ miminions import --input ./miminions-backup.json --mode replace
 
 ## `agent`
 
-Manage persisted agent records and drive a live Minion built from them. Agent records are CLI extensions of the core [Minion](agent.md) runtime, and their default CLI tools remain available through `tool-list`, `tool-info`, `tool-search`, and `tool-run`.
+Manage persisted agent records and drive a live Agent built from them. Agent records are CLI extensions of the core [Agent](agent.md) runtime, and their default CLI tools remain available through `tool-list`, `tool-info`, `tool-search`, and `tool-run`.
 
 All commands that take an agent id accept it as an optional positional argument. When omitted, the `default_agent` from `~/.miminions/config.json` is used.
 
@@ -642,7 +642,7 @@ miminions gateway sessions list --workspace Demo
 
 ## Related
 
-- [Agent](agent.md) — the `Minion` runtime the CLI drives
+- [Agent](agent.md) — the `Agent` runtime the CLI drives
 - [Workspaces](workspaces.md) — nodes, rules, and on-disk layout
 - [Memory](memory.md) — the three-tier memory and distillation pipeline
 - [Tasks & Workflows](tasks.md) — the programmatic task runtime and workflow traces

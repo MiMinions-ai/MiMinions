@@ -13,7 +13,7 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.execution import ExecutionRequest
 from miminions.system.execution.handlers import TaskContext
 from miminions.system.execution.store import ExecutionStore
@@ -28,7 +28,7 @@ def runtime(tmp_path, source, approval=None, relative="main.py"):
     path.write_text(source, encoding="utf-8")
     approval = approval or Mock(return_value=True)
     tools = WorkspaceTools(scan_project(project), approval)
-    agent = create_minion("Project", model=TestModel())
+    agent = create_agent("Project", model=TestModel())
     tools.register(agent)
     return agent, tools, approval, path
 

@@ -8,7 +8,7 @@ from .layout import WorkspaceLayout, BOOTSTRAP_PROMPT_FILES
 
 _DEFAULT_TEMPLATES: Dict[str, str] = {
     "prompt/AGENTS.md": """# AGENTS
-## Core Agent (Minion Runtime)
+## Core Agent (Agent Runtime)
 - Owns the default runtime behavior.
 - Prefer built-in tool execution, memory workflows, and model orchestration.
 - Keep core behavior stable and reusable across interfaces.

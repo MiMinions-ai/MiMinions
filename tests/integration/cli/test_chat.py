@@ -6,7 +6,7 @@ import pytest
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.core.workspace import WorkspaceManager, ensure_workspace
 from miminions.system.execution import ExecutionRequest
 from miminions.system.execution.handlers import TaskContext, get_handler
@@ -26,11 +26,11 @@ def conversation(tmp_path, monkeypatch):
     agents = []
 
     def factory(**kwargs):
-        agent = create_minion(**kwargs, model=TestModel(custom_output_text="reply", call_tools=[]))
+        agent = create_agent(**kwargs, model=TestModel(custom_output_text="reply", call_tools=[]))
         agents.append(agent)
         return agent
 
-    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_agent", factory)
     return store, workspace, root, agents
 
 
@@ -67,13 +67,13 @@ async def test_next_turn_restores_complete_model_checkpoint(conversation):
 
 async def test_checkpoint_preserves_tool_call_and_return_pairs(conversation, monkeypatch):
     def factory(**kwargs):
-        agent = create_minion(**kwargs, model=TestModel(call_tools=["add"]))
+        agent = create_agent(**kwargs, model=TestModel(call_tools=["add"]))
         def add(a: int, b: int) -> int:
             return a + b
         agent.register_tool("add", "Add numbers", add)
         return agent
 
-    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_agent", factory)
     context = turn_context(conversation)
     await get_handler("chat_turn")(context)
     history = ModelMessagesTypeAdapter.validate_json(context.store.checkpoint(context.task.request.session_key))
@@ -115,7 +115,7 @@ async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(c
     first.store.finish(first.task.id, "completed")
     checkpoint = first.store.checkpoint(first.task.request.session_key)
     second = turn_context(conversation, "fail")
-    factory = __import__("miminions.core.agent", fromlist=["create_minion"]).create_minion
+    factory = __import__("miminions.core.agent", fromlist=["create_agent"]).create_agent
 
     def failing_factory(**kwargs):
         agent = factory(**kwargs)
@@ -125,7 +125,7 @@ async def test_partial_failure_persists_output_and_does_not_replace_checkpoint(c
         agent.run_stream = stream
         return agent
 
-    monkeypatch.setattr("miminions.core.agent.create_minion", failing_factory)
+    monkeypatch.setattr("miminions.core.agent.create_agent", failing_factory)
     with pytest.raises(RuntimeError, match="midstream"):
         await get_handler("chat_turn")(second)
     records = list(JsonlSessionStore(conversation[2]).iter_messages("session"))

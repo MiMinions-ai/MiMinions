@@ -135,12 +135,12 @@ class WorkspaceTools:
             self.active.popitem(last=False)
         return results
 
-    def register(self, minion) -> None:
-        minion.register_tool("workspace_search_tools", "Search and activate project functions without importing code.", self.search)
+    def register(self, agent) -> None:
+        agent.register_tool("workspace_search_tools", "Search and activate project functions without importing code.", self.search)
         for function in self.project.functions:
-            self._register_function(minion, function)
+            self._register_function(agent, function)
 
-    def _register_function(self, minion, function: FunctionMetadata) -> None:
+    def _register_function(self, agent, function: FunctionMetadata) -> None:
         fields, parameters, annotations = {}, [], {}
         for index, param in enumerate(function.parameters):
             annotation = _safe_type(param["type"])
@@ -166,7 +166,7 @@ class WorkspaceTools:
         generic = create_tool(function.tool_name, function.docstring or function.signature, invoke, schema=ToolSchema(
             function.tool_name, function.docstring, schema.get("properties", {}), schema.get("required", []), schema,
         ))
-        minion.add_tool(generic, enabled=lambda: function.tool_name in self.active)
+        agent.add_tool(generic, enabled=lambda: function.tool_name in self.active)
 
     async def _invoke(self, function: FunctionMetadata, arguments: dict) -> Any:
         while not _execution_lock.acquire(blocking=False):

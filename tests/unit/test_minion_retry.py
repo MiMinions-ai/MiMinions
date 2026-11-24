@@ -1,10 +1,10 @@
-"""Unit tests for retry/timeout handling around Minion model calls."""
+"""Unit tests for retry/timeout handling around Agent model calls."""
 
 import pytest
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent.agent import Minion, _is_retryable_error
+from miminions.core.agent.agent import Agent, _is_retryable_error
 
 
 def _http_error(status_code: int) -> ModelHTTPError:
@@ -33,11 +33,11 @@ class _FlakyAgent:
         return _FakeResult()
 
 
-def _make_minion(**kwargs) -> Minion:
-    return Minion(name="Retry", model=TestModel(), retry_base_delay=0, **kwargs)
+def _make_minion(**kwargs) -> Agent:
+    return Agent(name="Retry", model=TestModel(), retry_base_delay=0, **kwargs)
 
 
-def _stub_agent(minion: Minion, fake: _FlakyAgent, monkeypatch) -> None:
+def _stub_agent(minion: Agent, fake: _FlakyAgent, monkeypatch) -> None:
     monkeypatch.setattr(minion, "_rebuild_pydantic_ai_agent", lambda: None)
     minion._pydantic_ai_agent = fake
 
@@ -88,7 +88,7 @@ async def test_connection_errors_are_retried(monkeypatch):
 
 
 async def test_backoff_delays_double_per_attempt(monkeypatch):
-    minion = Minion(name="Backoff", model=TestModel(), retry_base_delay=0.5)
+    minion = Agent(name="Backoff", model=TestModel(), retry_base_delay=0.5)
     fake = _FlakyAgent([_http_error(429), _http_error(500)])
     _stub_agent(minion, fake, monkeypatch)
 
@@ -128,8 +128,8 @@ def test_rebuild_passes_request_timeout(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr("miminions.core.agent.agent.Agent", _CapturingAgent)
-    minion = Minion(name="Timeout", model=TestModel(), request_timeout=12.5)
+    monkeypatch.setattr("miminions.core.agent.agent.PydanticAgent", _CapturingAgent)
+    minion = Agent(name="Timeout", model=TestModel(), request_timeout=12.5)
 
     minion._rebuild_pydantic_ai_agent()
 
@@ -143,8 +143,8 @@ def test_rebuild_omits_model_settings_without_timeout(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr("miminions.core.agent.agent.Agent", _CapturingAgent)
-    minion = Minion(name="NoTimeout", model=TestModel(), request_timeout=None)
+    monkeypatch.setattr("miminions.core.agent.agent.PydanticAgent", _CapturingAgent)
+    minion = Agent(name="NoTimeout", model=TestModel(), request_timeout=None)
 
     minion._rebuild_pydantic_ai_agent()
 

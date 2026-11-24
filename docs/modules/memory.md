@@ -15,7 +15,7 @@ The markdown files (Tiers 1 and 2) live under `<workspace_root>/memory/` and are
 ## The Memory Lifecycle
 
 ```
-  [ContextBuilder]                            [Minion Agent]
+  [ContextBuilder]                            [Agent Agent]
   Reads Tier 2 & 3        System Prompt       Reasons & chats
   at startup     ────────────────────────►    with the user
                                                     │
@@ -30,7 +30,7 @@ The markdown files (Tiers 1 and 2) live under `<workspace_root>/memory/` and are
 
 Before the agent responds, [`ContextBuilder`](context.md) reads `MEMORY.md` (Tier 2) and queries the global SQLite database (Tier 3) for relevant insights, then injects both into the system prompt. The Tier-3 "Global Knowledge" section only appears when `global_top_k > 0` and matching insights exist.
 
-### During Chat: `Minion`
+### During Chat: `Agent`
 
 The agent reasons with full memory context already injected. Raw conversation turns are appended to a `sessions/*.jsonl` log — nothing is written to memory during the session.
 
@@ -231,13 +231,13 @@ The function's canonical home is `miminions.core.paths`; it is still re-exported
 
 ## Attaching memory to an agent
 
-A `SQLiteMemory` instance can be attached to a [`Minion`](agent.md) so the agent gets memory CRUD and document-ingestion tools automatically, plus `store_knowledge` / `recall_knowledge` helpers:
+A `SQLiteMemory` instance can be attached to a [`Agent`](agent.md) so the agent gets memory CRUD and document-ingestion tools automatically, plus `store_knowledge` / `recall_knowledge` helpers:
 
 ```python
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.db.sqlite import SQLiteMemory
 
-agent = create_minion("researcher", memory=SQLiteMemory(":memory:"))
+agent = create_agent("researcher", memory=SQLiteMemory(":memory:"))
 agent.store_knowledge("The release ships on Friday", metadata={"topic": "release"})
 hits = agent.recall_knowledge("when do we ship?", top_k=3)
 ```

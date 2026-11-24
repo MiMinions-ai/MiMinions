@@ -25,7 +25,7 @@ def prompt_cli() -> None:
 @project_options
 def ask_prompt(workspace_ref: str | None, session_id: str | None, prompt_parts: tuple[str, ...], attach=False, detach=False,
                project: Path | None = None, no_discovery: bool = False) -> None:
-    """Send a single prompt to the Minion runtime."""
+    """Send a single prompt to the Agent runtime."""
     user_prompt = " ".join(prompt_parts).strip()
     if not user_prompt:
         raise click.ClickException("Prompt cannot be empty.")

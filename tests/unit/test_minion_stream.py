@@ -1,14 +1,14 @@
-"""Unit tests for Minion.run_stream()."""
+"""Unit tests for Agent.run_stream()."""
 
 import pytest
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.test import TestModel
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 
 async def test_stream_yields_deltas_and_updates_history():
-    minion = create_minion(
+    minion = create_agent(
         name="Stream",
         model=TestModel(custom_output_text="hello world", call_tools=[]),
     )
@@ -21,7 +21,7 @@ async def test_stream_yields_deltas_and_updates_history():
 
 async def test_stream_fires_on_turn_end():
     turns = []
-    minion = create_minion(
+    minion = create_agent(
         name="Stream",
         model=TestModel(call_tools=[]),
         on_turn_end=lambda usage, latency: turns.append((usage, latency)),
@@ -37,7 +37,7 @@ async def test_stream_fires_on_turn_end():
 
 
 async def test_stream_error_propagates_and_history_unchanged(monkeypatch):
-    minion = create_minion(name="Stream", model=TestModel())
+    minion = create_agent(name="Stream", model=TestModel())
 
     class _BoomAgent:
         def run_stream(self, *args, **kwargs):

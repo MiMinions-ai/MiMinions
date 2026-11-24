@@ -8,7 +8,7 @@ from click.testing import CliRunner
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.messages import SystemPromptPart
 
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.interface.cli.operations.chat import chat_command
 from miminions.interface.cli.operations.prompt import ask_prompt
 from miminions.interface.cli.management.project import select_project
@@ -126,10 +126,10 @@ async def test_handler_builds_project_tools_context_and_persists_checkpoint(proj
     workspace, root = ensure_workspace(WorkspaceManager(home), workspace_id)
     agents = []
     def factory(**kwargs):
-        agent = create_minion(**kwargs, model=TestModel(call_tools=["workspace_search_tools"]))
+        agent = create_agent(**kwargs, model=TestModel(call_tools=["workspace_search_tools"]))
         agents.append(agent)
         return agent
-    monkeypatch.setattr("miminions.core.agent.create_minion", factory)
+    monkeypatch.setattr("miminions.core.agent.create_agent", factory)
     store = ExecutionStore(home)
     key = conversation_key(workspace_id, "project-session")
     task_id = store.enqueue(ExecutionRequest("prompt", {"workspace": workspace_id, "session_id": "project-session",

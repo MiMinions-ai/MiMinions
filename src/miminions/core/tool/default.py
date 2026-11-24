@@ -1,4 +1,4 @@
-"""Built-in tools available to every Minion."""
+"""Built-in tools available to every Agent."""
 
 from dataclasses import dataclass
 from enum import Enum

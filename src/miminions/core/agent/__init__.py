@@ -1,5 +1,5 @@
 """
-Minion Agent Module
+Agent Module
 
 This module provides an LLM-powered agent implementation with strong typing, validation, and structured schemas for tools,
 inputs, and outputs.
@@ -10,10 +10,10 @@ The Agent is designed to:
 - Execute tools via LLM reasoning using the async run() API
 
 Example:
-    from miminions.core.agent import create_minion
+    from miminions.core.agent import create_agent
 
     # Create agent (uses OpenRouter by default; set OPENROUTER_API_KEY in env)
-    agent = create_minion(name="MyAgent", description="My helpful agent")
+    agent = create_agent(name="MyAgent", description="My helpful agent")
 
     def add(a: int, b: int) -> int:
         return a + b
@@ -31,6 +31,8 @@ from .models import (
 
 __all__ = [
     # MiMinions Agent
+    "Agent",
+    "create_agent",
     "Minion",
     "create_minion",
     "AgentConfig",
@@ -44,11 +46,13 @@ def __getattr__(name: str):
     This keeps lightweight imports such as ContextBuilder usable in tests
     without forcing the full agent stack to load at package import time.
     """
-    if name in {"Minion", "create_minion"}:
-        from .agent import Minion, create_minion
-
-        if name == "Minion":
-            return Minion
-        return create_minion
+    if name in {"Agent", "create_agent", "Minion", "create_minion"}:
+        from .agent import Agent, create_agent, Minion, create_minion
+        return {
+            "Agent": Agent,
+            "create_agent": create_agent,
+            "Minion": Minion,
+            "create_minion": create_minion,
+        }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

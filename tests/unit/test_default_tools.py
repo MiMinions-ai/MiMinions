@@ -1,4 +1,4 @@
-"""Tests for built-in Minion tools."""
+"""Tests for built-in Agent tools."""
 
 import shlex
 import subprocess

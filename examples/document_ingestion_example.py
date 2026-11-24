@@ -1,15 +1,15 @@
-"""Document Ingestion Example for Minion Agent."""
+"""Document Ingestion Example for Agent Agent."""
 
 import asyncio
 from pathlib import Path
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 from miminions.system.db.sqlite import SQLiteMemory
 
 
 async def main():
-    print("Minion Agent Document Ingestion Example")
+    print("Agent Agent Document Ingestion Example")
     
-    agent = create_minion(
+    agent = create_agent(
         name="DocumentAgent",
         memory=SQLiteMemory(db_path=":memory:"),
         provider="test",

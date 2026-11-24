@@ -109,10 +109,10 @@ Create your first agent:
 
 ```python
 import asyncio
-from miminions.core.agent import create_minion
+from miminions.core.agent import create_agent
 
 async def main():
-    agent = create_minion("MyAgent")
+    agent = create_agent("MyAgent")
 
     def add(a: int, b: int) -> int:
         return a + b
@@ -125,7 +125,7 @@ asyncio.run(main())
 ```
 
 !!! tip "Working offline?"
-    Pass `provider="test"` to `create_minion` to use pydantic-ai's `TestModel`
+    Pass `provider="test"` to `create_agent` to use pydantic-ai's `TestModel`
     and run without any API key — handy for tests and experiments.
 
 Then head to the [Getting Started](getting-started.md) guide to go further.
@@ -138,7 +138,7 @@ Then head to the [Getting Started](getting-started.md) guide to go further.
 └─────────────────────────┬───────────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────────┐
-│                      Minion Agent                           │
+│                      Agent Agent                           │
 │        (pydantic-ai + OpenRouter + MCP servers)             │
 └──────┬──────────────┬──────────────┬──────────────┬─────────┘
        │              │              │              │
@@ -150,7 +150,7 @@ Then head to the [Getting Started](getting-started.md) guide to go further.
  └───────────┘ └────────────┘ └─────────────┘ └────────────┘
 ```
 
-A [Minion](modules/agent.md) ties it all together: it talks to an LLM through
+A [Agent](modules/agent.md) ties it all together: it talks to an LLM through
 pydantic-ai (OpenRouter by default), calls [tools](modules/tools.md) you define
 or load from [MCP](modules/agent.md) servers, reads and writes
 [memory](modules/memory.md), and injects [workspace](modules/workspaces.md)

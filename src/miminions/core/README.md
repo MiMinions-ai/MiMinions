@@ -11,7 +11,7 @@ domain layer: workspace persistence and context loading already perform IO.
 
 | Module | Responsibility |
 |--------|----------------|
-| [agent/](agent/README.md) | `Minion`, model/provider selection, tool registration, MCP connections and the reasoning loop. |
+| [agent/](agent/README.md) | `Agent`, model/provider selection, tool registration, MCP connections and the reasoning loop. |
 | [agent/memory/](agent/memory/README.md) | Memory backend contracts and types; re-exports memory-processing and Markdown helpers implemented elsewhere. |
 | [context/](context/README.md) | System-prompt assembly, section budgets, memory distillation and compaction. |
 | [task/](task/README.md) | Task models and `TaskRuntime` for execution inside one process. |
@@ -31,7 +31,7 @@ Import domain APIs from their subpackages:
 
 ```python
 from miminions.core.workspace import WorkspaceManager, resolve_workspace
-from miminions.core.agent import Minion, create_minion
+from miminions.core.agent import Agent, create_agent
 from miminions.core.context import ContextBuilder
 from miminions.core.task import TaskRuntime
 from miminions.core.tool import GenericTool

@@ -15,6 +15,9 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import FunctionModel
 
 from miminions.core.agent import (
+    Agent,
+    Minion,
+    create_agent,
     create_minion,
 )
 from miminions.core.tool.mcp_adapter import MCPTool
@@ -35,7 +38,7 @@ def _cleanup(agent):
 def test_agent_creation():
     """Test basic agent creation."""
     print("test_agent_creation")
-    agent = create_minion("TestAgent", "A test agent")
+    agent = create_agent("TestAgent", "A test agent")
     
     assert agent.name == "TestAgent", f"expect 'TestAgent', got {agent.name}"
     assert agent.description == "A test agent", f"expect 'A test agent', got {agent.description}"
@@ -49,10 +52,16 @@ def test_agent_creation():
     print("PASSED")
 
 
+def test_legacy_agent_names_remain_aliases():
+    """The old public names remain compatible during migration."""
+    assert Minion is Agent
+    assert create_minion is create_agent
+
+
 def test_tool_registration():
     """Test tool registration and schema extraction."""
     print("test_tool_registration")
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
     
     def add(a: int, b: int) -> int:
         return a + b
@@ -84,7 +93,7 @@ def test_tool_registration():
 def test_tool_execution():
     """Test tool execution styles."""
     print("test_tool_execution")
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
     
     def multiply(a: float, b: float) -> float:
         return a * b
@@ -117,7 +126,7 @@ def test_tool_execution():
 
 async def test_parallel_sync_tool_execution():
     """Blocking synchronous tools run concurrently in worker threads."""
-    agent = create_minion("TestAgent", provider="test")
+    agent = create_agent("TestAgent", provider="test")
     thread_ids = set()
 
     def slow_value(value: str, delay: float) -> str:
@@ -147,7 +156,7 @@ async def test_parallel_sync_tool_execution():
 
 async def test_parallel_async_tools_preserve_request_order():
     """Async tools overlap while results remain in request order."""
-    agent = create_minion("TestAgent", provider="test")
+    agent = create_agent("TestAgent", provider="test")
 
     async def delayed(value: str, delay: float) -> str:
         await asyncio.sleep(delay)
@@ -177,7 +186,7 @@ async def test_parallel_async_tools_preserve_request_order():
 
 async def test_parallel_batch_respects_concurrency_limit():
     """Batch execution never exceeds its configured concurrency limit."""
-    agent = create_minion("TestAgent", provider="test")
+    agent = create_agent("TestAgent", provider="test")
     active = 0
     max_active = 0
 
@@ -212,7 +221,7 @@ async def test_parallel_batch_respects_concurrency_limit():
 
 async def test_parallel_batch_rejects_invalid_concurrency_limit():
     """A non-positive concurrency limit is rejected clearly."""
-    agent = create_minion("TestAgent", provider="test")
+    agent = create_agent("TestAgent", provider="test")
 
     try:
         await agent.execute_many_async([], max_concurrency=0)
@@ -226,7 +235,7 @@ async def test_parallel_batch_rejects_invalid_concurrency_limit():
 
 async def test_parallel_batch_isolates_failures():
     """A failed request does not cancel successful siblings."""
-    agent = create_minion("TestAgent", provider="test")
+    agent = create_agent("TestAgent", provider="test")
 
     def fail() -> None:
         raise ValueError("broken tool")
@@ -287,7 +296,7 @@ async def test_llm_parallel_results_are_injected_together():
         model_saw_results = True
         return ModelResponse(parts=[TextPart("all tools completed")])
 
-    agent = create_minion("TestAgent", model=FunctionModel(model_handler))
+    agent = create_agent("TestAgent", model=FunctionModel(model_handler))
     active = 0
     max_active = 0
 
@@ -316,7 +325,7 @@ async def test_llm_parallel_results_are_injected_together():
 def test_error_handling():
     """Test error handling."""
     print("test_error_handling")
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
     
     def failing_tool():
         raise ValueError("This tool always fails")
@@ -347,7 +356,7 @@ def test_error_handling():
 def test_tool_schema_json():
     """Test JSON schema generation."""
     print("test_tool_schema_json")
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
     
     def search(query: str, max_results: int = 10) -> list:
         return []
@@ -370,7 +379,7 @@ def test_tool_schema_json():
 
 def test_command_tool_schema_hides_permission_policy():
     """The model-facing command tool cannot provide its own policy."""
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
 
     schema = next(
         item for item in agent.get_tools_schema()
@@ -387,7 +396,7 @@ def test_command_tool_schema_hides_permission_policy():
 
 def test_command_tool_uses_subprocess_reported_timing():
     """Command approval time is not included in the agent execution duration."""
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
 
     class TimedResult(dict):
         execution_time_ms = 12.5
@@ -405,7 +414,7 @@ def test_command_tool_uses_subprocess_reported_timing():
 
 def test_rejected_command_reports_zero_execution_time():
     """Time waiting for a rejected confirmation is not execution time."""
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
 
     with patch("miminions.core.tool.default.click.confirm", return_value=False):
         result = agent.execute("cli_run_command", command="python --version")
@@ -419,7 +428,7 @@ def test_rejected_command_reports_zero_execution_time():
 def test_tool_management():
     """Test tool search and unregistration."""
     print("test_tool_management")
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
     
     agent.register_tool("math_add", "Add numbers", lambda a, b: a + b)
     agent.register_tool("math_sub", "Subtract numbers", lambda a, b: a - b)
@@ -438,7 +447,7 @@ def test_tool_management():
 
 async def test_async_generic_tool_registration_uses_async_execution_and_schema():
     """Async-backed GenericTools such as MCP tools must not use sync run()."""
-    agent = create_minion("TestAgent")
+    agent = create_agent("TestAgent")
 
     async def greet(**kwargs):
         return f"Hello, {kwargs['name']}!"

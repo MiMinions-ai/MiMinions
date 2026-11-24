@@ -42,7 +42,7 @@ The CLI can queue post-chat distillation; SDK callers may invoke it explicitly.
 Extraction depends on the configured filter/model and can produce no new facts.
 
 ```text
-  [ContextBuilder]                              [Minion Agent]
+  [ContextBuilder]                              [Agent]
   Reads Tier 2 & 3           System Prompt      Reasons & chats 
   memory at startup  ────────────────────────►  with the user
                                                       │
@@ -58,7 +58,7 @@ Extraction depends on the configured filter/model and can produce no new facts.
 number of recent global SQLite insights (Tier 3). Section budgets/strategies can
 limit what reaches the prompt; it does not inject every stored memory.
 
-### 2. Chat (`Minion`)
+### 2. Chat (`Agent`)
 The prompt/chat execution handler appends transcript records and saves native
 model-message checkpoints. An attached memory backend also exposes CRUD and
 ingestion tools, so an agent may write memory during a turn.
