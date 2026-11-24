@@ -19,6 +19,12 @@ python examples/document_ingestion_example.py
 python examples/tasks_example.py
 ```
 
+Memory examples require the SQLite extras:
+
+```bash
+python -m pip install -e ".[sqlite]"
+```
+
 ## What Each Example Demonstrates
 
 ### Basic Usage

@@ -8,7 +8,7 @@ def main():
     print("SQLite Memory Demo")
     
     memory = SQLiteMemory(db_path=":memory:")
-    agent = create_minion("DemoAgent", memory=memory)
+    agent = create_minion("DemoAgent", memory=memory, provider="test")
     
     print("\n1. Storing entries")
     facts = [

@@ -2,17 +2,21 @@
 
 import asyncio
 from pathlib import Path
-from miminions.core.agent import create_minion, ExecutionStatus
+from miminions.core.agent import create_minion
 from miminions.system.db.sqlite import SQLiteMemory
 
 
 async def main():
     print("Minion Agent Document Ingestion Example")
     
-    agent = create_minion(name="DocumentAgent", memory=SQLiteMemory(db_path=":memory:"))
+    agent = create_minion(
+        name="DocumentAgent",
+        memory=SQLiteMemory(db_path=":memory:"),
+        provider="test",
+    )
     print(f"Created: {agent}")
     
-    pdf_path = Path(__file__).parent.parent / "example_files" / "resume.pdf"
+    pdf_path = Path(__file__).parent / "example_files" / "resume.pdf"
     if pdf_path.exists():
         print(f"Ingesting PDF: {pdf_path.name}")
         result = agent.execute("ingest_document", filepath=str(pdf_path))

@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """Minion Agent Demo
 
-Demonstrates the pydantic_ai-based agent with tool registration and execution.
-Uses TestModel by default (no LLM required). Pass a real model for LLM support.
+Demonstrates the agent with tool registration and execution.
+Uses Pydantic AI's TestModel (no LLM required). Pass a real model for LLM support.
 """
 
 import asyncio
 
+from miminions.core.tool.schemas import ExecutionStatus, ToolExecutionRequest
 from miminions.core.agent import (
     create_minion,
-    ToolExecutionRequest,
-    ExecutionStatus,
 )
 
 
 async def basic_usage_example():
     print("Basic Usage")
-    agent = create_minion("MinionAgent", "A strongly-typed agent")
+    agent = create_minion("MinionAgent", "A strongly-typed agent", provider="test")
     
     def add_numbers(a: int, b: int) -> int:
         return a + b
@@ -56,7 +55,7 @@ async def basic_usage_example():
 async def tool_schema_example():
     print("\nTool Schema")
     
-    agent = create_minion("SchemaAgent")
+    agent = create_minion("SchemaAgent", provider="test")
     
     def search(query: str, max_results: int = 10, include_metadata: bool = False) -> list:
         return [f"Result for: {query}"]
@@ -84,7 +83,7 @@ async def tool_schema_example():
 async def error_handling_example():
     print("\nError Handling")
     
-    agent = create_minion("ErrorAgent")
+    agent = create_minion("ErrorAgent", provider="test")
     
     def safe_divide(a: float, b: float) -> float:
         if b == 0:

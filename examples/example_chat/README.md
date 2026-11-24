@@ -1,10 +1,12 @@
 # Chat Example Test Harness
 
-This directory contains `chat_example.py`, a fully self-contained standalone test script.
+This directory contains `chat_example.py`, a self-contained standalone chat harness.
 
 ## How it works
 
-The architecture in `chat_example.py` is an exact 1:1 reflection of the real CLI agent (`miminions.interface.cli.operations.chat`), but simplified into a single file to bypass the global CLI configuration folder.
+The architecture in `chat_example.py` demonstrates the same core agent lifecycle as the
+CLI chat implementation, but uses a local workspace and direct `Minion.run()` calls
+instead of the CLI task-dispatch and global configuration machinery.
 
 When you run it, it executes the identical 5-step agent lifecycle:
 

@@ -101,7 +101,7 @@ async def _chat_loop(session_id: str | None) -> None:
             if not user_text:
                 continue
 
-            if user_text.lower() in {"exit", "quit"}:
+            if user_text.lower() in {"exit", "quit", "/exit", "/quit"}:
                 print("Session ended.")
                 break
 

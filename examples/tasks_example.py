@@ -74,7 +74,31 @@ def run_single_task():
 
 def run_multiple_tasks():
     DEFAULT_LOGGER.info("Running multiple tasks example...")
-    pass
+    runtime = TaskRuntime()
+    for name in ("calculate", "summarize"):
+        mock_agent = MagicMock()
+        mock_result = MagicMock()
+        mock_result.data = f"{name} task completed!"
+
+        async def mock_run(*args, _mock_result=mock_result, **kwargs):
+            return _mock_result
+
+        mock_agent.run = mock_run
+        task = AgentTask(
+            name=name,
+            description=f"Demonstrate execution of the {name} task",
+            agent=mock_agent,
+            args=[],
+            kwargs={},
+            max_turns=3,
+            status=TaskStatus.IDLE,
+        )
+        runtime.add_task(task)
+
+    results = runtime.run_sync()
+    DEFAULT_LOGGER.info("Multiple task execution completed!")
+    DEFAULT_LOGGER.info("Results summary: %s", results)
+    return results
 
 # def run_task_petri_net():
 #     DEFAULT_LOGGER.info("Running task petri net example...")
@@ -140,7 +164,32 @@ async def run_single_task_async():
 
 async def run_multiple_tasks_async():
     DEFAULT_LOGGER.info("Running multiple tasks async example...")
-    pass
+    runtime = TaskRuntime()
+    for name in ("analyze", "report"):
+        mock_agent = MagicMock()
+        mock_result = MagicMock()
+        mock_result.data = f"{name} async task completed!"
+
+        async def mock_run(*args, _mock_result=mock_result, **kwargs):
+            await asyncio.sleep(0.1)
+            return _mock_result
+
+        mock_agent.run = mock_run
+        task = AgentTask(
+            name=name,
+            description=f"Demonstrate async execution of the {name} task",
+            agent=mock_agent,
+            args=[],
+            kwargs={},
+            max_turns=3,
+            status=TaskStatus.IDLE,
+        )
+        runtime.add_task(task)
+
+    results = await runtime.run()
+    DEFAULT_LOGGER.info("Multiple async task execution completed!")
+    DEFAULT_LOGGER.info("Results summary: %s", results)
+    return results
 
 # async def run_task_petri_net_async():
 #     DEFAULT_LOGGER.info("Running task petri net async example...")

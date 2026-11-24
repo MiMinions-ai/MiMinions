@@ -65,6 +65,8 @@ export MIMINIONS_HOME="/path/to/miminions-home"
 
 ## Quick Start
 
+Use `mm` as the short CLI alias. The full `miminions` command remains fully supported.
+
 ### A first agent with a custom tool
 
 ```python
